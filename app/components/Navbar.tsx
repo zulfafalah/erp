@@ -1,13 +1,19 @@
+import Image from "next/image";
+
 export default function Navbar() {
     return (
         <header className="flex items-center justify-between whitespace-nowrap border-b border-primary/10 bg-white px-6 py-3 shrink-0">
             <div className="flex items-center gap-8">
                 <div className="flex items-center gap-3 text-primary">
-                    <div className="size-8 bg-primary rounded flex items-center justify-center text-white">
-                        <span className="material-symbols-outlined">inventory_2</span>
-                    </div>
+                    <Image
+                        src="/logoesmart2.png"
+                        alt="Logo"
+                        width={32}
+                        height={32}
+                        className="size-8 object-contain"
+                    />
                     <h2 className="text-slate-900 text-lg font-bold leading-tight tracking-tight">
-                        ERP Purchase
+                        ERP E-Smart
                     </h2>
                 </div>
                 <nav className="hidden md:flex items-center gap-6">
