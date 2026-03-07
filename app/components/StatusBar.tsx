@@ -29,7 +29,7 @@ export default function StatusBar() {
 
             {/* Mobile Info Popup */}
             {showMobileInfo && (
-                <div className="absolute bottom-10 left-3 bg-slate-800 border border-slate-700 p-3 rounded-md shadow-lg flex flex-col gap-2 md:hidden min-w-[200px] animate-in slide-in-from-bottom-2 fade-in duration-200">
+                <div className="absolute bottom-24 left-3 bg-slate-800 border border-slate-700 p-3 rounded-md shadow-lg flex flex-col gap-2 md:hidden min-w-[200px] animate-in slide-in-from-bottom-2 fade-in duration-200">
                     <div className="text-slate-300 flex justify-between items-center border-b border-slate-700 pb-2 mb-1">
                         <span className="text-[10px] text-white">System Info</span>
                         <button onClick={() => setShowMobileInfo(false)} className="text-slate-400 hover:text-white px-2 py-0.5 text-xs">✕</button>
