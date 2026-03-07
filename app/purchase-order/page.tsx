@@ -85,25 +85,25 @@ export default function PurchaseOrderListPage() {
                 {/* Main Content Area */}
                 <section className="flex-1 flex flex-col bg-background-light overflow-hidden">
                     {/* Page Body */}
-                    <div className="flex-1 overflow-y-auto p-8 space-y-8">
+                    <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-4 md:space-y-8">
                         {/* Title and Actions */}
                         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                             <div>
-                                <h2 className="text-3xl font-black tracking-tight text-slate-900">
+                                <h2 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">
                                     Daftar Pemesanan Pembelian
                                 </h2>
                                 <p className="text-slate-500 mt-1">
                                     Kelola dan pantau semua pesanan pembelian operasional Anda.
                                 </p>
                             </div>
-                            <div className="flex items-center gap-3">
-                                <button className="flex items-center gap-2 px-4 py-2 bg-white border border-primary/10 rounded-lg text-sm font-semibold hover:bg-primary/5 transition-colors">
+                            <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 md:gap-3 w-full md:w-auto mt-2 md:mt-0">
+                                <button className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-3 md:px-4 py-2 bg-white border border-primary/10 rounded-lg text-sm font-semibold hover:bg-primary/5 transition-colors">
                                     <span className="material-symbols-outlined text-lg">
                                         filter_list
                                     </span>
                                     Filter
                                 </button>
-                                <button className="flex items-center gap-2 px-4 py-2 bg-white border border-primary/10 rounded-lg text-sm font-semibold hover:bg-primary/5 transition-colors">
+                                <button className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-3 md:px-4 py-2 bg-white border border-primary/10 rounded-lg text-sm font-semibold hover:bg-primary/5 transition-colors">
                                     <span className="material-symbols-outlined text-lg">
                                         description
                                     </span>
@@ -111,7 +111,7 @@ export default function PurchaseOrderListPage() {
                                 </button>
                                 <Link
                                     href="/purchase-order/new"
-                                    className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold hover:bg-primary/90 transition-colors shadow-sm shadow-primary/20"
+                                    className="w-full sm:w-auto justify-center flex items-center gap-2 px-3 md:px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold hover:bg-primary/90 transition-colors shadow-sm shadow-primary/20"
                                 >
                                     <span className="material-symbols-outlined text-lg">
                                         add_circle
@@ -122,7 +122,7 @@ export default function PurchaseOrderListPage() {
                         </div>
 
                         {/* Stats Cards */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
                             {/* Total Draft */}
                             <div className="bg-white p-6 rounded-xl border border-primary/10 shadow-sm flex items-center justify-between">
                                 <div>
@@ -191,7 +191,53 @@ export default function PurchaseOrderListPage() {
 
                         {/* Table Container */}
                         <div className="bg-white rounded-xl border border-primary/10 shadow-sm overflow-hidden">
-                            <div className="overflow-x-auto">
+                            {/* Mobile Card View */}
+                            <div className="block md:hidden divide-y divide-primary/5">
+                                {purchaseOrders.map((po) => (
+                                    <div key={po.id} className="p-4 space-y-3">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <Link
+                                                    href={`/purchase-order/${po.id}`}
+                                                    className="font-semibold text-primary text-sm hover:underline"
+                                                >
+                                                    {po.noPO}
+                                                </Link>
+                                                <p className="text-xs text-slate-500 mt-0.5">{po.tanggal}</p>
+                                            </div>
+                                            <span
+                                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusStyles[po.status]}`}
+                                            >
+                                                {po.status}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-medium text-slate-900">{po.pemasok}</p>
+                                            <p className="text-xs text-slate-500">{po.tipe}</p>
+                                        </div>
+                                        <div className="flex justify-between items-center pt-2 border-t border-slate-100">
+                                            <span className="text-sm font-bold text-slate-900">{po.total}</span>
+                                            <div className="flex items-center gap-1">
+                                                <Link
+                                                    href={`/purchase-order/${po.id}`}
+                                                    className="p-1.5 text-slate-400 hover:text-primary transition-colors"
+                                                >
+                                                    <span className="material-symbols-outlined text-base">edit_square</span>
+                                                </Link>
+                                                <button className="p-1.5 text-slate-400 hover:text-primary transition-colors">
+                                                    <span className="material-symbols-outlined text-base">print</span>
+                                                </button>
+                                                <button className="p-1.5 text-slate-400 hover:text-red-500 transition-colors">
+                                                    <span className="material-symbols-outlined text-base">delete</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Desktop Table View */}
+                            <div className="hidden md:block overflow-x-auto">
                                 <table className="w-full text-left border-collapse">
                                     <thead>
                                         <tr className="bg-slate-50 border-b border-primary/10">
@@ -283,11 +329,11 @@ export default function PurchaseOrderListPage() {
                             </div>
 
                             {/* Pagination */}
-                            <div className="px-6 py-4 bg-slate-50 flex items-center justify-between">
-                                <p className="text-sm text-slate-500">
+                            <div className="px-4 md:px-6 py-4 bg-slate-50 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0">
+                                <p className="text-sm text-slate-500 text-center md:text-left">
                                     Menampilkan 1 sampai 5 dari 57 data
                                 </p>
-                                <div className="flex items-center gap-1">
+                                <div className="flex flex-wrap justify-center items-center gap-1">
                                     <button
                                         className="p-2 border border-primary/10 rounded hover:bg-white disabled:opacity-50"
                                         disabled

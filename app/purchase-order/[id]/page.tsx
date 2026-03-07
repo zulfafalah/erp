@@ -59,39 +59,39 @@ export default function PurchaseOrderDetailPage() {
                 {/* Main Content Area */}
                 <section className="flex-1 flex flex-col bg-background-light overflow-hidden">
                     {/* Action Header */}
-                    <div className="px-6 py-4 flex flex-wrap items-center justify-between gap-4 border-b border-primary/5 bg-white/50 backdrop-blur-sm shrink-0">
-                        <div className="flex items-center gap-4">
+                    <div className="px-4 md:px-6 py-3 md:py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-primary/5 bg-white/50 backdrop-blur-sm shrink-0">
+                        <div className="flex items-start md:items-center gap-3 md:gap-4 w-full md:w-auto">
                             <button
                                 onClick={() => router.push("/purchase-order")}
-                                className="size-8 flex items-center justify-center rounded-lg border border-slate-200 hover:bg-white"
+                                className="size-8 flex-shrink-0 flex items-center justify-center rounded-lg border border-slate-200 hover:bg-white mt-1 md:mt-0"
                             >
                                 <span className="material-symbols-outlined text-lg">
                                     arrow_back
                                 </span>
                             </button>
                             <div>
-                                <div className="flex items-center gap-2">
-                                    <h1 className="text-xl font-bold text-slate-900">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <h1 className="text-lg md:text-xl font-bold text-slate-900 leading-tight">
                                         Pemesanan Pembelian Barang
                                     </h1>
-                                    <span className="px-3 py-1 bg-yellow-100 text-yellow-700 text-xs font-bold rounded-full uppercase tracking-widest border border-yellow-200">
+                                    <span className="px-2 md:px-3 py-0.5 md:py-1 bg-yellow-100 text-yellow-700 text-[10px] md:text-xs font-bold rounded-full uppercase tracking-widest border border-yellow-200">
                                         Draft
                                     </span>
                                 </div>
-                                <p className="text-xs text-slate-500 font-medium">
+                                <p className="text-[10px] md:text-xs text-slate-500 font-medium mt-1">
                                     Buat dan kelola pesanan pembelian ke pemasok Anda.
                                 </p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <button className="px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200/50 rounded-lg transition-all">
+                        <div className="flex flex-wrap items-center gap-2 md:gap-3 w-full md:w-auto">
+                            <button className="flex-1 md:flex-none justify-center px-3 md:px-4 py-2 text-xs md:text-sm font-semibold text-slate-700 hover:bg-slate-200/50 rounded-lg transition-all border border-slate-200 md:border-transparent">
                                 Save Draft
                             </button>
-                            <button className="px-4 py-2 text-sm font-semibold bg-white text-primary border border-primary/20 hover:border-primary rounded-lg transition-all flex items-center gap-2">
+                            <button className="flex-1 md:flex-none justify-center px-3 md:px-4 py-2 text-xs md:text-sm font-semibold bg-white text-primary border border-primary/20 hover:border-primary rounded-lg transition-all flex items-center gap-2">
                                 <span className="material-symbols-outlined text-sm">print</span>
                                 Print
                             </button>
-                            <button className="px-5 py-2 text-sm font-bold bg-primary text-white hover:bg-primary/90 rounded-lg shadow-lg shadow-primary/20 flex items-center gap-2">
+                            <button className="w-full md:w-auto justify-center px-4 md:px-5 py-2 text-xs md:text-sm font-bold bg-primary text-white hover:bg-primary/90 rounded-lg shadow-lg shadow-primary/20 flex items-center gap-2">
                                 <span className="material-symbols-outlined text-sm">
                                     check_circle
                                 </span>
@@ -101,14 +101,14 @@ export default function PurchaseOrderDetailPage() {
                     </div>
 
                     {/* Tab System Container */}
-                    <div className="flex-1 flex flex-col overflow-hidden p-6 gap-6">
+                    <div className="flex-1 flex flex-col overflow-hidden p-4 md:p-6 gap-4 md:gap-6">
                         {/* Tabs Selector */}
-                        <div className="flex border-b border-slate-200 shrink-0">
+                        <div className="flex overflow-x-auto no-scrollbar border-b border-slate-200 shrink-0">
                             {tabs.map((tab) => (
                                 <button
                                     key={tab.key}
                                     onClick={() => setActiveTab(tab.key)}
-                                    className={`px-6 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${activeTab === tab.key
+                                    className={`px-4 md:px-6 py-3 text-xs md:text-sm font-medium flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${activeTab === tab.key
                                         ? "font-bold border-primary text-primary"
                                         : "text-slate-500 hover:text-slate-700 border-transparent"
                                         }`}
@@ -128,17 +128,17 @@ export default function PurchaseOrderDetailPage() {
 
                         {/* Tab Content */}
                         {activeTab === "header" && (
-                            <div className="flex-1 overflow-y-auto no-scrollbar">
-                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <div className="flex-1 overflow-y-auto no-scrollbar pb-6">
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
                                     {/* Left Section: Basic & Supplier Info */}
                                     <div className="lg:col-span-2 space-y-6">
                                         {/* Basic Info Card */}
                                         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                                            <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2">
+                                            <div className="px-4 md:px-6 py-3 md:py-4 border-b border-slate-100 flex items-center gap-2">
                                                 <span className="material-symbols-outlined text-primary">info</span>
                                                 <h3 className="font-bold text-slate-800">Informasi Dasar</h3>
                                             </div>
-                                            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div className="p-4 md:p-6 grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
                                                 <FormField label="No. Purchase Order">
                                                     <FormInput defaultValue="POB 2603-0001" />
                                                 </FormField>
@@ -165,12 +165,12 @@ export default function PurchaseOrderDetailPage() {
 
                                         {/* Supplier Info Card */}
                                         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                                            <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2">
+                                            <div className="px-4 md:px-6 py-3 md:py-4 border-b border-slate-100 flex items-center gap-2">
                                                 <span className="material-symbols-outlined text-primary">local_shipping</span>
                                                 <h3 className="font-bold text-slate-800">Data Pemasok &amp; Pengiriman</h3>
                                             </div>
-                                            <div className="p-6 space-y-6">
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
                                                     <div className="md:col-span-2">
                                                         <FormField label="Pemasok (Supplier)">
                                                             <div className="relative">
@@ -215,13 +215,13 @@ export default function PurchaseOrderDetailPage() {
                                     {/* Right Section: Financial Summary & Actions */}
                                     <div className="space-y-6">
                                         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden sticky top-0">
-                                            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                                            <div className="px-4 md:px-6 py-3 md:py-4 border-b border-slate-100 flex items-center justify-between">
                                                 <div className="flex items-center gap-2">
                                                     <span className="material-symbols-outlined text-primary">receipt_long</span>
                                                     <h3 className="font-bold text-slate-800">Ringkasan Biaya</h3>
                                                 </div>
                                             </div>
-                                            <div className="p-6 space-y-4">
+                                            <div className="p-4 md:p-6 space-y-4">
                                                 <div className="flex justify-between items-center text-sm">
                                                     <span className="text-slate-500">Sub Total</span>
                                                     <span className="font-semibold">IDR 12.500.000,00</span>
@@ -252,8 +252,8 @@ export default function PurchaseOrderDetailPage() {
                                                 </div>
                                                 <div className="pt-4 border-t border-slate-100">
                                                     <div className="flex justify-between items-center mb-1">
-                                                        <span className="text-base font-bold text-slate-900">Grand Total</span>
-                                                        <span className="text-xl font-black text-primary">IDR 13.875.000,00</span>
+                                                        <span className="text-sm md:text-base font-bold text-slate-900">Grand Total</span>
+                                                        <span className="text-lg md:text-xl font-black text-primary">IDR 13.875.000,00</span>
                                                     </div>
                                                 </div>
                                                 <div className="pt-4 space-y-3">
@@ -271,16 +271,16 @@ export default function PurchaseOrderDetailPage() {
                                                 <button className="col-span-2 py-3 bg-primary text-white rounded font-bold hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20">
                                                     <span className="material-symbols-outlined">save</span> SIMPAN PESANAN
                                                 </button>
-                                                <button className="py-2 bg-white border border-slate-200 text-slate-600 rounded text-xs font-bold hover:bg-slate-100 transition-colors flex items-center justify-center gap-1">
+                                                <button className="py-2 bg-white border border-slate-200 text-slate-600 rounded text-xs px-1 md:px-0 font-bold hover:bg-slate-100 transition-colors flex items-center justify-center gap-1">
                                                     <span className="material-symbols-outlined !text-sm">refresh</span> RESET
                                                 </button>
-                                                <button className="py-2 bg-white border border-slate-200 text-slate-600 rounded text-xs font-bold hover:bg-slate-100 transition-colors flex items-center justify-center gap-1">
+                                                <button className="py-2 bg-white border border-slate-200 text-slate-600 rounded text-xs px-1 md:px-0 font-bold hover:bg-slate-100 transition-colors flex items-center justify-center gap-1">
                                                     <span className="material-symbols-outlined !text-sm">help</span> INFO
                                                 </button>
-                                                <button className="col-span-1 py-2 bg-emerald-500 text-white rounded text-xs font-bold hover:bg-emerald-600 transition-colors flex items-center justify-center gap-1">
+                                                <button className="col-span-1 py-2 bg-emerald-500 text-white rounded text-[10px] md:text-xs font-bold hover:bg-emerald-600 transition-colors flex items-center justify-center gap-1">
                                                     <span className="material-symbols-outlined !text-sm">verified</span> APPROVE
                                                 </button>
-                                                <button className="col-span-1 py-2 bg-amber-500 text-white rounded text-xs font-bold hover:bg-amber-600 transition-colors flex items-center justify-center gap-1 text-center">
+                                                <button className="col-span-1 py-2 bg-amber-500 text-white rounded text-[10px] md:text-xs font-bold hover:bg-amber-600 transition-colors flex items-center justify-center gap-1 text-center leading-tight">
                                                     <span className="material-symbols-outlined !text-sm">question_answer</span> ASK CONFIRM
                                                 </button>
                                             </div>
