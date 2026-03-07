@@ -75,7 +75,7 @@ export default function Navbar() {
 
                     <div className="flex items-center gap-3">
                         <div className="text-right hidden md:block">
-                            <p className="text-xs font-bold text-slate-900">Alex Thompson</p>
+                            <p className="text-xs font-bold text-slate-900">Zulfa Falah</p>
                             <p className="text-[10px] text-slate-500">Procurement Manager</p>
                         </div>
                         <div className="size-8 md:size-9 rounded-full bg-primary/10 border border-primary/20 overflow-hidden flex items-center justify-center shrink-0">
@@ -117,7 +117,7 @@ export default function Navbar() {
                             <span className="material-symbols-outlined text-primary">person</span>
                         </div>
                         <div>
-                            <p className="font-bold text-slate-900">Alex Thompson</p>
+                            <p className="font-bold text-slate-900">Zulfa Falah</p>
                             <p className="text-xs text-slate-500">Procurement Manager</p>
                         </div>
                     </div>

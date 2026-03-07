@@ -22,7 +22,7 @@ export default function StatusBar() {
             <div className="flex gap-2 md:gap-4 items-center shrink-0">
                 <span className="hidden 2xl:inline">Shortcut Keys: F2-Save, F5-Refresh, F8-Print</span>
                 <span className="text-slate-200">
-                    <span className="hidden sm:inline">User: </span>Alex T.
+                    <span className="hidden sm:inline">User: </span>Zulfa F.
                     <span className="hidden sm:inline"> | Time: 14:22:10</span>
                 </span>
             </div>
