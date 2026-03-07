@@ -101,7 +101,7 @@ export default function PurchaseOrderDetailPage() {
                     </div>
 
                     {/* Tab System Container */}
-                    <div className="flex-1 flex flex-col overflow-hidden p-4 md:p-6 gap-4 md:gap-6">
+                    <div className="flex-1 flex flex-col overflow-hidden p-4 md:p-6 pb-28 md:pb-6 gap-4 md:gap-6">
                         {/* Tabs Selector */}
                         <div className="flex overflow-x-auto no-scrollbar border-b border-slate-200 shrink-0">
                             {tabs.map((tab) => (

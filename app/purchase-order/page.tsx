@@ -85,7 +85,7 @@ export default function PurchaseOrderListPage() {
                 {/* Main Content Area */}
                 <section className="flex-1 flex flex-col bg-background-light overflow-hidden">
                     {/* Page Body */}
-                    <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-4 md:space-y-8">
+                    <div className="flex-1 overflow-y-auto p-4 md:p-8 pb-28 md:pb-8 space-y-4 md:space-y-8">
                         {/* Title and Actions */}
                         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                             <div>
