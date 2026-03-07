@@ -35,7 +35,7 @@ export default function Navbar() {
                     </div>
                 </div>
 
-                <nav className="hidden lg:flex items-center gap-6">
+                <nav className="hidden xl:flex items-center gap-4 2xl:gap-6">
                     <Link className={isActive("/purchase-order") ? activeClass : inactiveClass} href="/purchase-order">
                         Pembelian
                     </Link>
@@ -60,16 +60,6 @@ export default function Navbar() {
                 </nav>
 
                 <div className="flex items-center gap-2 md:gap-4">
-                    <div className="relative hidden xl:block">
-                        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">
-                            search
-                        </span>
-                        <input
-                            className="bg-slate-100 border-none rounded-lg pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-primary w-64"
-                            placeholder="Quick Search (Ctrl+K)"
-                            type="text"
-                        />
-                    </div>
 
                     {/* Mobile Search Icon */}
                     <button className="xl:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-full">
@@ -100,13 +90,13 @@ export default function Navbar() {
             {/* Mobile Navigation Drawer Overlay */}
             {isMobileMenuOpen && (
                 <div
-                    className="fixed inset-0 bg-slate-900/50 z-50 lg:hidden backdrop-blur-sm transition-opacity"
+                    className="fixed inset-0 bg-slate-900/50 z-50 xl:hidden backdrop-blur-sm transition-opacity"
                     onClick={() => setIsMobileMenuOpen(false)}
                 ></div>
             )}
 
             {/* Mobile Navigation Drawer */}
-            <div className={`fixed top-0 left-0 h-full w-[280px] bg-white z-50 transform transition-transform duration-300 ease-in-out lg:hidden shadow-2xl flex flex-col ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+            <div className={`fixed top-0 left-0 h-full w-[280px] bg-white z-50 transform transition-transform duration-300 ease-in-out xl:hidden shadow-2xl flex flex-col ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
                 }`}>
                 <div className="p-4 border-b border-slate-100 flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -187,7 +177,7 @@ export default function Navbar() {
             </div>
 
             {/* Mobile Bottom Navigation Bar */}
-            <div className="md:hidden fixed bottom-8 left-0 w-full bg-white border-t border-slate-200 flex justify-between items-start z-[55] pb-safe pt-2 pb-2 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] px-1">
+            <div className="xl:hidden fixed bottom-8 md:bottom-0 left-0 w-full bg-white border-t border-slate-200 flex justify-between items-start z-[55] pb-safe pt-2 md:pt-3 pb-2 md:pb-3 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] px-1 md:px-12">
                 <Link href="/" className="flex flex-col items-center p-1 text-slate-500 hover:text-primary w-1/5 overflow-hidden">
                     <span className="material-symbols-outlined text-[22px] md:text-2xl mb-1">home</span>
                     <span className="text-[9px] md:text-[10px] font-medium w-full text-center truncate">Dashboard</span>
