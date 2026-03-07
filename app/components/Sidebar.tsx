@@ -13,7 +13,7 @@ export default function Sidebar() {
                 </a>
                 <a
                     className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary text-white shadow-md shadow-primary/20"
-                    href="#"
+                    href="/purchase-order"
                 >
                     <span className="material-symbols-outlined">shopping_cart</span>
                     <span className="hidden lg:inline text-sm font-medium">
