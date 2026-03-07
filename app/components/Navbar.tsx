@@ -1,6 +1,17 @@
+"use client";
+
 import Image from "next/image";
+import { usePathname } from "next/navigation";
+import Link from "next/link";
 
 export default function Navbar() {
+    const pathname = usePathname();
+
+    const isActive = (path: string) => pathname?.startsWith(path);
+
+    const activeClass = "text-primary text-sm font-semibold border-b-2 border-primary py-1";
+    const inactiveClass = "text-slate-600 text-sm font-medium hover:text-primary transition-colors";
+
     return (
         <header className="flex items-center justify-between whitespace-nowrap border-b border-primary/10 bg-white px-6 py-3 shrink-0">
             <div className="flex items-center gap-8">
@@ -17,30 +28,27 @@ export default function Navbar() {
                     </h2>
                 </div>
                 <nav className="hidden md:flex items-center gap-6">
-                    <a
-                        className="text-slate-600 text-sm font-medium hover:text-primary transition-colors"
-                        href="#"
-                    >
-                        Dashboard
-                    </a>
-                    <a
-                        className="text-primary text-sm font-semibold border-b-2 border-primary py-1"
-                        href="#"
-                    >
-                        Orders
-                    </a>
-                    <a
-                        className="text-slate-600 text-sm font-medium hover:text-primary transition-colors"
-                        href="#"
-                    >
-                        Inventory
-                    </a>
-                    <a
-                        className="text-slate-600 text-sm font-medium hover:text-primary transition-colors"
-                        href="#"
-                    >
-                        Reports
-                    </a>
+                    <Link className={isActive("/purchase-order") ? activeClass : inactiveClass} href="#">
+                        Pembelian
+                    </Link>
+                    <Link className={inactiveClass} href="#">
+                        Penjualan
+                    </Link>
+                    <Link className={inactiveClass} href="#">
+                        Persediaan Barang
+                    </Link>
+                    <Link className={inactiveClass} href="#">
+                        Keuangan
+                    </Link>
+                    <Link className={inactiveClass} href="#">
+                        Akunting
+                    </Link>
+                    <Link className={inactiveClass} href="#">
+                        Laporan
+                    </Link>
+                    <Link className={inactiveClass} href="#">
+                        Pengaturan
+                    </Link>
                 </nav>
             </div>
             <div className="flex items-center gap-4">
