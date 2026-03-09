@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useActiveMenu } from "../context/ActiveMenuContext";
@@ -11,6 +11,7 @@ export default function Sidebar() {
     const { activeModule } = useActiveMenu();
     const [collapsed, setCollapsed] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
+    const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
 
     const moduleConfig = getModuleByKey(activeModule);
     const sidebarSections = moduleConfig?.sidebarSections ?? [];
@@ -21,6 +22,10 @@ export default function Sidebar() {
         if (savedState) {
             setCollapsed(JSON.parse(savedState));
         }
+        const savedSections = localStorage.getItem("sidebar_sections_collapsed");
+        if (savedSections) {
+            setCollapsedSections(JSON.parse(savedSections));
+        }
     }, []);
 
     const toggleSidebar = () => {
@@ -29,20 +34,20 @@ export default function Sidebar() {
         localStorage.setItem("sidebar_collapsed", JSON.stringify(newState));
     };
 
-    const linkBase =
-        "flex items-center rounded-lg transition-all duration-300";
-    const linkExpanded = "gap-3 px-3 py-2.5";
-    const linkCollapsed = "justify-center px-0 py-2.5";
-
-    const linkClass = (extra: string = "") =>
-        `${linkBase} ${collapsed ? linkCollapsed : linkExpanded} ${extra}`;
+    const toggleSection = useCallback((sectionKey: string) => {
+        setCollapsedSections((prev) => {
+            const next = { ...prev, [sectionKey]: !prev[sectionKey] };
+            localStorage.setItem("sidebar_sections_collapsed", JSON.stringify(next));
+            return next;
+        });
+    }, []);
 
     const isLinkActive = (href: string) =>
         href !== "#" && pathname?.startsWith(href);
 
-    const sidebarWidthDesktop = isMounted && collapsed ? "md:w-[68px]" : "md:w-60";
+    const sidebarWidthDesktop = isMounted && collapsed ? "md:w-[68px]" : "md:w-[270px]";
     const sidebarStateMobile = isMounted && !collapsed ? "translate-x-0" : "-translate-x-full md:translate-x-0";
-    const containerPadding = isMounted && collapsed ? "px-2 py-4" : "p-4";
+    const containerPadding = isMounted && collapsed ? "px-2 py-4" : "px-3 py-4";
     const hideLabel = isMounted && collapsed;
 
     return (
@@ -56,16 +61,17 @@ export default function Sidebar() {
             )}
 
             <aside
-                className={`fixed md:relative top-0 left-0 h-full md:h-auto z-[50] border-r border-primary/10 bg-white flex flex-col shrink-0 transition-all duration-300 ease-in-out w-60 ${sidebarWidthDesktop} ${sidebarStateMobile}`}
+                className={`fixed md:relative top-0 left-0 h-full md:h-auto z-[50] border-r border-slate-200/80 bg-white flex flex-col shrink-0 transition-all duration-300 ease-in-out w-[270px] ${sidebarWidthDesktop} ${sidebarStateMobile}`}
+                style={{ boxShadow: "1px 0 8px rgba(0,0,0,0.03)" }}
             >
                 {/* Desktop Toggle Button */}
                 <button
                     onClick={toggleSidebar}
-                    className="hidden md:flex absolute -right-3 top-4 z-10 size-6 bg-white border border-slate-200 rounded-full items-center justify-center shadow-sm hover:bg-slate-50 hover:border-primary/30 transition-all"
+                    className="hidden md:flex absolute -right-3 top-4 z-10 size-6 bg-white border border-slate-200 rounded-full items-center justify-center shadow-sm hover:bg-primary/5 hover:border-primary/30 hover:shadow-md transition-all duration-200"
                     title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
                 >
                     <span
-                        className={`material-symbols-outlined !text-xs text-slate-500 transition-transform duration-300 ${collapsed ? "rotate-180" : ""
+                        className={`material-symbols-outlined !text-xs text-slate-400 hover:text-primary transition-all duration-300 ${collapsed ? "rotate-180" : ""
                             }`}
                     >
                         chevron_left
@@ -85,53 +91,110 @@ export default function Sidebar() {
 
                 {/* Module Title */}
                 {!hideLabel && moduleConfig && (
-                    <div className="px-4 pt-4 pb-2 border-b border-slate-100">
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-primary">
-                            {moduleConfig.label}
-                        </h3>
+                    <div className="px-4 pt-4 pb-3 border-b border-slate-100">
+                        <div className="flex items-center gap-2.5">
+                            <div className="flex items-center justify-center size-8 rounded-lg bg-primary/10">
+                                <span className="material-symbols-outlined text-primary !text-[18px]">
+                                    {moduleConfig.icon}
+                                </span>
+                            </div>
+                            <h3 className="text-xs font-bold uppercase tracking-wider text-primary">
+                                {moduleConfig.label}
+                            </h3>
+                        </div>
+                    </div>
+                )}
+
+                {/* Collapsed Module Icon */}
+                {hideLabel && moduleConfig && (
+                    <div className="flex justify-center pt-4 pb-2 border-b border-slate-100">
+                        <div className="flex items-center justify-center size-9 rounded-lg bg-primary/10" title={moduleConfig.label}>
+                            <span className="material-symbols-outlined text-primary !text-[20px]">
+                                {moduleConfig.icon}
+                            </span>
+                        </div>
                     </div>
                 )}
 
                 <div
-                    className={`space-y-1 flex-1 overflow-y-auto no-scrollbar transition-all duration-300 ${containerPadding}`}
+                    className={`space-y-0.5 flex-1 overflow-y-auto no-scrollbar transition-all duration-300 ${containerPadding}`}
                 >
                     {sidebarSections.length > 0 ? (
-                        sidebarSections.map((section, sIdx) => (
-                            <div key={sIdx} className={sIdx > 0 ? "pt-3" : ""}>
-                                {/* Section Title */}
-                                {!hideLabel && (
-                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3 pb-2">
-                                        {section.title}
-                                    </p>
-                                )}
-                                {hideLabel && sIdx > 0 && (
-                                    <div className="h-px bg-slate-100 my-2"></div>
-                                )}
-                                <div className="space-y-0.5">
-                                    {section.items.map((item, iIdx) => (
-                                        <Link
-                                            key={iIdx}
-                                            className={linkClass(
-                                                isLinkActive(item.href)
-                                                    ? "bg-primary text-white shadow-md shadow-primary/20"
-                                                    : "text-slate-600 hover:bg-slate-100"
-                                            )}
-                                            href={item.href}
-                                            title={item.label}
+                        sidebarSections.map((section, sIdx) => {
+                            const sectionKey = `${activeModule}_${sIdx}`;
+                            const isSectionCollapsed = collapsedSections[sectionKey] ?? false;
+
+                            return (
+                                <div key={sIdx} className={sIdx > 0 ? "pt-2" : ""}>
+                                    {/* Section Title - clickable to collapse */}
+                                    {!hideLabel && (
+                                        <button
+                                            onClick={() => toggleSection(sectionKey)}
+                                            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-md hover:bg-slate-50 group transition-colors duration-150"
                                         >
-                                            <span className="material-symbols-outlined shrink-0 text-[22px]">
-                                                {item.icon}
+                                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 group-hover:text-slate-500 transition-colors">
+                                                {section.title}
+                                            </p>
+                                            <span
+                                                className={`material-symbols-outlined !text-[14px] text-slate-300 group-hover:text-slate-400 transition-all duration-200 ${isSectionCollapsed ? "-rotate-90" : ""
+                                                    }`}
+                                            >
+                                                expand_more
                                             </span>
-                                            {!hideLabel && (
-                                                <span className="text-sm font-medium whitespace-nowrap">
-                                                    {item.label}
-                                                </span>
-                                            )}
-                                        </Link>
-                                    ))}
+                                        </button>
+                                    )}
+                                    {hideLabel && sIdx > 0 && (
+                                        <div className="h-px bg-slate-100 my-2"></div>
+                                    )}
+
+                                    {/* Section Items with collapse animation */}
+                                    <div
+                                        className={`space-y-0.5 overflow-hidden transition-all duration-200 ease-in-out ${!hideLabel && isSectionCollapsed
+                                            ? "max-h-0 opacity-0"
+                                            : "max-h-[2000px] opacity-100"
+                                            }`}
+                                    >
+                                        {section.items.map((item, iIdx) => {
+                                            const active = isLinkActive(item.href);
+                                            return (
+                                                <Link
+                                                    key={iIdx}
+                                                    className={`flex items-center rounded-lg transition-all duration-200 group relative ${collapsed
+                                                        ? "justify-center px-0 py-2.5"
+                                                        : "gap-3 px-3 py-2"
+                                                        } ${active
+                                                            ? "bg-primary text-white shadow-md shadow-primary/20"
+                                                            : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                                                        }`}
+                                                    href={item.href}
+                                                    title={item.label}
+                                                >
+                                                    <span
+                                                        className={`material-symbols-outlined shrink-0 transition-transform duration-200 group-hover:scale-110 ${collapsed ? "text-[22px]" : "text-[20px]"
+                                                            }`}
+                                                    >
+                                                        {item.icon}
+                                                    </span>
+                                                    {!hideLabel && (
+                                                        <span className="text-[13px] font-medium leading-tight truncate">
+                                                            {item.label}
+                                                        </span>
+                                                    )}
+
+                                                    {/* Tooltip for collapsed mode */}
+                                                    {hideLabel && (
+                                                        <div className="absolute left-full ml-2 px-2.5 py-1.5 bg-slate-800 text-white text-xs font-medium rounded-md whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 pointer-events-none z-[60] shadow-lg">
+                                                            {item.label}
+                                                            <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-slate-800"></div>
+                                                        </div>
+                                                    )}
+                                                </Link>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
-                            </div>
-                        ))
+                            );
+                        })
                     ) : (
                         <div className="flex flex-col items-center justify-center h-32 text-slate-400">
                             <span className="material-symbols-outlined text-3xl mb-2">construction</span>
@@ -146,13 +209,13 @@ export default function Sidebar() {
                     className={`border-t border-slate-100 transition-all duration-300 ${containerPadding}`}
                 >
                     <button
-                        className={`w-full bg-slate-100 text-slate-700 py-2 rounded-lg flex items-center ${collapsed ? "justify-center px-0" : "justify-center gap-2"
-                            } hover:bg-slate-200 transition-all`}
+                        className={`w-full bg-slate-50 text-slate-600 py-2 rounded-lg flex items-center ${collapsed ? "justify-center px-0" : "justify-center gap-2"
+                            } hover:bg-red-50 hover:text-red-600 transition-all duration-200 group`}
                         title="Exit"
                     >
-                        <span className="material-symbols-outlined text-lg shrink-0">logout</span>
+                        <span className="material-symbols-outlined text-lg shrink-0 group-hover:scale-110 transition-transform duration-200">logout</span>
                         {!hideLabel && (
-                            <span className="text-sm font-semibold whitespace-nowrap">
+                            <span className="text-sm font-semibold">
                                 Exit
                             </span>
                         )}

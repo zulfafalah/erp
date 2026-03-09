@@ -203,14 +203,118 @@ export const modules: ModuleConfig[] = [
         label: "Laporan",
         icon: "bar_chart",
         href: "#",
-        sidebarSections: [],
+        sidebarSections: [
+            {
+                title: "Pembelian",
+                items: [
+                    { label: "Detil Nota Pembelian (PIV)", icon: "receipt_long", href: "#" },
+                    { label: "Rekap Nota Pembelian (PIV)", icon: "summarize", href: "#" },
+                    { label: "Detil Retur Pembelian", icon: "assignment_return", href: "#" },
+                    { label: "Rekap Retur Pembelian", icon: "undo", href: "#" },
+                    { label: "Rekap Pesanan Pembelian (POB)", icon: "shopping_cart", href: "#" },
+                    { label: "Rekap Penerimaan Barang (BPB)", icon: "inventory_2", href: "#" },
+                    { label: "Detil Penerimaan Barang (BPB)", icon: "fact_check", href: "#" },
+                ],
+            },
+            {
+                title: "Penjualan",
+                items: [
+                    { label: "Detil Penjualan", icon: "receipt", href: "#" },
+                    { label: "Rekap Penjualan", icon: "bar_chart", href: "#" },
+                    { label: "Detil Retur Penjualan", icon: "assignment_return", href: "#" },
+                    { label: "Rekap Retur Penjualan", icon: "undo", href: "#" },
+                    { label: "Rekap Pesanan Penjualan", icon: "shopping_bag", href: "#" },
+                ],
+            },
+            {
+                title: "Hutang",
+                items: [
+                    { label: "Detil Hutang", icon: "money_off", href: "#" },
+                    { label: "Rekap Hutang", icon: "account_balance", href: "#" },
+                ],
+            },
+            {
+                title: "Piutang",
+                items: [
+                    { label: "Detil Piutang", icon: "request_quote", href: "#" },
+                    { label: "Rekap Piutang", icon: "account_balance_wallet", href: "#" },
+                    { label: "Umur Piutang", icon: "hourglass_top", href: "#" },
+                ],
+            },
+            {
+                title: "Persediaan",
+                items: [
+                    { label: "Kartu Stok", icon: "style", href: "#" },
+                    { label: "Rekap Stok", icon: "inventory", href: "#" },
+                    { label: "Rekap Transaksi Stok", icon: "swap_horiz", href: "#" },
+                    { label: "Mutasi Stok", icon: "compare_arrows", href: "#" },
+                    { label: "Daftar Harga Jual", icon: "sell", href: "#" },
+                ],
+            },
+            {
+                title: "Keuangan",
+                items: [
+                    { label: "Alokasi Deposit Pelanggan", icon: "savings", href: "#" },
+                    { label: "Alokasi Deposit Pemasok", icon: "paid", href: "#" },
+                ],
+            },
+            {
+                title: "Akuntansi",
+                items: [
+                    { label: "Buku Besar", icon: "menu_book", href: "#" },
+                    { label: "Jurnal Harian", icon: "today", href: "#" },
+                    { label: "Jurnal Umum", icon: "auto_stories", href: "#" },
+                    { label: "Daftar Akun", icon: "account_tree", href: "#" },
+                    { label: "Laba Rugi Perpetual", icon: "trending_up", href: "#" },
+                    { label: "Laba Rugi Harian", icon: "show_chart", href: "#" },
+                    { label: "Neraca", icon: "balance", href: "#" },
+                    { label: "Neraca Saldo Bulanan", icon: "calendar_month", href: "#" },
+                    { label: "Neraca Saldo 3 Bulan", icon: "date_range", href: "#" },
+                ],
+            },
+            {
+                title: "Utilitas",
+                items: [
+                    { label: "Katalog Barcode", icon: "qr_code_scanner", href: "#" },
+                    { label: "Log Sistem", icon: "terminal", href: "#" },
+                ],
+            },
+        ],
     },
     {
         key: "pengaturan",
         label: "Pengaturan",
         icon: "settings",
         href: "#",
-        sidebarSections: [],
+        sidebarSections: [
+            {
+                title: "Sistem",
+                items: [
+                    { label: "Pengaturan Program", icon: "tune", href: "#" },
+                ],
+            },
+            {
+                title: "Pengguna",
+                items: [
+                    { label: "Pengguna", icon: "person", href: "#" },
+                    { label: "Grup Pengguna", icon: "group", href: "#" },
+                    { label: "Hak Akses Grup", icon: "admin_panel_settings", href: "#" },
+                ],
+            },
+            {
+                title: "Data Sistem",
+                items: [
+                    { label: "Data Outlet", icon: "store", href: "#" },
+                    { label: "Daftar Form", icon: "list_alt", href: "#" },
+                ],
+            },
+            {
+                title: "Lainnya",
+                items: [
+                    { label: "Tentang E-Smart", icon: "info", href: "#" },
+                ],
+            },
+        ],
     },
 ];
 
