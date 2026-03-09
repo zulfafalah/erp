@@ -1,14 +1,22 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useActiveMenu } from "../context/ActiveMenuContext";
+import { getModuleByKey } from "../config/menuConfig";
 
 export default function Sidebar() {
+    const pathname = usePathname();
+    const { activeModule } = useActiveMenu();
     const [collapsed, setCollapsed] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
 
+    const moduleConfig = getModuleByKey(activeModule);
+    const sidebarSections = moduleConfig?.sidebarSections ?? [];
+
     useEffect(() => {
         setIsMounted(true);
-        // Cek localStorage saat komponen di-mount di client
         const savedState = localStorage.getItem("sidebar_collapsed");
         if (savedState) {
             setCollapsed(JSON.parse(savedState));
@@ -18,7 +26,6 @@ export default function Sidebar() {
     const toggleSidebar = () => {
         const newState = !collapsed;
         setCollapsed(newState);
-        // Simpan state ke localStorage
         localStorage.setItem("sidebar_collapsed", JSON.stringify(newState));
     };
 
@@ -30,8 +37,9 @@ export default function Sidebar() {
     const linkClass = (extra: string = "") =>
         `${linkBase} ${collapsed ? linkCollapsed : linkExpanded} ${extra}`;
 
-    // Hindari hydration mismatch dengan tidak merender style beda di server vs client pertama kali
-    // Asumsi default adalah w-60 kalau belum mounted (kondisi awal)
+    const isLinkActive = (href: string) =>
+        href !== "#" && pathname?.startsWith(href);
+
     const sidebarWidthDesktop = isMounted && collapsed ? "md:w-[68px]" : "md:w-60";
     const sidebarStateMobile = isMounted && !collapsed ? "translate-x-0" : "-translate-x-full md:translate-x-0";
     const containerPadding = isMounted && collapsed ? "px-2 py-4" : "p-4";
@@ -75,96 +83,65 @@ export default function Sidebar() {
                     </span>
                 </button>
 
+                {/* Module Title */}
+                {!hideLabel && moduleConfig && (
+                    <div className="px-4 pt-4 pb-2 border-b border-slate-100">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-primary">
+                            {moduleConfig.label}
+                        </h3>
+                    </div>
+                )}
+
                 <div
                     className={`space-y-1 flex-1 overflow-y-auto no-scrollbar transition-all duration-300 ${containerPadding}`}
                 >
-                    <a
-                        className={linkClass("text-slate-600 hover:bg-slate-100")}
-                        href="#"
-                        title="Pemasok"
-                    >
-                        <span className="material-symbols-outlined shrink-0 text-[22px]">
-                            local_shipping
-                        </span>
-                        {!hideLabel && (
-                            <span className="text-sm font-medium whitespace-nowrap">
-                                Pemasok
-                            </span>
-                        )}
-                    </a>
-                    <a
-                        className={linkClass("text-slate-600 hover:bg-slate-100")}
-                        href="#"
-                        title="Permintaan"
-                    >
-                        <span className="material-symbols-outlined shrink-0 text-[22px]">
-                            assignment
-                        </span>
-                        {!hideLabel && (
-                            <span className="text-sm font-medium whitespace-nowrap">
-                                Permintaan
-                            </span>
-                        )}
-                    </a>
-                    <a
-                        className={linkClass(
-                            "bg-primary text-white shadow-md shadow-primary/20"
-                        )}
-                        href="/purchase-order"
-                        title="Pesanan"
-                    >
-                        <span className="material-symbols-outlined shrink-0 text-[22px]">
-                            shopping_cart
-                        </span>
-                        {!hideLabel && (
-                            <span className="text-sm font-medium whitespace-nowrap">
-                                Pesanan
-                            </span>
-                        )}
-                    </a>
-                    <a
-                        className={linkClass("text-slate-600 hover:bg-slate-100")}
-                        href="#"
-                        title="Penerimaan"
-                    >
-                        <span className="material-symbols-outlined shrink-0 text-[22px]">
-                            inventory_2
-                        </span>
-                        {!hideLabel && (
-                            <span className="text-sm font-medium whitespace-nowrap">
-                                Penerimaan
-                            </span>
-                        )}
-                    </a>
-                    <a
-                        className={linkClass("text-slate-600 hover:bg-slate-100")}
-                        href="#"
-                        title="Faktur Pembelian"
-                    >
-                        <span className="material-symbols-outlined shrink-0 text-[22px]">
-                            receipt_long
-                        </span>
-                        {!hideLabel && (
-                            <span className="text-sm font-medium whitespace-nowrap">
-                                Faktur Pembelian
-                            </span>
-                        )}
-                    </a>
-                    <a
-                        className={linkClass("text-slate-600 hover:bg-slate-100")}
-                        href="#"
-                        title="Retur Pembelian"
-                    >
-                        <span className="material-symbols-outlined shrink-0 text-[22px]">
-                            assignment_return
-                        </span>
-                        {!hideLabel && (
-                            <span className="text-sm font-medium whitespace-nowrap">
-                                Retur Pembelian
-                            </span>
-                        )}
-                    </a>
+                    {sidebarSections.length > 0 ? (
+                        sidebarSections.map((section, sIdx) => (
+                            <div key={sIdx} className={sIdx > 0 ? "pt-3" : ""}>
+                                {/* Section Title */}
+                                {!hideLabel && (
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3 pb-2">
+                                        {section.title}
+                                    </p>
+                                )}
+                                {hideLabel && sIdx > 0 && (
+                                    <div className="h-px bg-slate-100 my-2"></div>
+                                )}
+                                <div className="space-y-0.5">
+                                    {section.items.map((item, iIdx) => (
+                                        <Link
+                                            key={iIdx}
+                                            className={linkClass(
+                                                isLinkActive(item.href)
+                                                    ? "bg-primary text-white shadow-md shadow-primary/20"
+                                                    : "text-slate-600 hover:bg-slate-100"
+                                            )}
+                                            href={item.href}
+                                            title={item.label}
+                                        >
+                                            <span className="material-symbols-outlined shrink-0 text-[22px]">
+                                                {item.icon}
+                                            </span>
+                                            {!hideLabel && (
+                                                <span className="text-sm font-medium whitespace-nowrap">
+                                                    {item.label}
+                                                </span>
+                                            )}
+                                        </Link>
+                                    ))}
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="flex flex-col items-center justify-center h-32 text-slate-400">
+                            <span className="material-symbols-outlined text-3xl mb-2">construction</span>
+                            {!hideLabel && (
+                                <p className="text-xs font-medium text-center">Menu belum tersedia</p>
+                            )}
+                        </div>
+                    )}
                 </div>
+
                 <div
                     className={`border-t border-slate-100 transition-all duration-300 ${containerPadding}`}
                 >
