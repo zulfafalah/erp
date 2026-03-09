@@ -124,14 +124,79 @@ export const modules: ModuleConfig[] = [
         label: "Keuangan",
         icon: "account_balance_wallet",
         href: "#",
-        sidebarSections: [],
+        sidebarSections: [
+            {
+                title: "Master",
+                items: [
+                    { label: "Mata Uang", icon: "currency_exchange", href: "#" },
+                ],
+            },
+            {
+                title: "Hutang (AP)",
+                items: [
+                    { label: "Saldo Awal Hutang", icon: "account_balance", href: "#" },
+                    { label: "Debit Memo", icon: "description", href: "#" },
+                    { label: "Pembayaran Pemasok", icon: "payments", href: "#" },
+                    { label: "Alokasi Pembayaran Hutang", icon: "assignment", href: "#" },
+                ],
+            },
+            {
+                title: "Piutang (AR)",
+                items: [
+                    { label: "Saldo Awal Piutang", icon: "account_balance_wallet", href: "#" },
+                    { label: "Credit Memo", icon: "note_add", href: "#" },
+                    { label: "Penerimaan Pembayaran", icon: "point_of_sale", href: "#" },
+                    { label: "Alokasi Penerimaan", icon: "assignment_turned_in", href: "#" },
+                ],
+            },
+            {
+                title: "Komisi",
+                items: [
+                    { label: "Pembayaran Komisi", icon: "paid", href: "#" },
+                ],
+            },
+        ],
     },
     {
         key: "akunting",
         label: "Akunting",
         icon: "receipt_long",
         href: "#",
-        sidebarSections: [],
+        sidebarSections: [
+            {
+                title: "Master",
+                items: [
+                    { label: "Mata Uang", icon: "currency_exchange", href: "#" },
+                    { label: "Chart of Accounts", icon: "account_tree", href: "#" },
+                ],
+            },
+            {
+                title: "Saldo Awal",
+                items: [
+                    { label: "Saldo Awal Bulanan", icon: "calendar_month", href: "#" },
+                    { label: "Saldo Awal Tahunan", icon: "event_note", href: "#" },
+                ],
+            },
+            {
+                title: "Jurnal",
+                items: [
+                    { label: "Jurnal Umum", icon: "menu_book", href: "#" },
+                    { label: "Jurnal Transaksi", icon: "receipt", href: "#" },
+                ],
+            },
+            {
+                title: "Kas & Permintaan Dana",
+                items: [
+                    { label: "Permintaan Dana", icon: "request_quote", href: "#" },
+                ],
+            },
+            {
+                title: "Posting",
+                items: [
+                    { label: "Posting Bulanan", icon: "publish", href: "#" },
+                ],
+            },
+        ],
     },
     {
         key: "laporan",
