@@ -94,7 +94,30 @@ export const modules: ModuleConfig[] = [
         label: "Persediaan Barang",
         icon: "inventory_2",
         href: "#",
-        sidebarSections: [],
+        sidebarSections: [
+            {
+                title: "Master",
+                items: [
+                    { label: "Grup Produk", icon: "category", href: "#" },
+                    { label: "Produk", icon: "inventory", href: "#" },
+                    { label: "Gudang", icon: "warehouse", href: "#" },
+                ],
+            },
+            {
+                title: "Persediaan",
+                items: [
+                    { label: "Alasan Penyesuaian", icon: "edit_note", href: "#" },
+                    { label: "Penyesuaian Stok", icon: "tune", href: "#" },
+                ],
+            },
+            {
+                title: "Perpindahan Gudang",
+                items: [
+                    { label: "Transfer Gudang (Kirim)", icon: "local_shipping", href: "#" },
+                    { label: "Transfer Gudang (Terima)", icon: "move_to_inbox", href: "#" },
+                ],
+            },
+        ],
     },
     {
         key: "keuangan",
