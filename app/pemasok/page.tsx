@@ -1,78 +1,152 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import StatusBar from "../components/StatusBar";
+import MultiFilter, { FilterField, FilterRule } from "../components/MultiFilter";
 
-interface PurchaseOrder {
+interface Pemasok {
     id: string;
-    noPO: string;
-    tanggal: string;
-    pemasok: string;
-    tipe: string;
-    total: string;
-    status: "Approved" | "Pending" | "Draft";
+    kode: string;
+    nama: string;
+    kontak: string;
+    alamat: string;
+    telepon: string;
+    isImportir: boolean;
+    wilayah: string;
+    sisaHutang: string;
 }
 
-const purchaseOrders: PurchaseOrder[] = [
+const pemasokData: Pemasok[] = [
     {
-        id: "POB2603-0001",
-        noPO: "POB 2603-0001",
-        tanggal: "07/03/2026",
-        pemasok: "CARREFOUR DENPASAR",
-        tipe: "Lokal",
-        total: "IDR 13.875.000,00",
-        status: "Approved",
+        id: "PMSK-001",
+        kode: "PMSK-001",
+        nama: "CARREFOUR DENPASAR",
+        kontak: "Budi Santoso",
+        alamat: "Jl. Sunset Road No. 88, Kuta, Bali",
+        telepon: "0361-123456",
+        isImportir: false,
+        wilayah: "Bali",
+        sisaHutang: "IDR 13.875.000,00",
     },
     {
-        id: "POB2603-0002",
-        noPO: "POB 2603-0002",
-        tanggal: "07/03/2026",
-        pemasok: "PT ABC INDONESIA",
-        tipe: "Lokal",
-        total: "IDR 5.200.000,00",
-        status: "Pending",
+        id: "PMSK-002",
+        kode: "PMSK-002",
+        nama: "PT ABC INDONESIA",
+        kontak: "Siti Rahmawati",
+        alamat: "CBD Mega Kuningan, Jakarta Selatan",
+        telepon: "021-9876543",
+        isImportir: true,
+        wilayah: "Jakarta",
+        sisaHutang: "IDR 5.200.000,00",
     },
     {
-        id: "POB2603-0003",
-        noPO: "POB 2603-0003",
-        tanggal: "06/03/2026",
-        pemasok: "SINAR JAYA ABADI",
-        tipe: "Lokal",
-        total: "IDR 42.150.000,00",
-        status: "Draft",
+        id: "PMSK-003",
+        kode: "PMSK-003",
+        nama: "SINAR JAYA ABADI",
+        kontak: "Rudi Hartono",
+        alamat: "Kawasan Industri Delta Silicon, Cikarang",
+        telepon: "021-8901234",
+        isImportir: false,
+        wilayah: "Jawa Barat",
+        sisaHutang: "IDR 42.150.000,00",
     },
     {
-        id: "POB2603-0004",
-        noPO: "POB 2603-0004",
-        tanggal: "05/03/2026",
-        pemasok: "GLOBAL LOGISTICS",
-        tipe: "Luar Negeri",
-        total: "IDR 215.000.000,00",
-        status: "Approved",
+        id: "PMSK-004",
+        kode: "PMSK-004",
+        nama: "GLOBAL LOGISTICS",
+        kontak: "Michael Tan",
+        alamat: "Pelabuhan Tanjung Priok, Jakarta Utara",
+        telepon: "021-4321098",
+        isImportir: true,
+        wilayah: "Jakarta",
+        sisaHutang: "IDR 215.000.000,00",
     },
     {
-        id: "POB2603-0005",
-        noPO: "POB 2603-0005",
-        tanggal: "05/03/2026",
-        pemasok: "MEDIKA UTAMA",
-        tipe: "Lokal",
-        total: "IDR 8.900.000,00",
-        status: "Pending",
+        id: "PMSK-005",
+        kode: "PMSK-005",
+        nama: "MEDIKA UTAMA",
+        kontak: "dr. Andi Wijaya",
+        alamat: "Jl. Kesehatan No. 1, Bandung",
+        telepon: "022-7654321",
+        isImportir: false,
+        wilayah: "Jawa Barat",
+        sisaHutang: "IDR 8.900.000,00",
     },
 ];
 
-const statusStyles: Record<PurchaseOrder["status"], string> = {
-    Approved:
-        "bg-green-100 text-green-800",
-    Pending:
-        "bg-yellow-100 text-yellow-800",
-    Draft:
-        "bg-slate-100 text-slate-800",
-};
+export default function PemasokListPage() {
+    const [filteredData, setFilteredData] = useState<Pemasok[]>(pemasokData);
 
-export default function PurchaseOrderListPage() {
+    const filterFields: FilterField[] = [
+        { key: "kode", label: "Kode Pemasok", type: "text" },
+        { key: "nama", label: "Nama Pemasok", type: "text" },
+        { key: "kontak", label: "Kontak / PIC", type: "text" },
+        { key: "telepon", label: "Telepon", type: "text" },
+        {
+            key: "wilayah",
+            label: "Wilayah",
+            type: "select",
+            options: [
+                { label: "Bali", value: "Bali" },
+                { label: "Jakarta", value: "Jakarta" },
+                { label: "Jawa Barat", value: "Jawa Barat" },
+            ]
+        },
+        {
+            key: "isImportir",
+            label: "Jenis Pemasok",
+            type: "select",
+            options: [
+                { label: "Importir", value: "true" },
+                { label: "Lokal", value: "false" },
+            ]
+        }
+    ];
+
+    const handleApplyFilter = (rules: FilterRule[]) => {
+        if (rules.length === 0) {
+            setFilteredData(pemasokData);
+            return;
+        }
+
+        const result = pemasokData.filter(pemasok => {
+            // Semua rule harus cocok secara bersamaan (AND condition)
+            return rules.every(rule => {
+                let pValue = pemasok[rule.field as keyof Pemasok];
+
+                // Konversi value boolean ke string untuk kemudahan filter select
+                if (rule.field === 'isImportir') {
+                    pValue = (pValue === true) ? "true" : "false";
+                }
+
+                if (pValue === undefined || pValue === null) return false;
+
+                const stringValue = String(pValue).toLowerCase();
+                const filterValue = rule.value.toLowerCase();
+
+                switch (rule.operator) {
+                    case 'contains':
+                        return stringValue.includes(filterValue);
+                    case 'equals':
+                        return stringValue === filterValue;
+                    case 'not_equals':
+                        return stringValue !== filterValue;
+                    case 'starts_with':
+                        return stringValue.startsWith(filterValue);
+                    case 'ends_with':
+                        return stringValue.endsWith(filterValue);
+                    default:
+                        return true;
+                }
+            });
+        });
+
+        setFilteredData(result);
+    };
+
     return (
         <div className="bg-background-light text-slate-900 font-sans min-h-screen flex flex-col overflow-hidden pb-8">
             {/* Top Navigation Bar */}
@@ -90,102 +164,32 @@ export default function PurchaseOrderListPage() {
                         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                             <div>
                                 <h2 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">
-                                    Daftar Pemesanan Pembelian
+                                    Daftar Pemasok
                                 </h2>
                                 <p className="text-slate-500 mt-1">
-                                    Kelola dan pantau semua pesanan pembelian operasional Anda.
+                                    Kelola master data pemasok/supplier Anda.
                                 </p>
                             </div>
                             <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 md:gap-3 w-full md:w-auto mt-2 md:mt-0">
-                                <button className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-3 md:px-4 py-2 bg-white border border-primary/10 rounded-lg text-sm font-semibold hover:bg-primary/5 transition-colors">
-                                    <span className="material-symbols-outlined text-lg">
-                                        filter_list
-                                    </span>
-                                    Filter
-                                </button>
+                                <MultiFilter
+                                    fields={filterFields}
+                                    onApplyFilter={handleApplyFilter}
+                                />
                                 {/* <button className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-3 md:px-4 py-2 bg-white border border-primary/10 rounded-lg text-sm font-semibold hover:bg-primary/5 transition-colors">
                                     <span className="material-symbols-outlined text-lg">
                                         description
                                     </span>
-                                    Export PDF
+                                    Export Excel
                                 </button> */}
                                 <Link
-                                    href="/purchase-order/new"
+                                    href="/pemasok/new"
                                     className="w-full sm:w-auto justify-center flex items-center gap-2 px-3 md:px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold hover:bg-primary/90 transition-colors shadow-sm shadow-primary/20"
                                 >
                                     <span className="material-symbols-outlined text-lg">
                                         add_circle
                                     </span>
-                                    Tambah Pesanan Baru
+                                    Tambah Pemasok Baru
                                 </Link>
-                            </div>
-                        </div>
-
-                        {/* Stats Cards */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-                            {/* Total Draft */}
-                            <div className="bg-white p-6 rounded-xl border border-primary/10 shadow-sm flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-slate-500">
-                                        Total Draft
-                                    </p>
-                                    <h3 className="text-2xl font-bold mt-1">12</h3>
-                                    <p className="text-xs text-green-600 font-semibold mt-1 flex items-center gap-1">
-                                        <span className="material-symbols-outlined text-sm">
-                                            trending_up
-                                        </span>{" "}
-                                        +5% vs bulan lalu
-                                    </p>
-                                </div>
-                                <div className="bg-slate-100 p-3 rounded-lg">
-                                    <span className="material-symbols-outlined text-primary">
-                                        edit_note
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* Total Approved */}
-                            <div className="bg-white p-6 rounded-xl border border-primary/10 shadow-sm flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-slate-500">
-                                        Total Approved
-                                    </p>
-                                    <h3 className="text-2xl font-bold mt-1">45</h3>
-                                    <p className="text-xs text-red-500 font-semibold mt-1 flex items-center gap-1">
-                                        <span className="material-symbols-outlined text-sm">
-                                            trending_down
-                                        </span>{" "}
-                                        -2% vs bulan lalu
-                                    </p>
-                                </div>
-                                <div className="bg-slate-100 p-3 rounded-lg">
-                                    <span className="material-symbols-outlined text-primary">
-                                        verified
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* Total Nilai PO */}
-                            <div className="bg-white p-6 rounded-xl border border-primary/10 shadow-sm flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-slate-500">
-                                        Total Nilai PO Bulan Ini
-                                    </p>
-                                    <h3 className="text-2xl font-bold mt-1">
-                                        IDR 1.250.000.000
-                                    </h3>
-                                    <p className="text-xs text-green-600 font-semibold mt-1 flex items-center gap-1">
-                                        <span className="material-symbols-outlined text-sm">
-                                            trending_up
-                                        </span>{" "}
-                                        +15% target
-                                    </p>
-                                </div>
-                                <div className="bg-slate-100 p-3 rounded-lg">
-                                    <span className="material-symbols-outlined text-primary">
-                                        payments
-                                    </span>
-                                </div>
                             </div>
                         </div>
 
@@ -193,40 +197,40 @@ export default function PurchaseOrderListPage() {
                         <div className="bg-white rounded-xl border border-primary/10 shadow-sm overflow-hidden">
                             {/* Mobile Card View */}
                             <div className="block md:hidden divide-y divide-primary/5">
-                                {purchaseOrders.map((po) => (
-                                    <div key={po.id} className="p-4 space-y-3">
+                                {filteredData.map((p) => (
+                                    <div key={p.id} className="p-4 space-y-3">
                                         <div className="flex justify-between items-start">
                                             <div>
                                                 <Link
-                                                    href={`/purchase-order/${po.id}`}
+                                                    href={`/pemasok/${p.id}`}
                                                     className="font-semibold text-primary text-sm hover:underline"
                                                 >
-                                                    {po.noPO}
+                                                    {p.kode} - {p.nama}
                                                 </Link>
-                                                <p className="text-xs text-slate-500 mt-0.5">{po.tanggal}</p>
+                                                <p className="text-xs text-slate-500 mt-0.5">{p.wilayah}</p>
                                             </div>
-                                            <span
-                                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusStyles[po.status]}`}
-                                            >
-                                                {po.status}
-                                            </span>
+                                            {p.isImportir && (
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 uppercase">
+                                                    Importir
+                                                </span>
+                                            )}
                                         </div>
                                         <div>
-                                            <p className="text-sm font-medium text-slate-900">{po.pemasok}</p>
-                                            <p className="text-xs text-slate-500">{po.tipe}</p>
+                                            <p className="text-sm font-medium text-slate-900">{p.kontak} ({p.telepon})</p>
+                                            <p className="text-xs text-slate-500 truncate">{p.alamat}</p>
                                         </div>
                                         <div className="flex justify-between items-center pt-2 border-t border-slate-100">
-                                            <span className="text-sm font-bold text-slate-900">{po.total}</span>
+                                            <div>
+                                                <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Sisa Hutang</p>
+                                                <span className="text-sm font-bold text-red-600">{p.sisaHutang}</span>
+                                            </div>
                                             <div className="flex items-center gap-1">
                                                 <Link
-                                                    href={`/purchase-order/${po.id}`}
+                                                    href={`/pemasok/${p.id}`}
                                                     className="p-1.5 text-slate-400 hover:text-primary transition-colors"
                                                 >
                                                     <span className="material-symbols-outlined text-base">edit_square</span>
                                                 </Link>
-                                                <button className="p-1.5 text-slate-400 hover:text-primary transition-colors">
-                                                    <span className="material-symbols-outlined text-base">print</span>
-                                                </button>
                                                 <button className="p-1.5 text-slate-400 hover:text-red-500 transition-colors">
                                                     <span className="material-symbols-outlined text-base">delete</span>
                                                 </button>
@@ -242,22 +246,19 @@ export default function PurchaseOrderListPage() {
                                     <thead>
                                         <tr className="bg-slate-50 border-b border-primary/10">
                                             <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
-                                                No. PO
+                                                Kode & Nama
                                             </th>
                                             <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
-                                                Tanggal
+                                                Kontak & Telp
                                             </th>
                                             <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
-                                                Pemasok
+                                                Wilayah
                                             </th>
                                             <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
-                                                Tipe
+                                                Importir
                                             </th>
                                             <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
-                                                Total
-                                            </th>
-                                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
-                                                Status
+                                                Sisa Hutang
                                             </th>
                                             <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 text-right">
                                                 Aksi
@@ -265,38 +266,45 @@ export default function PurchaseOrderListPage() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-primary/5">
-                                        {purchaseOrders.map((po) => (
+                                        {filteredData.map((p) => (
                                             <tr
-                                                key={po.id}
+                                                key={p.id}
                                                 className="hover:bg-primary/5 transition-colors cursor-pointer"
                                             >
                                                 <td className="px-6 py-4">
                                                     <Link
-                                                        href={`/purchase-order/${po.id}`}
-                                                        className="font-semibold text-primary text-sm tracking-tight hover:underline"
+                                                        href={`/pemasok/${p.id}`}
+                                                        className="font-semibold text-primary text-sm tracking-tight hover:underline flex flex-col"
                                                     >
-                                                        {po.noPO}
+                                                        <span>{p.kode}</span>
+                                                        <span className="text-slate-700">{p.nama}</span>
                                                     </Link>
                                                 </td>
-                                                <td className="px-6 py-4 text-sm">{po.tanggal}</td>
-                                                <td className="px-6 py-4 text-sm font-medium">
-                                                    {po.pemasok}
+                                                <td className="px-6 py-4 text-sm">
+                                                    <div className="font-medium text-slate-900">{p.kontak}</div>
+                                                    <div className="text-slate-500 text-xs">{p.telepon}</div>
                                                 </td>
-                                                <td className="px-6 py-4 text-sm">{po.tipe}</td>
-                                                <td className="px-6 py-4 text-sm font-bold">
-                                                    {po.total}
+                                                <td className="px-6 py-4 text-sm text-slate-600">
+                                                    {p.wilayah}
                                                 </td>
-                                                <td className="px-6 py-4">
-                                                    <span
-                                                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusStyles[po.status]}`}
-                                                    >
-                                                        {po.status}
-                                                    </span>
+                                                <td className="px-6 py-4 text-sm">
+                                                    {p.isImportir ? (
+                                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 uppercase">
+                                                            Ya
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 uppercase">
+                                                            Tidak
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-4 text-sm font-bold text-red-600">
+                                                    {p.sisaHutang}
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
                                                     <div className="flex items-center justify-end gap-2">
                                                         <Link
-                                                            href={`/purchase-order/${po.id}`}
+                                                            href={`/pemasok/${p.id}`}
                                                             className="p-1.5 text-slate-400 hover:text-primary transition-colors"
                                                             title="View/Edit"
                                                         >
@@ -304,14 +312,6 @@ export default function PurchaseOrderListPage() {
                                                                 edit_square
                                                             </span>
                                                         </Link>
-                                                        <button
-                                                            className="p-1.5 text-slate-400 hover:text-primary transition-colors"
-                                                            title="Print"
-                                                        >
-                                                            <span className="material-symbols-outlined text-lg">
-                                                                print
-                                                            </span>
-                                                        </button>
                                                         <button
                                                             className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"
                                                             title="Delete"
@@ -331,7 +331,7 @@ export default function PurchaseOrderListPage() {
                             {/* Pagination */}
                             <div className="px-4 md:px-6 py-4 bg-slate-50 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0">
                                 <p className="text-sm text-slate-500 text-center md:text-left">
-                                    Menampilkan 1 sampai 5 dari 57 data
+                                    Menampilkan 1 sampai 5 dari 158 data
                                 </p>
                                 <div className="flex flex-wrap justify-center items-center gap-1">
                                     <button
@@ -353,7 +353,7 @@ export default function PurchaseOrderListPage() {
                                     </button>
                                     <span className="px-2 text-slate-400">...</span>
                                     <button className="px-3 py-1 hover:bg-white text-sm font-medium rounded transition-colors">
-                                        12
+                                        32
                                     </button>
                                     <button className="p-2 border border-primary/10 rounded hover:bg-white">
                                         <span className="material-symbols-outlined text-lg">

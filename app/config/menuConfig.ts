@@ -27,7 +27,7 @@ export const modules: ModuleConfig[] = [
             {
                 title: "Master",
                 items: [
-                    { label: "Pemasok", icon: "local_shipping", href: "#" },
+                    { label: "Pemasok", icon: "local_shipping", href: "/pemasok" },
                 ],
             },
             {
