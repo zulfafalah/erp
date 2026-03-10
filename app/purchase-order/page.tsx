@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import StatusBar from "../components/StatusBar";
+import MultiFilter, { FilterField, FilterRule } from "../components/MultiFilter";
 
 interface PurchaseOrder {
     id: string;
@@ -72,7 +74,61 @@ const statusStyles: Record<PurchaseOrder["status"], string> = {
         "bg-slate-100 text-slate-800",
 };
 
+const FILTER_FIELDS: FilterField[] = [
+    { key: "noPO", label: "No. PO", type: "text" },
+    { key: "pemasok", label: "Pemasok", type: "text" },
+    {
+        key: "tipe", label: "Tipe", type: "select", options: [
+            { label: "Lokal", value: "Lokal" },
+            { label: "Luar Negeri", value: "Luar Negeri" },
+        ]
+    },
+    {
+        key: "status", label: "Status", type: "select", options: [
+            { label: "Approved", value: "Approved" },
+            { label: "Pending", value: "Pending" },
+            { label: "Draft", value: "Draft" },
+        ]
+    },
+];
+
 export default function PurchaseOrderListPage() {
+    const [filteredOrders, setFilteredOrders] = useState<PurchaseOrder[]>(purchaseOrders);
+
+    const handleApplyFilter = (rules: FilterRule[]) => {
+        if (rules.length === 0) {
+            setFilteredOrders(purchaseOrders);
+            return;
+        }
+
+        const result = purchaseOrders.filter((po) => {
+            return rules.every((rule) => {
+                const { field, operator, value } = rule;
+                const poValue = po[field as keyof PurchaseOrder];
+                if (poValue === undefined) return true;
+
+                const poStr = String(poValue).toLowerCase();
+                const valStr = value.toLowerCase();
+
+                switch (operator) {
+                    case "contains":
+                        return poStr.includes(valStr);
+                    case "equals":
+                        return poStr === valStr;
+                    case "not_equals":
+                        return poStr !== valStr;
+                    case "starts_with":
+                        return poStr.startsWith(valStr);
+                    case "ends_with":
+                        return poStr.endsWith(valStr);
+                    default:
+                        return true;
+                }
+            });
+        });
+        setFilteredOrders(result);
+    };
+
     return (
         <div className="bg-background-light text-slate-900 font-sans min-h-screen flex flex-col overflow-hidden pb-8">
             {/* Top Navigation Bar */}
@@ -97,12 +153,7 @@ export default function PurchaseOrderListPage() {
                                 </p>
                             </div>
                             <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 md:gap-3 w-full md:w-auto mt-2 md:mt-0">
-                                <button className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-3 md:px-4 py-2 bg-white border border-primary/10 rounded-lg text-sm font-semibold hover:bg-primary/5 transition-colors">
-                                    <span className="material-symbols-outlined text-lg">
-                                        filter_list
-                                    </span>
-                                    Filter
-                                </button>
+                                <MultiFilter fields={FILTER_FIELDS} onApplyFilter={handleApplyFilter} />
                                 {/* <button className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-3 md:px-4 py-2 bg-white border border-primary/10 rounded-lg text-sm font-semibold hover:bg-primary/5 transition-colors">
                                     <span className="material-symbols-outlined text-lg">
                                         description
@@ -121,79 +172,11 @@ export default function PurchaseOrderListPage() {
                             </div>
                         </div>
 
-                        {/* Stats Cards */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-                            {/* Total Draft */}
-                            <div className="bg-white p-6 rounded-xl border border-primary/10 shadow-sm flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-slate-500">
-                                        Total Draft
-                                    </p>
-                                    <h3 className="text-2xl font-bold mt-1">12</h3>
-                                    <p className="text-xs text-green-600 font-semibold mt-1 flex items-center gap-1">
-                                        <span className="material-symbols-outlined text-sm">
-                                            trending_up
-                                        </span>{" "}
-                                        +5% vs bulan lalu
-                                    </p>
-                                </div>
-                                <div className="bg-slate-100 p-3 rounded-lg">
-                                    <span className="material-symbols-outlined text-primary">
-                                        edit_note
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* Total Approved */}
-                            <div className="bg-white p-6 rounded-xl border border-primary/10 shadow-sm flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-slate-500">
-                                        Total Approved
-                                    </p>
-                                    <h3 className="text-2xl font-bold mt-1">45</h3>
-                                    <p className="text-xs text-red-500 font-semibold mt-1 flex items-center gap-1">
-                                        <span className="material-symbols-outlined text-sm">
-                                            trending_down
-                                        </span>{" "}
-                                        -2% vs bulan lalu
-                                    </p>
-                                </div>
-                                <div className="bg-slate-100 p-3 rounded-lg">
-                                    <span className="material-symbols-outlined text-primary">
-                                        verified
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* Total Nilai PO */}
-                            <div className="bg-white p-6 rounded-xl border border-primary/10 shadow-sm flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-slate-500">
-                                        Total Nilai PO Bulan Ini
-                                    </p>
-                                    <h3 className="text-2xl font-bold mt-1">
-                                        IDR 1.250.000.000
-                                    </h3>
-                                    <p className="text-xs text-green-600 font-semibold mt-1 flex items-center gap-1">
-                                        <span className="material-symbols-outlined text-sm">
-                                            trending_up
-                                        </span>{" "}
-                                        +15% target
-                                    </p>
-                                </div>
-                                <div className="bg-slate-100 p-3 rounded-lg">
-                                    <span className="material-symbols-outlined text-primary">
-                                        payments
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
                         {/* Table Container */}
                         <div className="bg-white rounded-xl border border-primary/10 shadow-sm overflow-hidden">
                             {/* Mobile Card View */}
                             <div className="block md:hidden divide-y divide-primary/5">
-                                {purchaseOrders.map((po) => (
+                                {filteredOrders.map((po) => (
                                     <div key={po.id} className="p-4 space-y-3">
                                         <div className="flex justify-between items-start">
                                             <div>
@@ -265,7 +248,7 @@ export default function PurchaseOrderListPage() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-primary/5">
-                                        {purchaseOrders.map((po) => (
+                                        {filteredOrders.map((po) => (
                                             <tr
                                                 key={po.id}
                                                 className="hover:bg-primary/5 transition-colors cursor-pointer"
