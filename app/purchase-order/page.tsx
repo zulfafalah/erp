@@ -6,6 +6,7 @@ import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import StatusBar from "../components/StatusBar";
 import MultiFilter, { FilterField, FilterRule } from "../components/MultiFilter";
+import DataTable, { Column } from "../components/DataTable";
 
 interface PurchaseOrder {
     id: string;
@@ -129,6 +130,106 @@ export default function PurchaseOrderListPage() {
         setFilteredOrders(result);
     };
 
+    const columns: Column<PurchaseOrder>[] = [
+        {
+            header: "No. PO",
+            key: "noPO",
+            render: (po) => (
+                <Link
+                    href={`/purchase-order/${po.id}`}
+                    className="font-semibold text-primary text-sm tracking-tight hover:underline"
+                >
+                    {po.noPO}
+                </Link>
+            ),
+        },
+        { header: "Tanggal", key: "tanggal", render: (po) => <span className="text-sm">{po.tanggal}</span> },
+        { header: "Pemasok", key: "pemasok", render: (po) => <span className="text-sm font-medium">{po.pemasok}</span> },
+        { header: "Tipe", key: "tipe", render: (po) => <span className="text-sm">{po.tipe}</span> },
+        { header: "Total", key: "total", render: (po) => <span className="text-sm font-bold">{po.total}</span> },
+        {
+            header: "Status",
+            key: "status",
+            render: (po) => (
+                <span
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusStyles[po.status]}`}
+                >
+                    {po.status}
+                </span>
+            ),
+        },
+        {
+            header: "Aksi",
+            key: "aksi",
+            align: "right",
+            render: (po) => (
+                <div className="flex items-center justify-end gap-2">
+                    <Link
+                        href={`/purchase-order/${po.id}`}
+                        className="p-1.5 text-slate-400 hover:text-primary transition-colors"
+                        title="View/Edit"
+                    >
+                        <span className="material-symbols-outlined text-lg">edit_square</span>
+                    </Link>
+                    <button
+                        className="p-1.5 text-slate-400 hover:text-primary transition-colors"
+                        title="Print"
+                    >
+                        <span className="material-symbols-outlined text-lg">print</span>
+                    </button>
+                    <button
+                        className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"
+                        title="Delete"
+                    >
+                        <span className="material-symbols-outlined text-lg">delete</span>
+                    </button>
+                </div>
+            ),
+        },
+    ];
+
+    const renderMobileCard = (po: PurchaseOrder) => (
+        <div className="p-4 space-y-3">
+            <div className="flex justify-between items-start">
+                <div>
+                    <Link
+                        href={`/purchase-order/${po.id}`}
+                        className="font-semibold text-primary text-sm hover:underline"
+                    >
+                        {po.noPO}
+                    </Link>
+                    <p className="text-xs text-slate-500 mt-0.5">{po.tanggal}</p>
+                </div>
+                <span
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusStyles[po.status]}`}
+                >
+                    {po.status}
+                </span>
+            </div>
+            <div>
+                <p className="text-sm font-medium text-slate-900">{po.pemasok}</p>
+                <p className="text-xs text-slate-500">{po.tipe}</p>
+            </div>
+            <div className="flex justify-between items-center pt-2 border-t border-slate-100">
+                <span className="text-sm font-bold text-slate-900">{po.total}</span>
+                <div className="flex items-center gap-1">
+                    <Link
+                        href={`/purchase-order/${po.id}`}
+                        className="p-1.5 text-slate-400 hover:text-primary transition-colors"
+                    >
+                        <span className="material-symbols-outlined text-base">edit_square</span>
+                    </Link>
+                    <button className="p-1.5 text-slate-400 hover:text-primary transition-colors">
+                        <span className="material-symbols-outlined text-base">print</span>
+                    </button>
+                    <button className="p-1.5 text-slate-400 hover:text-red-500 transition-colors">
+                        <span className="material-symbols-outlined text-base">delete</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+
     return (
         <div className="bg-background-light text-slate-900 font-sans min-h-screen flex flex-col overflow-hidden pb-8">
             {/* Top Navigation Bar */}
@@ -173,179 +274,12 @@ export default function PurchaseOrderListPage() {
                         </div>
 
                         {/* Table Container */}
-                        <div className="bg-white rounded-xl border border-primary/10 shadow-sm overflow-hidden">
-                            {/* Mobile Card View */}
-                            <div className="block md:hidden divide-y divide-primary/5">
-                                {filteredOrders.map((po) => (
-                                    <div key={po.id} className="p-4 space-y-3">
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <Link
-                                                    href={`/purchase-order/${po.id}`}
-                                                    className="font-semibold text-primary text-sm hover:underline"
-                                                >
-                                                    {po.noPO}
-                                                </Link>
-                                                <p className="text-xs text-slate-500 mt-0.5">{po.tanggal}</p>
-                                            </div>
-                                            <span
-                                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusStyles[po.status]}`}
-                                            >
-                                                {po.status}
-                                            </span>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-medium text-slate-900">{po.pemasok}</p>
-                                            <p className="text-xs text-slate-500">{po.tipe}</p>
-                                        </div>
-                                        <div className="flex justify-between items-center pt-2 border-t border-slate-100">
-                                            <span className="text-sm font-bold text-slate-900">{po.total}</span>
-                                            <div className="flex items-center gap-1">
-                                                <Link
-                                                    href={`/purchase-order/${po.id}`}
-                                                    className="p-1.5 text-slate-400 hover:text-primary transition-colors"
-                                                >
-                                                    <span className="material-symbols-outlined text-base">edit_square</span>
-                                                </Link>
-                                                <button className="p-1.5 text-slate-400 hover:text-primary transition-colors">
-                                                    <span className="material-symbols-outlined text-base">print</span>
-                                                </button>
-                                                <button className="p-1.5 text-slate-400 hover:text-red-500 transition-colors">
-                                                    <span className="material-symbols-outlined text-base">delete</span>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-
-                            {/* Desktop Table View */}
-                            <div className="hidden md:block overflow-x-auto">
-                                <table className="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr className="bg-slate-50 border-b border-primary/10">
-                                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
-                                                No. PO
-                                            </th>
-                                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
-                                                Tanggal
-                                            </th>
-                                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
-                                                Pemasok
-                                            </th>
-                                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
-                                                Tipe
-                                            </th>
-                                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
-                                                Total
-                                            </th>
-                                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
-                                                Status
-                                            </th>
-                                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 text-right">
-                                                Aksi
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-primary/5">
-                                        {filteredOrders.map((po) => (
-                                            <tr
-                                                key={po.id}
-                                                className="hover:bg-primary/5 transition-colors cursor-pointer"
-                                            >
-                                                <td className="px-6 py-4">
-                                                    <Link
-                                                        href={`/purchase-order/${po.id}`}
-                                                        className="font-semibold text-primary text-sm tracking-tight hover:underline"
-                                                    >
-                                                        {po.noPO}
-                                                    </Link>
-                                                </td>
-                                                <td className="px-6 py-4 text-sm">{po.tanggal}</td>
-                                                <td className="px-6 py-4 text-sm font-medium">
-                                                    {po.pemasok}
-                                                </td>
-                                                <td className="px-6 py-4 text-sm">{po.tipe}</td>
-                                                <td className="px-6 py-4 text-sm font-bold">
-                                                    {po.total}
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <span
-                                                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusStyles[po.status]}`}
-                                                    >
-                                                        {po.status}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <div className="flex items-center justify-end gap-2">
-                                                        <Link
-                                                            href={`/purchase-order/${po.id}`}
-                                                            className="p-1.5 text-slate-400 hover:text-primary transition-colors"
-                                                            title="View/Edit"
-                                                        >
-                                                            <span className="material-symbols-outlined text-lg">
-                                                                edit_square
-                                                            </span>
-                                                        </Link>
-                                                        <button
-                                                            className="p-1.5 text-slate-400 hover:text-primary transition-colors"
-                                                            title="Print"
-                                                        >
-                                                            <span className="material-symbols-outlined text-lg">
-                                                                print
-                                                            </span>
-                                                        </button>
-                                                        <button
-                                                            className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"
-                                                            title="Delete"
-                                                        >
-                                                            <span className="material-symbols-outlined text-lg">
-                                                                delete
-                                                            </span>
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {/* Pagination */}
-                            <div className="px-4 md:px-6 py-4 bg-slate-50 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0">
-                                <p className="text-sm text-slate-500 text-center md:text-left">
-                                    Menampilkan 1 sampai 5 dari 57 data
-                                </p>
-                                <div className="flex flex-wrap justify-center items-center gap-1">
-                                    <button
-                                        className="p-2 border border-primary/10 rounded hover:bg-white disabled:opacity-50"
-                                        disabled
-                                    >
-                                        <span className="material-symbols-outlined text-lg">
-                                            chevron_left
-                                        </span>
-                                    </button>
-                                    <button className="px-3 py-1 bg-primary text-white rounded text-sm font-bold">
-                                        1
-                                    </button>
-                                    <button className="px-3 py-1 hover:bg-white text-sm font-medium rounded transition-colors">
-                                        2
-                                    </button>
-                                    <button className="px-3 py-1 hover:bg-white text-sm font-medium rounded transition-colors">
-                                        3
-                                    </button>
-                                    <span className="px-2 text-slate-400">...</span>
-                                    <button className="px-3 py-1 hover:bg-white text-sm font-medium rounded transition-colors">
-                                        12
-                                    </button>
-                                    <button className="p-2 border border-primary/10 rounded hover:bg-white">
-                                        <span className="material-symbols-outlined text-lg">
-                                            chevron_right
-                                        </span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+                        <DataTable
+                            data={filteredOrders}
+                            columns={columns}
+                            keyField="id"
+                            renderMobileCard={renderMobileCard}
+                        />
                     </div>
                 </section>
             </main>
