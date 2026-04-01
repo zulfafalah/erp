@@ -35,7 +35,7 @@ export const modules: ModuleConfig[] = [
                 items: [
                     { label: "Permintaan", icon: "assignment", href: "/purchase-request" },
                     { label: "Pesanan Pembelian", icon: "shopping_cart", href: "/purchase-order" },
-                    { label: "Penerimaan", icon: "inventory_2", href: "#" },
+                    { label: "Penerimaan", icon: "inventory_2", href: "/purchase-receipt" },
                     { label: "Faktur Pembelian", icon: "receipt_long", href: "#" },
                     { label: "Retur Pembelian", icon: "assignment_return", href: "#" },
                 ],

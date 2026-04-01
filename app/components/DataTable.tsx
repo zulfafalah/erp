@@ -5,7 +5,7 @@ import React, { ReactNode } from "react";
 export interface Column<T> {
     header: string;
     key: string;
-    render?: (item: T) => ReactNode;
+    render?: (item: T, index?: number) => ReactNode;
     align?: "left" | "center" | "right";
 }
 
@@ -61,7 +61,7 @@ export default function DataTable<T>({
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-primary/5">
-                        {data.map((item) => (
+                        {data.map((item, rowIndex) => (
                             <tr
                                 key={String(item[keyField])}
                                 className="hover:bg-primary/5 transition-colors cursor-pointer"
@@ -77,7 +77,7 @@ export default function DataTable<T>({
                                             }`}
                                     >
                                         {col.render
-                                            ? col.render(item)
+                                            ? col.render(item, rowIndex)
                                             : String(item[col.key as keyof T] || "")}
                                     </td>
                                 ))}
