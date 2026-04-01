@@ -10,9 +10,13 @@ export interface ProductItem {
 
 interface ProductTableProps {
     items: ProductItem[];
+    onAddProduct?: () => void;
+    onInsertQuickRow?: () => void;
+    onUpdateItem?: (index: number, field: keyof ProductItem, value: any) => void;
+    onRemoveItem?: (index: number) => void;
 }
 
-export default function ItemTable({ items }: ProductTableProps) {
+export default function ItemTable({ items, onAddProduct, onInsertQuickRow, onUpdateItem, onRemoveItem }: ProductTableProps) {
     const totalRows = items.length;
     const totalQty = items.reduce((sum, item) => sum + item.qty, 0);
 
@@ -20,7 +24,11 @@ export default function ItemTable({ items }: ProductTableProps) {
         <div className="flex-1 flex flex-col bg-white rounded-xl border border-primary/5 shadow-sm overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
                 <h3 className="text-sm font-bold text-slate-900">Product Items</h3>
-                <button className="bg-primary text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-primary/90 transition-all">
+                <button
+                    type="button"
+                    onClick={onAddProduct}
+                    className="bg-primary text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-primary/90 transition-all"
+                >
                     <span className="material-symbols-outlined text-base">add</span>
                     Add Product
                 </button>
@@ -53,30 +61,53 @@ export default function ItemTable({ items }: ProductTableProps) {
                                 className="hover:bg-primary/5 transition-colors group"
                             >
                                 <td className="px-5 py-3">
-                                    <p className="text-sm font-semibold text-slate-900">
-                                        {item.name}
-                                    </p>
-                                    <p className="text-[10px] text-slate-500">SKU: {item.sku}</p>
+                                    <input
+                                        type="text"
+                                        value={item.name}
+                                        onChange={(e) => onUpdateItem?.(index, 'name', e.target.value)}
+                                        className="w-full bg-transparent border-none focus:ring-1 focus:ring-primary focus:bg-white rounded px-2 py-1 text-sm font-semibold text-slate-900 outline-none hover:bg-slate-50"
+                                        placeholder="Product Name"
+                                    />
+                                    <input
+                                        type="text"
+                                        value={item.sku}
+                                        onChange={(e) => onUpdateItem?.(index, 'sku', e.target.value)}
+                                        className="w-full bg-transparent border-none focus:ring-1 focus:ring-primary focus:bg-white rounded px-2 py-1 text-[10px] text-slate-500 mt-1 outline-none hover:bg-slate-50"
+                                        placeholder="SKU"
+                                    />
                                 </td>
                                 <td className="px-5 py-3">
                                     <input
-                                        className="w-full bg-transparent border-none focus:ring-0 p-0 text-sm font-medium"
+                                        className="w-full bg-transparent border-none focus:ring-1 focus:ring-primary focus:bg-white rounded px-2 py-1 text-sm font-medium outline-none hover:bg-slate-50"
                                         type="number"
-                                        defaultValue={item.qty}
+                                        value={item.qty}
+                                        onChange={(e) => onUpdateItem?.(index, 'qty', Number(e.target.value))}
+                                        min="1"
                                     />
                                 </td>
                                 <td className="px-5 py-3 text-right">
-                                    <span className="text-sm font-medium">
-                                        ${item.unitPrice.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                                    </span>
+                                    <div className="flex items-center justify-end gap-1">
+                                        <span className="text-sm font-medium text-slate-500">$</span>
+                                        <input
+                                            className="w-24 bg-transparent border-none focus:ring-1 focus:ring-primary focus:bg-white rounded px-2 py-1 text-sm font-medium text-right outline-none hover:bg-slate-50"
+                                            type="number"
+                                            value={item.unitPrice}
+                                            onChange={(e) => onUpdateItem?.(index, 'unitPrice', Number(e.target.value))}
+                                            min="0"
+                                            step="0.01"
+                                        />
+                                    </div>
                                 </td>
                                 <td className="px-5 py-3 text-right">
-                                    <span className="text-sm font-bold text-slate-900">
+                                    <span className="text-sm font-bold text-slate-900 px-2 py-1">
                                         ${item.subtotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                                     </span>
                                 </td>
                                 <td className="px-5 py-3 text-right">
-                                    <button className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                        onClick={() => onRemoveItem?.(index)}
+                                        className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded hover:bg-red-50"
+                                    >
                                         <span className="material-symbols-outlined text-lg">
                                             delete
                                         </span>
@@ -88,7 +119,11 @@ export default function ItemTable({ items }: ProductTableProps) {
                         {/* Quick add row */}
                         <tr className="bg-slate-50/50">
                             <td className="px-5 py-4" colSpan={5}>
-                                <button className="text-xs font-bold text-primary flex items-center gap-1 hover:underline">
+                                <button
+                                    type="button"
+                                    onClick={onInsertQuickRow}
+                                    className="text-xs font-bold text-primary flex items-center gap-1 hover:underline"
+                                >
                                     <span className="material-symbols-outlined text-sm">
                                         add_circle
                                     </span>

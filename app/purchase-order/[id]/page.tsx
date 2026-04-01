@@ -10,8 +10,9 @@ import FormField from "../../components/FormField";
 import FormInput from "../../components/FormInput";
 import FormSelect from "../../components/FormSelect";
 import FormTextarea from "../../components/FormTextarea";
+import Modal from "../../components/Modal";
 
-const productItems: ProductItem[] = [
+const defaultProductItems: ProductItem[] = [
     {
         name: "Intel Core i9-13900K",
         sku: "CPU-INT-13900K",
@@ -45,7 +46,37 @@ const tabs: { key: TabKey; label: string; icon: string; badge?: string }[] = [
 
 export default function PurchaseOrderDetailPage() {
     const [activeTab, setActiveTab] = useState<TabKey>("header");
+    const [productItems, setProductItems] = useState<ProductItem[]>(defaultProductItems);
+    const [isProductModalOpen, setIsProductModalOpen] = useState(false);
     const router = useRouter();
+
+    const handleInsertQuickRow = () => {
+        setProductItems([
+            ...productItems,
+            {
+                name: "",
+                sku: "",
+                qty: 1,
+                unitPrice: 0,
+                subtotal: 0,
+            },
+        ]);
+    };
+
+    const handleUpdateItem = (index: number, field: keyof ProductItem, value: any) => {
+        const newItems = [...productItems];
+        newItems[index] = { ...newItems[index], [field]: value };
+
+        if (field === 'qty' || field === 'unitPrice') {
+            newItems[index].subtotal = newItems[index].qty * newItems[index].unitPrice;
+        }
+
+        setProductItems(newItems);
+    };
+
+    const handleRemoveItem = (index: number) => {
+        setProductItems(productItems.filter((_, i) => i !== index));
+    };
 
     return (
         <div className="bg-background-light text-slate-900 font-sans min-h-screen flex flex-col overflow-hidden pb-8">
@@ -292,7 +323,13 @@ export default function PurchaseOrderDetailPage() {
 
                         {activeTab === "order-details" && (
                             <div className="flex-1 flex flex-col overflow-hidden">
-                                <ItemTable items={productItems} />
+                                <ItemTable
+                                    items={productItems}
+                                    onAddProduct={() => setIsProductModalOpen(true)}
+                                    onInsertQuickRow={handleInsertQuickRow}
+                                    onUpdateItem={handleUpdateItem}
+                                    onRemoveItem={handleRemoveItem}
+                                />
                             </div>
                         )}
 
@@ -320,6 +357,62 @@ export default function PurchaseOrderDetailPage() {
 
             {/* Footer StatusBar */}
             <StatusBar />
+
+            {/* Product Modal — menggunakan komponen Modal reusable */}
+            <Modal
+                isOpen={isProductModalOpen}
+                onClose={() => setIsProductModalOpen(false)}
+                title="Tambah Produk Baru"
+                icon="inventory_2"
+                size="md"
+                footer={
+                    <>
+                        <button
+                            onClick={() => setIsProductModalOpen(false)}
+                            className="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                        >
+                            Batal
+                        </button>
+                        <button
+                            onClick={() => {
+                                handleInsertQuickRow();
+                                setIsProductModalOpen(false);
+                            }}
+                            className="px-4 py-2 text-sm font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center gap-2"
+                        >
+                            <span className="material-symbols-outlined text-sm">add_circle</span>
+                            Tambah Produk
+                        </button>
+                    </>
+                }
+            >
+                <FormField label="Nama Produk">
+                    <FormInput placeholder="Masukkan nama produk..." />
+                </FormField>
+                <FormField label="SKU">
+                    <FormInput placeholder="Masukkan kode SKU..." />
+                </FormField>
+                <div className="grid grid-cols-2 gap-4">
+                    <FormField label="Jumlah (Qty)">
+                        <FormInput type="number" defaultValue="1" />
+                    </FormField>
+                    <FormField label="Harga Satuan">
+                        <FormInput type="number" defaultValue="0" />
+                    </FormField>
+                </div>
+                <FormField label="Satuan">
+                    <FormSelect>
+                        <option>Pcs</option>
+                        <option>Unit</option>
+                        <option>Box</option>
+                        <option>Kg</option>
+                        <option>Liter</option>
+                    </FormSelect>
+                </FormField>
+                <FormField label="Keterangan">
+                    <FormInput placeholder="Catatan tambahan (opsional)..." />
+                </FormField>
+            </Modal>
         </div>
     );
 }
