@@ -100,12 +100,6 @@ export default function SalesOrderListPage() {
                                     </span>
                                     Filter
                                 </button>
-                                <button className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-3 md:px-4 py-2 bg-white border border-primary/10 rounded-lg text-sm font-semibold hover:bg-primary/5 transition-colors">
-                                    <span className="material-symbols-outlined text-lg">
-                                        description
-                                    </span>
-                                    Export PDF
-                                </button>
                                 <Link
                                     href="/sales/new"
                                     className="w-full sm:w-auto justify-center flex items-center gap-2 px-3 md:px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold hover:bg-primary/90 transition-colors shadow-sm shadow-primary/20"
@@ -115,71 +109,6 @@ export default function SalesOrderListPage() {
                                     </span>
                                     Tambah Pesanan Baru
                                 </Link>
-                            </div>
-                        </div>
-
-                        {/* Stats Cards */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-                            <div className="bg-white p-6 rounded-xl border border-primary/10 shadow-sm flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-slate-500">
-                                        Total Draft
-                                    </p>
-                                    <h3 className="text-2xl font-bold mt-1">8</h3>
-                                    <p className="text-xs text-green-600 font-semibold mt-1 flex items-center gap-1">
-                                        <span className="material-symbols-outlined text-sm">
-                                            trending_up
-                                        </span>{" "}
-                                        +3% vs bulan lalu
-                                    </p>
-                                </div>
-                                <div className="bg-slate-100 p-3 rounded-lg">
-                                    <span className="material-symbols-outlined text-primary">
-                                        edit_note
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div className="bg-white p-6 rounded-xl border border-primary/10 shadow-sm flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-slate-500">
-                                        Total Approved
-                                    </p>
-                                    <h3 className="text-2xl font-bold mt-1">32</h3>
-                                    <p className="text-xs text-green-600 font-semibold mt-1 flex items-center gap-1">
-                                        <span className="material-symbols-outlined text-sm">
-                                            trending_up
-                                        </span>{" "}
-                                        +8% vs bulan lalu
-                                    </p>
-                                </div>
-                                <div className="bg-slate-100 p-3 rounded-lg">
-                                    <span className="material-symbols-outlined text-primary">
-                                        verified
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div className="bg-white p-6 rounded-xl border border-primary/10 shadow-sm flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-slate-500">
-                                        Total Nilai SO Bulan Ini
-                                    </p>
-                                    <h3 className="text-2xl font-bold mt-1">
-                                        IDR 2.150.000.000
-                                    </h3>
-                                    <p className="text-xs text-green-600 font-semibold mt-1 flex items-center gap-1">
-                                        <span className="material-symbols-outlined text-sm">
-                                            trending_up
-                                        </span>{" "}
-                                        +12% target
-                                    </p>
-                                </div>
-                                <div className="bg-slate-100 p-3 rounded-lg">
-                                    <span className="material-symbols-outlined text-primary">
-                                        payments
-                                    </span>
-                                </div>
                             </div>
                         </div>
 
