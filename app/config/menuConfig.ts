@@ -52,7 +52,7 @@ export const modules: ModuleConfig[] = [
                 title: "Master",
                 items: [
                     { label: "Negara", icon: "public", href: "/master-data/country" },
-                    { label: "Kota", icon: "location_city", href: "#" },
+                    { label: "Kota", icon: "location_city", href: "/master-data/city" },
                     { label: "Wilayah", icon: "map", href: "#" },
                     { label: "Harga Barang", icon: "sell", href: "#" },
                     { label: "Penjual", icon: "badge", href: "#" },
