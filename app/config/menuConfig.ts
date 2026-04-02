@@ -51,7 +51,7 @@ export const modules: ModuleConfig[] = [
             {
                 title: "Master",
                 items: [
-                    { label: "Negara", icon: "public", href: "#" },
+                    { label: "Negara", icon: "public", href: "/master-data/country" },
                     { label: "Kota", icon: "location_city", href: "#" },
                     { label: "Wilayah", icon: "map", href: "#" },
                     { label: "Harga Barang", icon: "sell", href: "#" },
@@ -323,7 +323,18 @@ export function getModuleByKey(key: string): ModuleConfig | undefined {
 }
 
 export function getModuleByPath(pathname: string): ModuleConfig | undefined {
-    return modules.find(
+    // Check module-level href first
+    const byHref = modules.find(
         (m) => m.href !== "#" && pathname.startsWith(m.href)
+    );
+    if (byHref) return byHref;
+
+    // Then check all sidebar items for a matching href
+    return modules.find((m) =>
+        m.sidebarSections.some((section) =>
+            section.items.some(
+                (item) => item.href !== "#" && pathname.startsWith(item.href)
+            )
+        )
     );
 }
