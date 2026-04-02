@@ -53,7 +53,7 @@ export const modules: ModuleConfig[] = [
                 items: [
                     { label: "Negara", icon: "public", href: "/master-data/country" },
                     { label: "Kota", icon: "location_city", href: "/master-data/city" },
-                    { label: "Wilayah", icon: "map", href: "#" },
+                    { label: "Wilayah", icon: "map", href: "/master-data/region" },
                     { label: "Harga Barang", icon: "sell", href: "#" },
                     { label: "Penjual", icon: "badge", href: "#" },
                     { label: "Pelanggan", icon: "group", href: "#" },
