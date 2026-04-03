@@ -56,7 +56,7 @@ export const modules: ModuleConfig[] = [
                     { label: "Wilayah", icon: "map", href: "/master-data/region" },
                     { label: "Harga Barang", icon: "sell", href: "#" },
                     { label: "Penjual", icon: "badge", href: "/master-data/seller" },
-                    { label: "Pelanggan", icon: "group", href: "#" },
+                    { label: "Pelanggan", icon: "group", href: "/master-data/customer" },
                 ],
             },
             {
