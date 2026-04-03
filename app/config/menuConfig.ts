@@ -46,7 +46,7 @@ export const modules: ModuleConfig[] = [
         key: "penjualan",
         label: "Penjualan",
         icon: "storefront",
-        href: "/sales",
+        href: "/sales/order",
         sidebarSections: [
             {
                 title: "Master",
@@ -62,7 +62,7 @@ export const modules: ModuleConfig[] = [
             {
                 title: "Transaksi Penjualan",
                 items: [
-                    { label: "Pesanan Penjualan", icon: "shopping_bag", href: "/sales" },
+                    { label: "Pesanan Penjualan", icon: "shopping_bag", href: "/sales/order" },
                     { label: "Faktur Penjualan", icon: "receipt", href: "#" },
                     { label: "Retur Penjualan", icon: "assignment_return", href: "#" },
                 ],
