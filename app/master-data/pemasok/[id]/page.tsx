@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Navbar from "../../components/Navbar";
-import Sidebar from "../../components/Sidebar";
-import StatusBar from "../../components/StatusBar";
-import FormField from "../../components/FormField";
-import FormInput from "../../components/FormInput";
-import FormSelect from "../../components/FormSelect";
-import FormTextarea from "../../components/FormTextarea";
+import Navbar from "../../../components/Navbar";
+import Sidebar from "../../../components/Sidebar";
+import StatusBar from "../../../components/StatusBar";
+import FormField from "../../../components/FormField";
+import FormInput from "../../../components/FormInput";
+import FormSelect from "../../../components/FormSelect";
+import FormTextarea from "../../../components/FormTextarea";
 
 export default function PemasokFormPage() {
     const router = useRouter();
@@ -28,7 +28,7 @@ export default function PemasokFormPage() {
                     <div className="px-4 md:px-6 py-3 md:py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-primary/5 bg-white/50 backdrop-blur-sm shrink-0">
                         <div className="flex items-start md:items-center gap-3 md:gap-4 w-full md:w-auto">
                             <button
-                                onClick={() => router.push("/pemasok")}
+                                onClick={() => router.push("/master-data/pemasok")}
                                 className="size-8 flex-shrink-0 flex items-center justify-center rounded-lg border border-slate-200 hover:bg-white mt-1 md:mt-0"
                             >
                                 <span className="material-symbols-outlined text-lg">
@@ -43,6 +43,16 @@ export default function PemasokFormPage() {
                                     Kelola master data pemasok/supplier Anda.
                                 </p>
                             </div>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 md:gap-3 w-full md:w-auto">
+                            <button className="flex-1 md:flex-none justify-center px-3 md:px-4 py-2 text-xs md:text-sm font-semibold text-slate-700 hover:bg-slate-200/50 rounded-lg transition-all border border-slate-200 md:border-transparent flex items-center gap-2">
+                                <span className="material-symbols-outlined text-sm">refresh</span>
+                                Reset
+                            </button>
+                            <button className="w-full md:w-auto justify-center px-4 md:px-5 py-2 text-xs md:text-sm font-bold bg-primary text-white hover:bg-primary/90 rounded-lg shadow-lg shadow-primary/20 flex items-center gap-2">
+                                <span className="material-symbols-outlined text-sm">save</span>
+                                Simpan
+                            </button>
                         </div>
                     </div>
 
@@ -168,15 +178,7 @@ export default function PemasokFormPage() {
                                         </div>
                                     </div>
 
-                                    {/* Action Buttons */}
-                                    <div className="flex gap-2 pb-6">
-                                        <button className="px-6 py-2 bg-primary text-white rounded-lg font-bold hover:bg-primary/90 transition-all flex items-center justify-center shadow-md">
-                                            Save
-                                        </button>
-                                        <button className="px-6 py-2 bg-yellow-500 text-slate-900 rounded-lg font-bold hover:bg-yellow-400 transition-all flex items-center justify-center shadow-md">
-                                            Reset
-                                        </button>
-                                    </div>
+
                                 </div>
                             </div>
                         </div>
