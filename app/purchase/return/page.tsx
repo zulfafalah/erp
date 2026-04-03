@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import Navbar from "../components/Navbar";
-import Sidebar from "../components/Sidebar";
-import StatusBar from "../components/StatusBar";
-import MultiFilter, { FilterField, FilterRule } from "../components/MultiFilter";
-import DataTable, { Column } from "../components/DataTable";
+import Navbar from "../../components/Navbar";
+import Sidebar from "../../components/Sidebar";
+import StatusBar from "../../components/StatusBar";
+import MultiFilter, { FilterField, FilterRule } from "../../components/MultiFilter";
+import DataTable, { Column } from "../../components/DataTable";
 
 interface PurchaseReturn {
     id: string;
@@ -355,7 +355,7 @@ export default function PurchaseReturnListPage() {
             key: "returnNo",
             render: (item) => (
                 <Link
-                    href={`/purchase-return/${item.id}`}
+                    href={`/purchase/return/${item.id}`}
                     className="font-semibold text-primary text-sm tracking-tight hover:underline"
                 >
                     {item.returnNo}
@@ -414,7 +414,7 @@ export default function PurchaseReturnListPage() {
             render: (item) => (
                 <div className="flex items-center justify-end gap-2">
                     <Link
-                        href={`/purchase-return/${item.id}`}
+                        href={`/purchase/return/${item.id}`}
                         className="p-1.5 text-slate-400 hover:text-primary transition-colors"
                         title="View"
                     >
@@ -442,7 +442,7 @@ export default function PurchaseReturnListPage() {
             <div className="flex justify-between items-start">
                 <div>
                     <Link
-                        href={`/purchase-return/${item.id}`}
+                        href={`/purchase/return/${item.id}`}
                         className="font-semibold text-primary text-sm hover:underline"
                     >
                         {item.returnNo}
@@ -468,7 +468,7 @@ export default function PurchaseReturnListPage() {
                 </div>
                 <div className="flex items-center gap-1">
                     <Link
-                        href={`/purchase-return/${item.id}`}
+                        href={`/purchase/return/${item.id}`}
                         className="p-1.5 text-slate-400 hover:text-primary transition-colors"
                     >
                         <span className="material-symbols-outlined text-base">edit_square</span>
@@ -510,7 +510,7 @@ export default function PurchaseReturnListPage() {
                             <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 md:gap-3 w-full md:w-auto mt-2 md:mt-0">
                                 <MultiFilter fields={FILTER_FIELDS} onApplyFilter={handleApplyFilter} />
                                 <Link
-                                    href="/purchase-return/new"
+                                    href="/purchase/return/new"
                                     className="w-full sm:w-auto justify-center flex items-center gap-2 px-3 md:px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold hover:bg-primary/90 transition-colors shadow-sm shadow-primary/20"
                                 >
                                     <span className="material-symbols-outlined text-lg">add_circle</span>

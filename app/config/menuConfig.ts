@@ -22,7 +22,7 @@ export const modules: ModuleConfig[] = [
         key: "pembelian",
         label: "Pembelian",
         icon: "shopping_cart",
-        href: "/purchase-order",
+        href: "/purchase/order",
         sidebarSections: [
             {
                 title: "Master",
@@ -33,11 +33,11 @@ export const modules: ModuleConfig[] = [
             {
                 title: "Transaksi Pembelian",
                 items: [
-                    { label: "Permintaan", icon: "assignment", href: "/purchase-request" },
-                    { label: "Pesanan Pembelian", icon: "shopping_cart", href: "/purchase-order" },
-                    { label: "Penerimaan", icon: "inventory_2", href: "/purchase-receipt" },
-                    { label: "Faktur Pembelian", icon: "receipt_long", href: "/purchase-invoice" },
-                    { label: "Retur Pembelian", icon: "assignment_return", href: "/purchase-return" },
+                    { label: "Permintaan", icon: "assignment", href: "/purchase/request" },
+                    { label: "Pesanan Pembelian", icon: "shopping_cart", href: "/purchase/order" },
+                    { label: "Penerimaan", icon: "inventory_2", href: "/purchase/receipt" },
+                    { label: "Faktur Pembelian", icon: "receipt_long", href: "/purchase/invoice" },
+                    { label: "Retur Pembelian", icon: "assignment_return", href: "/purchase/return" },
                 ],
             },
         ],

@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import Navbar from "../components/Navbar";
-import Sidebar from "../components/Sidebar";
-import StatusBar from "../components/StatusBar";
-import MultiFilter, { FilterField, FilterRule } from "../components/MultiFilter";
-import DataTable, { Column } from "../components/DataTable";
+import Navbar from "../../components/Navbar";
+import Sidebar from "../../components/Sidebar";
+import StatusBar from "../../components/StatusBar";
+import MultiFilter, { FilterField, FilterRule } from "../../components/MultiFilter";
+import DataTable, { Column } from "../../components/DataTable";
 
 interface PurchaseInvoice {
     id: string;
