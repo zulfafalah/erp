@@ -107,7 +107,7 @@ export const modules: ModuleConfig[] = [
                 title: "Persediaan",
                 items: [
                     { label: "Alasan Penyesuaian", icon: "edit_note", href: "/master-data/adjustment-reason" },
-                    { label: "Penyesuaian Stok", icon: "tune", href: "#" },
+                    { label: "Penyesuaian Stok", icon: "tune", href: "/inventory/adjustment" },
                 ],
             },
             {
