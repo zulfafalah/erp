@@ -99,7 +99,7 @@ export const modules: ModuleConfig[] = [
                 title: "Master",
                 items: [
                     { label: "Grup Produk", icon: "category", href: "/master-data/product-category" },
-                    { label: "Produk", icon: "inventory", href: "#" },
+                    { label: "Produk", icon: "inventory", href: "/master-data/product" },
                     { label: "Gudang", icon: "warehouse", href: "#" },
                 ],
             },
