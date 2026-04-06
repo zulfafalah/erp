@@ -64,7 +64,7 @@ export const modules: ModuleConfig[] = [
                 items: [
                     { label: "Pesanan Penjualan", icon: "shopping_bag", href: "/sales/order" },
                     { label: "Faktur Penjualan", icon: "receipt", href: "/sales/invoice" },
-                    { label: "Retur Penjualan", icon: "assignment_return", href: "#" },
+                    { label: "Retur Penjualan", icon: "assignment_return", href: "/sales/return" },
                 ],
             },
             {
