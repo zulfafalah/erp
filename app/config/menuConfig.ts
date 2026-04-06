@@ -84,7 +84,7 @@ export const modules: ModuleConfig[] = [
             {
                 title: "Lainnya",
                 items: [
-                    { label: "Komisi Penjualan", icon: "payments", href: "#" },
+                    { label: "Komisi Penjualan", icon: "payments", href: "/sales/commission" },
                 ],
             },
         ],
