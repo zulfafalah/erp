@@ -2,14 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Navbar from "../../components/Navbar";
-import Sidebar from "../../components/Sidebar";
-import StatusBar from "../../components/StatusBar";
-import ItemTable, { ProductItem } from "../../components/ItemTable";
-import FormField from "../../components/FormField";
-import FormInput from "../../components/FormInput";
-import FormSelect from "../../components/FormSelect";
-import Modal from "../../components/Modal";
+import Navbar from "../../../components/Navbar";
+import Sidebar from "../../../components/Sidebar";
+import StatusBar from "../../../components/StatusBar";
+import ItemTable, { ProductItem } from "../../../components/ItemTable";
+import FormField from "../../../components/FormField";
+import FormInput from "../../../components/FormInput";
+import FormSelect from "../../../components/FormSelect";
+import Modal from "../../../components/Modal";
 
 // ── Item Detail Modal State ────────────────────────────────────────────────
 interface ItemDetailForm {
