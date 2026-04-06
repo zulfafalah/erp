@@ -100,7 +100,7 @@ export const modules: ModuleConfig[] = [
                 items: [
                     { label: "Grup Produk", icon: "category", href: "/master-data/product-category" },
                     { label: "Produk", icon: "inventory", href: "/master-data/product" },
-                    { label: "Gudang", icon: "warehouse", href: "#" },
+                    { label: "Gudang", icon: "warehouse", href: "/master-data/warehouse" },
                 ],
             },
             {
