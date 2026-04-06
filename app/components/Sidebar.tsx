@@ -42,8 +42,11 @@ export default function Sidebar() {
         });
     }, []);
 
-    const isLinkActive = (href: string) =>
-        href !== "#" && pathname?.startsWith(href);
+    const isLinkActive = (href: string) => {
+        if (href === "#" || !pathname) return false;
+        if (pathname === href) return true;
+        return pathname.startsWith(href + "/") || pathname.startsWith(href + "?");
+    };
 
     const sidebarWidthDesktop = isMounted && collapsed ? "md:w-[68px]" : "md:w-[270px]";
     const sidebarStateMobile = isMounted && !collapsed ? "translate-x-0" : "-translate-x-full md:translate-x-0";

@@ -323,18 +323,20 @@ export function getModuleByKey(key: string): ModuleConfig | undefined {
 }
 
 export function getModuleByPath(pathname: string): ModuleConfig | undefined {
+    const matchesPath = (href: string) => {
+        if (href === "#") return false;
+        if (pathname === href) return true;
+        return pathname.startsWith(href + "/") || pathname.startsWith(href + "?");
+    };
+
     // Check module-level href first
-    const byHref = modules.find(
-        (m) => m.href !== "#" && pathname.startsWith(m.href)
-    );
+    const byHref = modules.find((m) => matchesPath(m.href));
     if (byHref) return byHref;
 
     // Then check all sidebar items for a matching href
     return modules.find((m) =>
         m.sidebarSections.some((section) =>
-            section.items.some(
-                (item) => item.href !== "#" && pathname.startsWith(item.href)
-            )
+            section.items.some((item) => matchesPath(item.href))
         )
     );
 }
