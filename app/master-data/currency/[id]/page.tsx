@@ -159,10 +159,10 @@ export default function CurrencyDetailPage() {
                                                         Digit
                                                     </label>
                                                     <div className="sm:col-span-3 flex items-center gap-2">
-                                                        <FormSelect className="w-24">
+                                                        <FormSelect className="w-24" defaultValue="2">
                                                             <option value="0">0</option>
                                                             <option value="1">1</option>
-                                                            <option value="2" selected>2</option>
+                                                            <option value="2">2</option>
                                                             <option value="3">3</option>
                                                             <option value="4">4</option>
                                                         </FormSelect>
