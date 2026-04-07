@@ -8,6 +8,9 @@ export interface FormInputProps {
     placeholder?: string;
     readOnly?: boolean;
     className?: string;
+    step?: string | number;
+    min?: string | number;
+    max?: string | number;
 }
 
 export default function FormInput({
@@ -18,6 +21,9 @@ export default function FormInput({
     placeholder,
     readOnly,
     className,
+    step,
+    min,
+    max,
 }: FormInputProps) {
     return (
         <input
@@ -28,6 +34,9 @@ export default function FormInput({
             onChange={onChange}
             placeholder={placeholder}
             readOnly={readOnly}
+            step={step}
+            min={min}
+            max={max}
         />
     );
 }
