@@ -128,7 +128,7 @@ export const modules: ModuleConfig[] = [
             {
                 title: "Master",
                 items: [
-                    { label: "Mata Uang", icon: "currency_exchange", href: "#" },
+                    { label: "Mata Uang", icon: "currency_exchange", href: "/master-data/currency" },
                 ],
             },
             {
@@ -166,7 +166,7 @@ export const modules: ModuleConfig[] = [
             {
                 title: "Master",
                 items: [
-                    { label: "Mata Uang", icon: "currency_exchange", href: "#" },
+                    { label: "Mata Uang", icon: "currency_exchange", href: "/master-data/currency" },
                     { label: "Chart of Accounts", icon: "account_tree", href: "#" },
                 ],
             },
