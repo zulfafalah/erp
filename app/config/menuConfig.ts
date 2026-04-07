@@ -113,7 +113,7 @@ export const modules: ModuleConfig[] = [
             {
                 title: "Perpindahan Gudang",
                 items: [
-                    { label: "Transfer Gudang (Kirim)", icon: "local_shipping", href: "#" },
+                    { label: "Transfer Gudang (Kirim)", icon: "local_shipping", href: "/inventory/stock-transfer-outbound" },
                     { label: "Transfer Gudang (Terima)", icon: "move_to_inbox", href: "#" },
                 ],
             },
