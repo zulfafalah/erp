@@ -137,7 +137,7 @@ export const modules: ModuleConfig[] = [
                     { label: "Saldo Awal Hutang", icon: "account_balance", href: "/finance/accounts-payable/opening-balance" },
                     { label: "Debit Memo", icon: "description", href: "/finance/accounts-payable/debit-memo" },
                     { label: "Pembayaran Pemasok", icon: "payments", href: "/finance/accounts-payable/vendor-payments" },
-                    { label: "Alokasi Pembayaran Hutang", icon: "assignment", href: "#" },
+                    { label: "Alokasi Pembayaran Hutang", icon: "assignment", href: "/finance/accounts-payable/payment-allocation" },
                 ],
             },
             {
