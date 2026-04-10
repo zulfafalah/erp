@@ -144,7 +144,7 @@ export const modules: ModuleConfig[] = [
                 title: "Piutang (AR)",
                 items: [
                     { label: "Saldo Awal Piutang", icon: "account_balance_wallet", href: "/finance/accounts-receivable/opening-balance" },
-                    { label: "Credit Memo", icon: "note_add", href: "#" },
+                    { label: "Credit Memo", icon: "note_add", href: "/finance/accounts-receivable/credit-memo" },
                     { label: "Penerimaan Pembayaran", icon: "point_of_sale", href: "#" },
                     { label: "Alokasi Penerimaan", icon: "assignment_turned_in", href: "#" },
                 ],
