@@ -586,31 +586,6 @@ export default function CreditMemoListPage() {
                             keyField="id"
                             renderMobileCard={renderMobileCard}
                         />
-
-                        {/* Summary Footer */}
-                        <div className="bg-white rounded-xl border border-primary/10 shadow-sm px-4 md:px-6 py-4 flex flex-col sm:flex-row gap-4 sm:gap-8">
-                            <div className="flex items-center gap-3">
-                                <span className="material-symbols-outlined text-primary">receipt</span>
-                                <div>
-                                    <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Total Jumlah</p>
-                                    <p className="text-base md:text-lg font-black text-slate-900">{fmtCur(totalJumlah)}</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <span className="material-symbols-outlined text-amber-500">percent</span>
-                                <div>
-                                    <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Total PPN</p>
-                                    <p className="text-base md:text-lg font-black text-amber-600">{fmtCur(totalPpn)}</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <span className="material-symbols-outlined text-emerald-500">payments</span>
-                                <div>
-                                    <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Grand Total</p>
-                                    <p className="text-base md:text-lg font-black text-emerald-600">{fmtCur(totalGrandTotal)}</p>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </section>
             </main>
