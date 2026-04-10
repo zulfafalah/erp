@@ -167,7 +167,7 @@ export const modules: ModuleConfig[] = [
                 title: "Master",
                 items: [
                     { label: "Mata Uang", icon: "currency_exchange", href: "/master-data/currency" },
-                    { label: "Chart of Accounts", icon: "account_tree", href: "#" },
+                    { label: "Chart of Accounts", icon: "account_tree", href: "/accounting/chart-of-accounts" },
                 ],
             },
             {
