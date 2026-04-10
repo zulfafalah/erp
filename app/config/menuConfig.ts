@@ -152,7 +152,7 @@ export const modules: ModuleConfig[] = [
             {
                 title: "Komisi",
                 items: [
-                    { label: "Pembayaran Komisi", icon: "paid", href: "#" },
+                    { label: "Pembayaran Komisi", icon: "paid", href: "/finance/sales-commissions" },
                 ],
             },
         ],
