@@ -173,7 +173,7 @@ export const modules: ModuleConfig[] = [
             {
                 title: "Saldo Awal",
                 items: [
-                    { label: "Saldo Awal Bulanan", icon: "calendar_month", href: "#" },
+                    { label: "Saldo Awal Bulanan", icon: "calendar_month", href: "/accounting/monthly-opening-balance" },
                     { label: "Saldo Awal Tahunan", icon: "event_note", href: "#" },
                 ],
             },
