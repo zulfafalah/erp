@@ -1,4 +1,4 @@
-# ERP Falah
+# ERP
 
 A web-based **Enterprise Resource Planning (ERP)** system built with [Next.js](https://nextjs.org), TypeScript, and Tailwind CSS. The application covers core business modules including purchasing, sales, inventory, accounting, and finance.
 
