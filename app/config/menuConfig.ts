@@ -230,8 +230,8 @@ export const modules: ModuleConfig[] = [
             {
                 title: "Hutang",
                 items: [
-                    { label: "Detil Hutang", icon: "money_off", href: "#" },
-                    { label: "Rekap Hutang", icon: "account_balance", href: "#" },
+                    { label: "Detil Hutang", icon: "money_off", href: "/reports/accounts-payable?report=accounts-payable-detail" },
+                    { label: "Rekap Hutang", icon: "account_balance", href: "/reports/accounts-payable?report=accounts-payable-summary" },
                 ],
             },
             {
