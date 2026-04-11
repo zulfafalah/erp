@@ -1,79 +1,79 @@
 # ERP Falah
 
-Sistem **Enterprise Resource Planning (ERP)** berbasis web yang dibangun menggunakan [Next.js](https://nextjs.org), TypeScript, dan Tailwind CSS. Aplikasi ini mencakup modul-modul bisnis utama mulai dari pembelian, penjualan, inventaris, akuntansi, hingga keuangan.
+A web-based **Enterprise Resource Planning (ERP)** system built with [Next.js](https://nextjs.org), TypeScript, and Tailwind CSS. The application covers core business modules including purchasing, sales, inventory, accounting, and finance.
 
-## Teknologi
+## Tech Stack
 
 - **Framework**: [Next.js 16](https://nextjs.org) (App Router)
 - **UI**: [React 19](https://react.dev) + [Tailwind CSS 4](https://tailwindcss.com)
-- **Bahasa**: TypeScript
-- **Ikon**: Material Symbols Outlined
+- **Language**: TypeScript
+- **Icons**: Material Symbols Outlined
 
-## Modul
+## Modules
 
-### 🛒 Purchase (Pembelian)
-- **Order** — Purchase Order ke supplier
-- **Request** — Purchase Request internal
-- **Receipt** — Penerimaan barang
-- **Invoice** — Faktur pembelian
-- **Return** — Retur pembelian
+### 🛒 Purchase
+- **Order** — Purchase orders to suppliers
+- **Request** — Internal purchase requests
+- **Receipt** — Goods receipt
+- **Invoice** — Purchase invoices
+- **Return** — Purchase returns
 
-### 💰 Sales (Penjualan)
-- **Order** — Sales Order ke pelanggan
-- **Commission** — Komisi penjualan
-- **Invoice** — Faktur penjualan
-- **Return** — Retur penjualan
+### 💰 Sales
+- **Order** — Sales orders to customers
+- **Commission** — Sales commissions
+- **Invoice** — Sales invoices
+- **Return** — Sales returns
 
-### 📦 Inventory (Inventaris)
-- **Adjustment** — Penyesuaian stok
-- **Stock Transfer Inbound** — Transfer stok masuk
-- **Stock Transfer Outbound** — Transfer stok keluar
+### 📦 Inventory
+- **Adjustment** — Stock adjustments
+- **Stock Transfer Inbound** — Inbound stock transfers
+- **Stock Transfer Outbound** — Outbound stock transfers
 
-### 📒 Accounting (Akuntansi)
-- **Chart of Accounts** — Daftar akun
-- **General Journal** — Jurnal umum
-- **Transaction Journal** — Jurnal transaksi
-- **Monthly Posting** — Posting bulanan
-- **Monthly Opening Balance** — Saldo awal bulanan
-- **Yearly Opening Balance** — Saldo awal tahunan
-- **Fund Request** — Permintaan dana
+### 📒 Accounting
+- **Chart of Accounts** — Account list
+- **General Journal** — General journal entries
+- **Transaction Journal** — Transaction journal
+- **Monthly Posting** — Monthly postings
+- **Monthly Opening Balance** — Monthly opening balances
+- **Yearly Opening Balance** — Yearly opening balances
+- **Fund Request** — Fund requests
 
-### 💳 Finance (Keuangan)
-- **Accounts Payable** — Hutang usaha
-- **Accounts Receivable** — Piutang usaha
-- **Sales Commissions** — Komisi penjualan
+### 💳 Finance
+- **Accounts Payable** — Vendor payables
+- **Accounts Receivable** — Customer receivables
+- **Sales Commissions** — Sales commission tracking
 
 ### 🗂️ Master Data
-- **Product & Product Category** — Produk dan kategori
-- **Customer** — Data pelanggan
-- **Supplier** — Data supplier
-- **Seller** — Data penjual
-- **Warehouse** — Data gudang
-- **Currency** — Mata uang
-- **Country, City, Region** — Lokasi
-- **Adjustment Reason** — Alasan penyesuaian
+- **Product & Product Category** — Products and categories
+- **Customer** — Customer records
+- **Supplier** — Supplier records
+- **Seller** — Seller records
+- **Warehouse** — Warehouse records
+- **Currency** — Currencies
+- **Country, City, Region** — Location data
+- **Adjustment Reason** — Stock adjustment reasons
 
-## Menjalankan Proyek
+## Getting Started
 
-Install dependensi:
+Install dependencies:
 
 ```bash
 npm install
 ```
 
-Jalankan development server:
+Run the development server:
 
 ```bash
 npm run dev
 ```
 
-Buka [http://localhost:3000](http://localhost:3000) di browser. Halaman akan otomatis diarahkan ke modul Purchase Order.
+Open [http://localhost:3000](http://localhost:3000) in your browser. The app will automatically redirect to the Purchase Order module.
 
 ## Scripts
 
-| Perintah | Deskripsi |
+| Command | Description |
 |---|---|
-| `npm run dev` | Jalankan development server |
-| `npm run build` | Build untuk production |
-| `npm run start` | Jalankan production server |
-| `npm run lint` | Jalankan ESLint |
+| `npm run dev` | Start the development server |
+| `npm run build` | Build for production |
+| `npm run start` | Start the production server |
+| `npm run lint` | Run ESLint |
