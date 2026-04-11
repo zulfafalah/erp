@@ -296,7 +296,7 @@ export const modules: ModuleConfig[] = [
             {
                 title: "Pengguna",
                 items: [
-                    { label: "Pengguna", icon: "person", href: "#" },
+                    { label: "Pengguna", icon: "person", href: "/settings/user-settings" },
                     { label: "Grup Pengguna", icon: "group", href: "#" },
                     { label: "Hak Akses Grup", icon: "admin_panel_settings", href: "#" },
                 ],
