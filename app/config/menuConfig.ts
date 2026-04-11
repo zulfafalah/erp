@@ -312,7 +312,7 @@ export const modules: ModuleConfig[] = [
             {
                 title: "Lainnya",
                 items: [
-                    { label: "Tentang E-Smart", icon: "info", href: "#" },
+                    { label: "Tentang E-Smart", icon: "info", href: "/settings/about" },
                 ],
             },
         ],
