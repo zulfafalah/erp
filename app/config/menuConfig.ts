@@ -299,7 +299,7 @@ export const modules: ModuleConfig[] = [
                 items: [
                     { label: "Pengguna", icon: "person", href: "/settings/user-settings" },
                     { label: "Grup Pengguna", icon: "group", href: "/settings/user-group-settings" },
-                    { label: "Hak Akses Grup", icon: "admin_panel_settings", href: "#" },
+                    { label: "Hak Akses Grup", icon: "admin_panel_settings", href: "/settings/user-group-permissions" },
                 ],
             },
             {
