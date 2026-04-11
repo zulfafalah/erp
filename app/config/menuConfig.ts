@@ -277,8 +277,8 @@ export const modules: ModuleConfig[] = [
             {
                 title: "Utilitas",
                 items: [
-                    { label: "Katalog Barcode", icon: "qr_code_scanner", href: "#" },
-                    { label: "Log Sistem", icon: "terminal", href: "#" },
+                    { label: "Katalog Barcode", icon: "qr_code_scanner", href: "/reports/utility?report=barcode-catalog" },
+                    { label: "Log Sistem", icon: "terminal", href: "/reports/utility?report=system-log" },
                 ],
             },
         ],
