@@ -306,7 +306,7 @@ export const modules: ModuleConfig[] = [
                 title: "Data Sistem",
                 items: [
                     { label: "Data Outlet", icon: "store", href: "/master-data/outlet" },
-                    { label: "Daftar Form", icon: "list_alt", href: "#" },
+                    { label: "Daftar Form", icon: "list_alt", href: "/settings/form-management" },
                 ],
             },
             {
