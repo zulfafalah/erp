@@ -181,7 +181,7 @@ export const modules: ModuleConfig[] = [
                 title: "Jurnal",
                 items: [
                     { label: "Jurnal Umum", icon: "menu_book", href: "/accounting/general-journal" },
-                    { label: "Jurnal Transaksi", icon: "receipt", href: "#" },
+                    { label: "Jurnal Transaksi", icon: "receipt", href: "/accounting/transaction-journal" },
                 ],
             },
             {
