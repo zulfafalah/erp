@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, Suspense } from "react";
 import { getModuleByPath, modules } from "../config/menuConfig";
 import { usePathname, useSearchParams } from "next/navigation";
 
@@ -16,7 +16,7 @@ const ActiveMenuContext = createContext<ActiveMenuContextType>({
     setActiveModule: () => { },
 });
 
-export function ActiveMenuProvider({ children }: { children: ReactNode }) {
+function ActiveMenuProviderInner({ children }: { children: ReactNode }) {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const [activeModule, setActiveModuleState] = useState("pembelian");
@@ -71,6 +71,18 @@ export function ActiveMenuProvider({ children }: { children: ReactNode }) {
         <ActiveMenuContext.Provider value={{ activeModule, setActiveModule }}>
             {children}
         </ActiveMenuContext.Provider>
+    );
+}
+
+export function ActiveMenuProvider({ children }: { children: ReactNode }) {
+    return (
+        <Suspense fallback={
+            <ActiveMenuContext.Provider value={{ activeModule: "pembelian", setActiveModule: () => { } }}>
+                {children}
+            </ActiveMenuContext.Provider>
+        }>
+            <ActiveMenuProviderInner>{children}</ActiveMenuProviderInner>
+        </Suspense>
     );
 }
 

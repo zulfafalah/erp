@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useActiveMenu } from "../context/ActiveMenuContext";
 import { getModuleByKey } from "../config/menuConfig";
 
-export default function Sidebar() {
+function SidebarInner() {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const { activeModule } = useActiveMenu();
@@ -233,5 +233,15 @@ export default function Sidebar() {
                 </div>
             </aside>
         </>
+    );
+}
+
+export default function Sidebar() {
+    return (
+        <Suspense fallback={
+            <aside className="fixed md:relative top-0 left-0 h-full md:h-auto z-[50] border-r border-slate-200/80 bg-white flex flex-col shrink-0 md:w-[270px] w-[270px]" />
+        }>
+            <SidebarInner />
+        </Suspense>
     );
 }
