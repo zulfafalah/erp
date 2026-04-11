@@ -290,7 +290,7 @@ export const modules: ModuleConfig[] = [
             {
                 title: "Sistem",
                 items: [
-                    { label: "Pengaturan Program", icon: "tune", href: "#" },
+                    { label: "Pengaturan Program", icon: "tune", href: "/settings/system" },
                 ],
             },
             {
