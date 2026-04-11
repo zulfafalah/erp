@@ -1,20 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useActiveMenu } from "../context/ActiveMenuContext";
 import { getModuleByKey } from "../config/menuConfig";
 
 export default function Sidebar() {
-    return (
-        <Suspense fallback={<div className="w-[68px] md:w-[270px] border-r border-slate-200/80 bg-white shadow-[1px_0_8px_rgba(0,0,0,0.03)] h-full shrink-0 hidden md:block transition-all duration-300"></div>}>
-            <SidebarContent />
-        </Suspense>
-    );
-}
-
-function SidebarContent() {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const { activeModule } = useActiveMenu();
@@ -53,13 +45,13 @@ function SidebarContent() {
 
     const isLinkActive = (href: string) => {
         if (href === "#" || !pathname) return false;
-        
+
         const searchString = searchParams.toString();
         const currentFullPath = searchString ? `${pathname}?${searchString}` : pathname;
 
         if (currentFullPath === href) return true;
         if (pathname === href && !href.includes("?")) return true;
-        
+
         return pathname.startsWith(href + "/") || (pathname.startsWith(href + "?") && !href.includes("?"));
     };
 
