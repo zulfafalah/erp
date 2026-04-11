@@ -208,7 +208,7 @@ export const modules: ModuleConfig[] = [
             {
                 title: "Pembelian",
                 items: [
-                    { label: "Detil Nota Pembelian (PIV)", icon: "receipt_long", href: "#" },
+                    { label: "Detil Nota Pembelian (PIV)", icon: "receipt_long", href: "/reports/purchase/purchase-invoice-detail" },
                     { label: "Rekap Nota Pembelian (PIV)", icon: "summarize", href: "#" },
                     { label: "Detil Retur Pembelian", icon: "assignment_return", href: "#" },
                     { label: "Rekap Retur Pembelian", icon: "undo", href: "#" },
