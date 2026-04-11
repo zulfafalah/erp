@@ -193,7 +193,7 @@ export const modules: ModuleConfig[] = [
             {
                 title: "Posting",
                 items: [
-                    { label: "Posting Bulanan", icon: "publish", href: "#" },
+                    { label: "Posting Bulanan", icon: "publish", href: "/accounting/monthly-posting" },
                 ],
             },
         ],
