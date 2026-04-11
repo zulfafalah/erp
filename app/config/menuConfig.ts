@@ -208,13 +208,13 @@ export const modules: ModuleConfig[] = [
             {
                 title: "Pembelian",
                 items: [
-                    { label: "Detil Nota Pembelian (PIV)", icon: "receipt_long", href: "/reports/purchase/purchase-invoice-detail" },
-                    { label: "Rekap Nota Pembelian (PIV)", icon: "summarize", href: "#" },
-                    { label: "Detil Retur Pembelian", icon: "assignment_return", href: "#" },
-                    { label: "Rekap Retur Pembelian", icon: "undo", href: "#" },
-                    { label: "Rekap Pesanan Pembelian (POB)", icon: "shopping_cart", href: "#" },
-                    { label: "Rekap Penerimaan Barang (BPB)", icon: "inventory_2", href: "#" },
-                    { label: "Detil Penerimaan Barang (BPB)", icon: "fact_check", href: "#" },
+                    { label: "Detil Nota Pembelian (PIV)", icon: "receipt_long", href: "/reports/purchase?report=purchase-invoice-detail" },
+                    { label: "Rekap Nota Pembelian (PIV)", icon: "summarize", href: "/reports/purchase?report=purchase-invoice-summary" },
+                    { label: "Detil Retur Pembelian", icon: "assignment_return", href: "/reports/purchase?report=purchase-return-detail" },
+                    { label: "Rekap Retur Pembelian", icon: "undo", href: "/reports/purchase?report=purchase-return-summary" },
+                    { label: "Rekap Pesanan Pembelian (POB)", icon: "shopping_cart", href: "/reports/purchase?report=purchase-order-summary" },
+                    { label: "Rekap Penerimaan Barang (BPB)", icon: "inventory_2", href: "/reports/purchase?report=goods-receipt-summary" },
+                    { label: "Detil Penerimaan Barang (BPB)", icon: "fact_check", href: "/reports/purchase?report=goods-receipt-detail" },
                 ],
             },
             {
@@ -323,11 +323,14 @@ export function getModuleByKey(key: string): ModuleConfig | undefined {
     return modules.find((m) => m.key === key);
 }
 
-export function getModuleByPath(pathname: string): ModuleConfig | undefined {
+export function getModuleByPath(currentFullPath: string): ModuleConfig | undefined {
+    const [pathname] = currentFullPath.split('?');
+
     const matchesPath = (href: string) => {
         if (href === "#") return false;
-        if (pathname === href) return true;
-        return pathname.startsWith(href + "/") || pathname.startsWith(href + "?");
+        if (currentFullPath === href) return true;
+        if (pathname === href && !href.includes("?")) return true;
+        return pathname.startsWith(href + "/") || (pathname.startsWith(href + "?") && !href.includes("?"));
     };
 
     // Check module-level href first

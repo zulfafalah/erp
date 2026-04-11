@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { getModuleByPath, modules } from "../config/menuConfig";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 
 const STORAGE_KEY = "erp_active_module";
 
@@ -18,6 +18,7 @@ const ActiveMenuContext = createContext<ActiveMenuContextType>({
 
 export function ActiveMenuProvider({ children }: { children: ReactNode }) {
     const pathname = usePathname();
+    const searchParams = useSearchParams();
     const [activeModule, setActiveModuleState] = useState("pembelian");
 
     // Load persisted module from localStorage on mount
@@ -37,7 +38,13 @@ export function ActiveMenuProvider({ children }: { children: ReactNode }) {
         const isPathInCurrentModule = currentMod?.sidebarSections.some((section) =>
             section.items.some((item) => {
                 if (item.href === "#") return false;
-                return pathname === item.href || pathname.startsWith(item.href + "/") || pathname.startsWith(item.href + "?");
+                
+                const searchString = searchParams.toString();
+                const currentFullPath = searchString ? `${pathname}?${searchString}` : pathname;
+
+                if (currentFullPath === item.href) return true;
+                if (pathname === item.href && !item.href.includes("?")) return true;
+                return pathname.startsWith(item.href + "/") || (pathname.startsWith(item.href + "?") && !item.href.includes("?"));
             })
         );
 
@@ -45,12 +52,15 @@ export function ActiveMenuProvider({ children }: { children: ReactNode }) {
         if (isPathInCurrentModule) return;
 
         // Otherwise fall back to auto-detection (e.g. direct URL navigation).
-        const matched = getModuleByPath(pathname);
+        const searchString = searchParams.toString();
+        const fullPathForModule = searchString ? `${pathname}?${searchString}` : pathname;
+        
+        const matched = getModuleByPath(fullPathForModule);
         if (matched) {
             setActiveModuleState(matched.key);
             localStorage.setItem(STORAGE_KEY, matched.key);
         }
-    }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [pathname, searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const setActiveModule = (key: string) => {
         setActiveModuleState(key);

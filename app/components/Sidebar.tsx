@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useActiveMenu } from "../context/ActiveMenuContext";
 import { getModuleByKey } from "../config/menuConfig";
 
 export default function Sidebar() {
     const pathname = usePathname();
+    const searchParams = useSearchParams();
     const { activeModule } = useActiveMenu();
     const [collapsed, setCollapsed] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
@@ -44,8 +45,14 @@ export default function Sidebar() {
 
     const isLinkActive = (href: string) => {
         if (href === "#" || !pathname) return false;
-        if (pathname === href) return true;
-        return pathname.startsWith(href + "/") || pathname.startsWith(href + "?");
+        
+        const searchString = searchParams.toString();
+        const currentFullPath = searchString ? `${pathname}?${searchString}` : pathname;
+
+        if (currentFullPath === href) return true;
+        if (pathname === href && !href.includes("?")) return true;
+        
+        return pathname.startsWith(href + "/") || (pathname.startsWith(href + "?") && !href.includes("?"));
     };
 
     const sidebarWidthDesktop = isMounted && collapsed ? "md:w-[68px]" : "md:w-[270px]";
