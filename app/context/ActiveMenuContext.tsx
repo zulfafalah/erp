@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, Suspense } from "react";
 import { getModuleByPath, modules } from "../config/menuConfig";
 import { usePathname, useSearchParams } from "next/navigation";
 
@@ -16,18 +16,10 @@ const ActiveMenuContext = createContext<ActiveMenuContextType>({
     setActiveModule: () => { },
 });
 
-export function ActiveMenuProvider({ children }: { children: ReactNode }) {
+function RouteSync() {
     const pathname = usePathname();
     const searchParams = useSearchParams();
-    const [activeModule, setActiveModuleState] = useState("pembelian");
-
-    // Load persisted module from localStorage on mount
-    useEffect(() => {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved && modules.some((m) => m.key === saved)) {
-            setActiveModuleState(saved);
-        }
-    }, []);
+    const { activeModule, setActiveModule } = useActiveMenu();
 
     // Auto-detect active module based on the current route,
     // but only override the persisted choice when the new path
@@ -57,10 +49,23 @@ export function ActiveMenuProvider({ children }: { children: ReactNode }) {
         
         const matched = getModuleByPath(fullPathForModule);
         if (matched) {
-            setActiveModuleState(matched.key);
-            localStorage.setItem(STORAGE_KEY, matched.key);
+            setActiveModule(matched.key);
         }
-    }, [pathname, searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [pathname, searchParams, activeModule, setActiveModule]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    return null;
+}
+
+export function ActiveMenuProvider({ children }: { children: ReactNode }) {
+    const [activeModule, setActiveModuleState] = useState("pembelian");
+
+    // Load persisted module from localStorage on mount
+    useEffect(() => {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved && modules.some((m) => m.key === saved)) {
+            setActiveModuleState(saved);
+        }
+    }, []);
 
     const setActiveModule = (key: string) => {
         setActiveModuleState(key);
@@ -69,6 +74,9 @@ export function ActiveMenuProvider({ children }: { children: ReactNode }) {
 
     return (
         <ActiveMenuContext.Provider value={{ activeModule, setActiveModule }}>
+            <Suspense fallback={null}>
+                <RouteSync />
+            </Suspense>
             {children}
         </ActiveMenuContext.Provider>
     );
