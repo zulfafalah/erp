@@ -220,11 +220,11 @@ export const modules: ModuleConfig[] = [
             {
                 title: "Penjualan",
                 items: [
-                    { label: "Detil Penjualan", icon: "receipt", href: "#" },
-                    { label: "Rekap Penjualan", icon: "bar_chart", href: "#" },
-                    { label: "Detil Retur Penjualan", icon: "assignment_return", href: "#" },
-                    { label: "Rekap Retur Penjualan", icon: "undo", href: "#" },
-                    { label: "Rekap Pesanan Penjualan", icon: "shopping_bag", href: "#" },
+                    { label: "Detil Penjualan", icon: "receipt", href: "/reports/sales?report=sales-detail" },
+                    { label: "Rekap Penjualan", icon: "bar_chart", href: "/reports/sales?report=sales-summary" },
+                    { label: "Detil Retur Penjualan", icon: "assignment_return", href: "/reports/sales?report=sales-return-detail" },
+                    { label: "Rekap Retur Penjualan", icon: "undo", href: "/reports/sales?report=sales-return-summary" },
+                    { label: "Rekap Pesanan Penjualan", icon: "shopping_bag", href: "/reports/sales?report=sales-order-summary" },
                 ],
             },
             {
