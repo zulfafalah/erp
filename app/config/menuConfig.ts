@@ -256,8 +256,8 @@ export const modules: ModuleConfig[] = [
             {
                 title: "Keuangan",
                 items: [
-                    { label: "Alokasi Deposit Pelanggan", icon: "savings", href: "#" },
-                    { label: "Alokasi Deposit Pemasok", icon: "paid", href: "#" },
+                    { label: "Alokasi Deposit Pelanggan", icon: "savings", href: "/reports/financial?report=customer-deposit-allocation" },
+                    { label: "Alokasi Deposit Pemasok", icon: "paid", href: "/reports/financial?report=supplier-deposit-allocation" },
                 ],
             },
             {
