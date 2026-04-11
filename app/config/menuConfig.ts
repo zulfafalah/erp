@@ -246,11 +246,11 @@ export const modules: ModuleConfig[] = [
             {
                 title: "Persediaan",
                 items: [
-                    { label: "Kartu Stok", icon: "style", href: "#" },
-                    { label: "Rekap Stok", icon: "inventory", href: "#" },
-                    { label: "Rekap Transaksi Stok", icon: "swap_horiz", href: "#" },
-                    { label: "Mutasi Stok", icon: "compare_arrows", href: "#" },
-                    { label: "Daftar Harga Jual", icon: "sell", href: "#" },
+                    { label: "Kartu Stok", icon: "style", href: "/reports/inventory?report=stock-card" },
+                    { label: "Rekap Stok", icon: "inventory", href: "/reports/inventory?report=stock-summary" },
+                    { label: "Rekap Transaksi Stok", icon: "swap_horiz", href: "/reports/inventory?report=stock-transaction-summary" },
+                    { label: "Mutasi Stok", icon: "compare_arrows", href: "/reports/inventory?report=stock-mutation" },
+                    { label: "Daftar Harga Jual", icon: "sell", href: "/reports/inventory?report=selling-price-list" },
                 ],
             },
             {
