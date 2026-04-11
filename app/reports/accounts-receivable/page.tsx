@@ -15,16 +15,24 @@ interface ReportParams {
     tanggalHingga: string;
     rowPerPage: number;
     status: string;
-    pemasok: string;
+    penjual: string;
+    pelanggan: string;
     tampilan: string;
 }
 
 // --- Mock data options ---
-const pemasokOptions = [
-    { label: ":: Semua Pemasok ::", value: "" },
-    { label: "TRIAL", value: "TRIAL" },
-    { label: "CHUP", value: "CHUP" },
-    { label: "UNILEVER", value: "UNILEVER" },
+const penjualOptions = [
+    { label: ":: Semua Penjual ::", value: "" },
+    { label: "Budi (Sales)", value: "BUDI" },
+    { label: "Andi (Sales)", value: "ANDI" },
+    { label: "Siska (Sales)", value: "SISKA" },
+];
+
+const pelangganOptions = [
+    { label: ":: Semua Pelanggan ::", value: "" },
+    { label: "PT. ABC", value: "PT_ABC" },
+    { label: "Toko Sinar Jaya", value: "TOKO_SINAR_JAYA" },
+    { label: "CV. Makmur", value: "CV_MAKMUR" },
 ];
 
 const statusOptions = [
@@ -36,7 +44,7 @@ const statusOptions = [
 const tampilanOptions = [
     { label: "Per Baris", value: "per_baris" },
     { label: "Per Nota", value: "per_nota" },
-    { label: "Per Pemasok", value: "per_pemasok" },
+    { label: "Per Pelanggan", value: "per_pelanggan" },
 ];
 
 const today = new Date();
@@ -50,54 +58,55 @@ const formatCurrency = (v: number) =>
 
 function ReportContent() {
     const searchParams = useSearchParams();
-    const reportType = searchParams.get("report") || "accounts-payable-detail";
+    const reportType = searchParams.get("report") || "accounts-receivable-detail";
 
     // Configuration for different report types
     const reportConfigs: Record<string, any> = {
-        "accounts-payable-detail": {
-            title: "Laporan Detil Hutang Dagang",
-            desc: "Filter dan tampilkan laporan detail hutang dagang ke pemasok.",
+        "accounts-receivable-detail": {
+            title: "Laporan Detil Piutang Dagang",
+            desc: "Filter dan tampilkan laporan detail piutang dagang pelanggan.",
             type: "detail",
             columns: [
                 { key: "noNota", label: "No. Nota", align: "left" },
                 { key: "tanggal", label: "Tanggal", align: "left" },
                 { key: "jatuhTempo", label: "Jatuh Tempo", align: "left" },
-                { key: "pemasok", label: "Pemasok", align: "left" },
-                { key: "totalHutang", label: "Total Hutang", align: "right", render: (r: any) => formatCurrency(r.totalHutang) },
+                { key: "pelanggan", label: "Pelanggan", align: "left" },
+                { key: "penjual", label: "Penjual", align: "left" },
+                { key: "totalPiutang", label: "Total Piutang", align: "right", render: (r: any) => formatCurrency(r.totalPiutang) },
                 { key: "terbayar", label: "Terbayar", align: "right", render: (r: any) => formatCurrency(r.terbayar) },
-                { key: "sisaHutang", label: "Sisa Hutang", align: "right", render: (r: any) => formatCurrency(r.sisaHutang) },
+                { key: "sisaPiutang", label: "Sisa Piutang", align: "right", render: (r: any) => formatCurrency(r.sisaPiutang) },
                 { key: "status", label: "Status", align: "center" },
             ],
             data: [
-                { noNota: "PIV-2404-001", tanggal: "2026-04-01", jatuhTempo: "2026-05-01", pemasok: "UNILEVER", totalHutang: 10000000, terbayar: 5000000, sisaHutang: 5000000, status: "Lokal" },
-                { noNota: "PIV-2404-002", tanggal: "2026-04-05", jatuhTempo: "2026-05-05", pemasok: "CHUP", totalHutang: 2500000, terbayar: 2500000, sisaHutang: 0, status: "Lokal" },
-                { noNota: "PIV-2404-003", tanggal: "2026-04-10", jatuhTempo: "2026-05-10", pemasok: "TRIAL", totalHutang: 750000, terbayar: 0, sisaHutang: 750000, status: "Lokal" },
+                { noNota: "INV-2404-001", tanggal: "2026-04-01", jatuhTempo: "2026-05-01", pelanggan: "PT. ABC", penjual: "Budi (Sales)", totalPiutang: 5000000, terbayar: 2000000, sisaPiutang: 3000000, status: "Lokal" },
+                { noNota: "INV-2404-002", tanggal: "2026-04-05", jatuhTempo: "2026-05-05", pelanggan: "Toko Sinar Jaya", penjual: "Andi (Sales)", totalPiutang: 1500000, terbayar: 0, sisaPiutang: 1500000, status: "Lokal" },
+                { noNota: "INV-2404-003", tanggal: "2026-04-10", jatuhTempo: "2026-05-10", pelanggan: "CV. Makmur", penjual: "Siska (Sales)", totalPiutang: 3000000, terbayar: 3000000, sisaPiutang: 0, status: "Lokal" },
             ],
-            grandTotalKey: "sisaHutang"
+            grandTotalKey: "sisaPiutang"
         },
-        "accounts-payable-summary": {
-            title: "Laporan Rekapitulasi Hutang Dagang",
-            desc: "Filter dan tampilkan laporan rekapitulasi hutang ke pemasok.",
+        "accounts-receivable-summary": {
+            title: "Laporan Rekapitulasi Piutang Dagang",
+            desc: "Filter dan tampilkan laporan rekapitulasi piutang pelanggan.",
             type: "summary",
             columns: [
-                { key: "pemasok", label: "Pemasok", align: "left" },
-                { key: "totalHutang", label: "Total Hutang", align: "right", render: (r: any) => formatCurrency(r.totalHutang) },
+                { key: "pelanggan", label: "Pelanggan", align: "left" },
+                { key: "totalPiutang", label: "Total Piutang", align: "right", render: (r: any) => formatCurrency(r.totalPiutang) },
                 { key: "terbayar", label: "Terbayar", align: "right", render: (r: any) => formatCurrency(r.terbayar) },
-                { key: "sisaHutang", label: "Sisa Hutang", align: "right", render: (r: any) => formatCurrency(r.sisaHutang) },
+                { key: "sisaPiutang", label: "Sisa Piutang", align: "right", render: (r: any) => formatCurrency(r.sisaPiutang) },
             ],
             data: [
-                { pemasok: "UNILEVER", totalHutang: 10000000, terbayar: 5000000, sisaHutang: 5000000 },
-                { pemasok: "CHUP", totalHutang: 2500000, terbayar: 2500000, sisaHutang: 0 },
-                { pemasok: "TRIAL", totalHutang: 750000, terbayar: 0, sisaHutang: 750000 },
+                { pelanggan: "PT. ABC", totalPiutang: 5000000, terbayar: 2000000, sisaPiutang: 3000000 },
+                { pelanggan: "Toko Sinar Jaya", totalPiutang: 1500000, terbayar: 0, sisaPiutang: 1500000 },
+                { pelanggan: "CV. Makmur", totalPiutang: 3000000, terbayar: 3000000, sisaPiutang: 0 },
             ],
-            grandTotalKey: "sisaHutang"
+            grandTotalKey: "sisaPiutang"
         },
-        "accounts-payable-aging": {
-            title: "Laporan Umur Hutang Dagang",
-            desc: "Filter dan tampilkan laporan umur hutang dagang berdasarkan hari keterlambatan.",
+        "accounts-receivable-aging": {
+            title: "Laporan Umur Piutang Dagang",
+            desc: "Filter dan tampilkan laporan umur piutang dagang berdasarkan hari keterlambatan.",
             type: "aging",
             columns: [
-                { key: "pemasok", label: "Pemasok", align: "left" },
+                { key: "pelanggan", label: "Pelanggan", align: "left" },
                 { key: "belumJatuhTempo", label: "Belum Jatuh Tempo", align: "right", render: (r: any) => formatCurrency(r.belumJatuhTempo) },
                 { key: "hari1_30", label: "1-30 Hari", align: "right", render: (r: any) => formatCurrency(r.hari1_30) },
                 { key: "hari31_60", label: "31-60 Hari", align: "right", render: (r: any) => formatCurrency(r.hari31_60) },
@@ -106,26 +115,26 @@ function ReportContent() {
                 { key: "total", label: "Total Saldo", align: "right", render: (r: any) => formatCurrency(r.total) },
             ],
             data: [
-                { pemasok: "UNILEVER", belumJatuhTempo: 5000000, hari1_30: 0, hari31_60: 0, hari61_90: 0, lebih90: 0, total: 5000000 },
-                { pemasok: "TRIAL", belumJatuhTempo: 0, hari1_30: 750000, hari31_60: 0, hari61_90: 0, lebih90: 0, total: 750000 },
+                { pelanggan: "PT. ABC", belumJatuhTempo: 3000000, hari1_30: 0, hari31_60: 0, hari61_90: 0, lebih90: 0, total: 3000000 },
+                { pelanggan: "Toko Sinar Jaya", belumJatuhTempo: 0, hari1_30: 1500000, hari31_60: 0, hari61_90: 0, lebih90: 0, total: 1500000 },
             ],
             grandTotalKey: "total"
         },
         // Fallback for others
         "default": {
-            title: "Laporan Hutang Dagang",
-            desc: "Laporan data hutang dagang pemasok",
+            title: "Laporan Piutang Dagang",
+            desc: "Laporan data piutang dagang pelanggan",
             type: "summary",
             columns: [
                 { key: "noNota", label: "No. Nota", align: "left" },
                 { key: "tanggal", label: "Tanggal", align: "left" },
-                { key: "pemasok", label: "Pemasok", align: "left" },
-                { key: "sisaHutang", label: "Sisa Hutang", align: "right", render: (r: any) => formatCurrency(r.sisaHutang) },
+                { key: "pelanggan", label: "Pelanggan", align: "left" },
+                { key: "sisaPiutang", label: "Sisa Piutang", align: "right", render: (r: any) => formatCurrency(r.sisaPiutang) },
             ],
             data: [
-                { noNota: "PIV-2401-0001", tanggal: "2026-04-10", pemasok: "TRIAL", sisaHutang: 500000 }
+                { noNota: "INV-2401-0001", tanggal: "2026-04-10", pelanggan: "TRIAL", sisaPiutang: 500000 }
             ],
-            grandTotalKey: "sisaHutang"
+            grandTotalKey: "sisaPiutang"
         }
     };
 
@@ -141,7 +150,8 @@ function ReportContent() {
         tanggalHingga: toDateInput(lastOfMonth),
         rowPerPage: 20,
         status: "lokal",
-        pemasok: "",
+        penjual: "",
+        pelanggan: "",
         tampilan: "per_baris",
     });
 
@@ -165,7 +175,8 @@ function ReportContent() {
             tanggalHingga: toDateInput(lastOfMonth),
             rowPerPage: 20,
             status: "lokal",
-            pemasok: "",
+            penjual: "",
+            pelanggan: "",
             tampilan: "per_baris",
         });
         setShowPreview(false);
@@ -210,9 +221,14 @@ function ReportContent() {
                                     {statusOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                                 </FormSelect>
                             </FormField>
-                            <FormField label="Pemasok">
-                                <FormSelect value={params.pemasok} onChange={(e) => set("pemasok", e.target.value)}>
-                                    {pemasokOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                            <FormField label="Penjual">
+                                <FormSelect value={params.penjual} onChange={(e) => set("penjual", e.target.value)}>
+                                    {penjualOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                                </FormSelect>
+                            </FormField>
+                            <FormField label="Pelanggan">
+                                <FormSelect value={params.pelanggan} onChange={(e) => set("pelanggan", e.target.value)}>
+                                    {pelangganOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                                 </FormSelect>
                             </FormField>
                             <FormField label="Tampilan">
@@ -253,7 +269,7 @@ function ReportContent() {
                                 <div>
                                     <h3 className="font-bold text-slate-800 capitalize">{config.title}</h3>
                                     <p className="text-xs text-slate-500 mt-0.5">
-                                        Periode: {params.tanggalDari} s/d {params.tanggalHingga} · {params.pemasok ? pemasokOptions.find((p) => p.value === params.pemasok)?.label : "Semua Pemasok"}
+                                        Periode: {params.tanggalDari} s/d {params.tanggalHingga} · {params.pelanggan ? pelangganOptions.find((p) => p.value === params.pelanggan)?.label : "Semua Pelanggan"}
                                     </p>
                                 </div>
                             </div>
@@ -284,7 +300,7 @@ function ReportContent() {
                                             {config.columns.map((col: any, colIdx: number) => (
                                                 <td key={colIdx} className={`px-4 py-3 text-sm text-${col.align || 'left'} ${col.key === 'noNota' ? 'font-semibold text-primary' : ''} ${col.key === 'status' ? 'text-center' : ''}`}>
                                                     {col.key === 'status' ? (
-                                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${row.status === 'Lokal' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
+                                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                                             {row.status}
                                                         </span>
                                                     ) : col.render ? col.render(row) : row[col.key]}
@@ -296,7 +312,7 @@ function ReportContent() {
                                 <tfoot>
                                     <tr className="bg-slate-50 border-t-2 border-primary/10">
                                         <td colSpan={config.columns.length - 1} className="px-4 py-3 text-sm font-bold text-slate-700 text-right">
-                                            Grand Total Sisa Hutang
+                                            Grand Total Sisa Piutang
                                         </td>
                                         <td className="px-4 py-3 text-base font-black text-primary text-right" colSpan={2}>
                                             Rp {formatCurrency(grandTotal)}
@@ -338,7 +354,7 @@ function ReportContent() {
     );
 }
 
-export default function AccountsPayableReportsPage() {
+export default function AccountsReceivableReportsPage() {
     return (
         <div className="bg-background-light text-slate-900 font-sans min-h-screen flex flex-col overflow-hidden pb-8">
             <Navbar />

@@ -232,14 +232,15 @@ export const modules: ModuleConfig[] = [
                 items: [
                     { label: "Detil Hutang", icon: "money_off", href: "/reports/accounts-payable?report=accounts-payable-detail" },
                     { label: "Rekap Hutang", icon: "account_balance", href: "/reports/accounts-payable?report=accounts-payable-summary" },
+                    { label: "Umur Hutang", icon: "hourglass_top", href: "/reports/accounts-payable?report=accounts-payable-aging" },
                 ],
             },
             {
                 title: "Piutang",
                 items: [
-                    { label: "Detil Piutang", icon: "request_quote", href: "#" },
-                    { label: "Rekap Piutang", icon: "account_balance_wallet", href: "#" },
-                    { label: "Umur Piutang", icon: "hourglass_top", href: "#" },
+                    { label: "Detil Piutang", icon: "request_quote", href: "/reports/accounts-receivable?report=accounts-receivable-detail" },
+                    { label: "Rekap Piutang", icon: "account_balance_wallet", href: "/reports/accounts-receivable?report=accounts-receivable-summary" },
+                    { label: "Umur Piutang", icon: "hourglass_top", href: "/reports/accounts-receivable?report=accounts-receivable-aging" },
                 ],
             },
             {
