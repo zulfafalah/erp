@@ -187,7 +187,7 @@ export const modules: ModuleConfig[] = [
             {
                 title: "Kas & Permintaan Dana",
                 items: [
-                    { label: "Permintaan Dana", icon: "request_quote", href: "#" },
+                    { label: "Permintaan Dana", icon: "request_quote", href: "/accounting/fund-request" },
                 ],
             },
             {
