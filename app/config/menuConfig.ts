@@ -51,6 +51,7 @@ export const modules: ModuleConfig[] = [
             {
                 title: "Master",
                 items: [
+                    { label: "Outlet", icon: "store", href: "/master-data/outlet" },
                     { label: "Negara", icon: "public", href: "/master-data/country" },
                     { label: "Kota", icon: "location_city", href: "/master-data/city" },
                     { label: "Wilayah", icon: "map", href: "/master-data/region" },
@@ -304,7 +305,7 @@ export const modules: ModuleConfig[] = [
             {
                 title: "Data Sistem",
                 items: [
-                    { label: "Data Outlet", icon: "store", href: "#" },
+                    { label: "Data Outlet", icon: "store", href: "/master-data/outlet" },
                     { label: "Daftar Form", icon: "list_alt", href: "#" },
                 ],
             },
