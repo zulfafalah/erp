@@ -1,36 +1,79 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ERP Falah
 
-## Getting Started
+Sistem **Enterprise Resource Planning (ERP)** berbasis web yang dibangun menggunakan [Next.js](https://nextjs.org), TypeScript, dan Tailwind CSS. Aplikasi ini mencakup modul-modul bisnis utama mulai dari pembelian, penjualan, inventaris, akuntansi, hingga keuangan.
 
-First, run the development server:
+## Teknologi
+
+- **Framework**: [Next.js 16](https://nextjs.org) (App Router)
+- **UI**: [React 19](https://react.dev) + [Tailwind CSS 4](https://tailwindcss.com)
+- **Bahasa**: TypeScript
+- **Ikon**: Material Symbols Outlined
+
+## Modul
+
+### 🛒 Purchase (Pembelian)
+- **Order** — Purchase Order ke supplier
+- **Request** — Purchase Request internal
+- **Receipt** — Penerimaan barang
+- **Invoice** — Faktur pembelian
+- **Return** — Retur pembelian
+
+### 💰 Sales (Penjualan)
+- **Order** — Sales Order ke pelanggan
+- **Commission** — Komisi penjualan
+- **Invoice** — Faktur penjualan
+- **Return** — Retur penjualan
+
+### 📦 Inventory (Inventaris)
+- **Adjustment** — Penyesuaian stok
+- **Stock Transfer Inbound** — Transfer stok masuk
+- **Stock Transfer Outbound** — Transfer stok keluar
+
+### 📒 Accounting (Akuntansi)
+- **Chart of Accounts** — Daftar akun
+- **General Journal** — Jurnal umum
+- **Transaction Journal** — Jurnal transaksi
+- **Monthly Posting** — Posting bulanan
+- **Monthly Opening Balance** — Saldo awal bulanan
+- **Yearly Opening Balance** — Saldo awal tahunan
+- **Fund Request** — Permintaan dana
+
+### 💳 Finance (Keuangan)
+- **Accounts Payable** — Hutang usaha
+- **Accounts Receivable** — Piutang usaha
+- **Sales Commissions** — Komisi penjualan
+
+### 🗂️ Master Data
+- **Product & Product Category** — Produk dan kategori
+- **Customer** — Data pelanggan
+- **Supplier** — Data supplier
+- **Seller** — Data penjual
+- **Warehouse** — Data gudang
+- **Currency** — Mata uang
+- **Country, City, Region** — Lokasi
+- **Adjustment Reason** — Alasan penyesuaian
+
+## Menjalankan Proyek
+
+Install dependensi:
+
+```bash
+npm install
+```
+
+Jalankan development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Buka [http://localhost:3000](http://localhost:3000) di browser. Halaman akan otomatis diarahkan ke modul Purchase Order.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Perintah | Deskripsi |
+|---|---|
+| `npm run dev` | Jalankan development server |
+| `npm run build` | Build untuk production |
+| `npm run start` | Jalankan production server |
+| `npm run lint` | Jalankan ESLint |
