@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, use } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "../../../components/Navbar";
 import Sidebar from "../../../components/Sidebar";
@@ -489,11 +489,12 @@ function TabGudang() {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default function UserSettingsDetailPage({ params }: { params: { id: string } }) {
+export default function UserSettingsDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = use(params);
     const router = useRouter();
     const [activeTab, setActiveTab] = useState<TabKey>("data-pengguna");
-    const isNew = params.id === "new";
-    const pageTitle = isNew ? "Tambah Pengguna Baru" : `Data Pengguna: ${params.id}`;
+    const isNew = id === "new";
+    const pageTitle = isNew ? "Tambah Pengguna Baru" : `Data Pengguna: ${id}`;
 
     return (
         <div className="bg-background-light text-slate-900 font-sans min-h-screen flex flex-col overflow-hidden pb-8">
@@ -554,7 +555,7 @@ export default function UserSettingsDetailPage({ params }: { params: { id: strin
                         </div>
 
                         {/* Tab Content */}
-                        {activeTab === "data-pengguna" && <TabDataPengguna userId={params.id} />}
+                        {activeTab === "data-pengguna" && <TabDataPengguna userId={id} />}
                         {activeTab === "outlet"        && <TabOutlet />}
                         {activeTab === "gudang"        && <TabGudang />}
                     </div>
