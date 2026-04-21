@@ -27,8 +27,8 @@ export default function LoginPage() {
             return;
         }
 
-        // Placeholder: redirect to dashboard
-        router.push("/");
+        // Redirect to Context Selection page
+        router.push("/select-location");
     };
 
     return (
