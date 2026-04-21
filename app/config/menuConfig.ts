@@ -19,6 +19,13 @@ export interface ModuleConfig {
 
 export const modules: ModuleConfig[] = [
     {
+        key: "panel-utama",
+        label: "Panel Utama",
+        icon: "home",
+        href: "/",
+        sidebarSections: [],
+    },
+    {
         key: "pembelian",
         label: "Pembelian",
         icon: "shopping_cart",

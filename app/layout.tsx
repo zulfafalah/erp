@@ -10,8 +10,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "ERP Purchase",
-  description: "ERP Purchase Order Management System",
+  title: "ERP E-Smart — Dashboard",
+  description: "Sistem ERP E-Smart — Panel Utama",
 };
 
 export default function RootLayout({

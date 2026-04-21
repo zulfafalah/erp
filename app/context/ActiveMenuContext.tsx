@@ -12,14 +12,14 @@ interface ActiveMenuContextType {
 }
 
 const ActiveMenuContext = createContext<ActiveMenuContextType>({
-    activeModule: "pembelian",
+    activeModule: "panel-utama",
     setActiveModule: () => { },
 });
 
 function ActiveMenuProviderInner({ children }: { children: ReactNode }) {
     const pathname = usePathname();
     const searchParams = useSearchParams();
-    const [activeModule, setActiveModuleState] = useState("pembelian");
+    const [activeModule, setActiveModuleState] = useState("panel-utama");
 
     // Load persisted module from localStorage on mount
     useEffect(() => {
@@ -77,7 +77,7 @@ function ActiveMenuProviderInner({ children }: { children: ReactNode }) {
 export function ActiveMenuProvider({ children }: { children: ReactNode }) {
     return (
         <Suspense fallback={
-            <ActiveMenuContext.Provider value={{ activeModule: "pembelian", setActiveModule: () => { } }}>
+            <ActiveMenuContext.Provider value={{ activeModule: "panel-utama", setActiveModule: () => { } }}>
                 {children}
             </ActiveMenuContext.Provider>
         }>
