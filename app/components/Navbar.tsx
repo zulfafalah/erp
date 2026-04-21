@@ -6,11 +6,14 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { modules } from "../config/menuConfig";
 import { useActiveMenu } from "../context/ActiveMenuContext";
+import { useAuth } from "../context/AuthContext";
 
 export default function Navbar() {
     const pathname = usePathname();
     const { activeModule, setActiveModule } = useActiveMenu();
+    const { user, logout } = useAuth();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isProfileOpen, setIsProfileOpen] = useState(false);
 
     const isActive = (path: string) => pathname?.startsWith(path);
     const isModuleActive = (key: string) => activeModule === key;
@@ -94,16 +97,45 @@ export default function Navbar() {
 
                     <div className="h-8 w-px bg-slate-200 mx-1 hidden sm:block"></div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 relative">
                         <div className="text-right hidden md:block">
-                            <p className="text-xs font-bold text-slate-900">Zulfa Falah</p>
-                            <p className="text-[10px] text-slate-500">Procurement Manager</p>
+                            <p className="text-xs font-bold text-slate-900">{user?.full_name || user?.username || "—"}</p>
+                            <p className="text-[10px] text-slate-500">Administrator</p>
                         </div>
-                        <div className="size-8 md:size-9 rounded-full bg-primary/10 border border-primary/20 overflow-hidden flex items-center justify-center shrink-0">
+                        <button
+                            id="btn-profile-menu"
+                            onClick={() => setIsProfileOpen((v) => !v)}
+                            className="size-8 md:size-9 rounded-full bg-primary/10 border border-primary/20 overflow-hidden flex items-center justify-center shrink-0 hover:bg-primary/20 transition-colors"
+                        >
                             <span className="material-symbols-outlined text-primary text-xl md:text-xl">
                                 person
                             </span>
-                        </div>
+                        </button>
+
+                        {/* Profile dropdown */}
+                        {isProfileOpen && (
+                            <>
+                                {/* Backdrop */}
+                                <div
+                                    className="fixed inset-0 z-40"
+                                    onClick={() => setIsProfileOpen(false)}
+                                />
+                                <div className="absolute right-0 top-11 w-48 bg-white rounded-xl border border-slate-100 shadow-xl z-50 overflow-hidden">
+                                    <div className="px-4 py-3 border-b border-slate-100">
+                                        <p className="text-sm font-bold text-slate-800">{user?.full_name || user?.username || "—"}</p>
+                                        <p className="text-xs text-slate-400">Administrator</p>
+                                    </div>
+                                    <button
+                                        id="btn-navbar-logout"
+                                        onClick={async () => { setIsProfileOpen(false); await logout(); }}
+                                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
+                                    >
+                                        <span className="material-symbols-outlined text-base">logout</span>
+                                        Logout
+                                    </button>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             </header>
@@ -138,8 +170,8 @@ export default function Navbar() {
                             <span className="material-symbols-outlined text-primary">person</span>
                         </div>
                         <div>
-                            <p className="font-bold text-slate-900">Zulfa Falah</p>
-                            <p className="text-xs text-slate-500">Procurement Manager</p>
+                            <p className="font-bold text-slate-900">{user?.full_name || user?.username || "—"}</p>
+                            <p className="text-xs text-slate-500">Administrator</p>
                         </div>
                     </div>
                 </div>

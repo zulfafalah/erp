@@ -3,9 +3,11 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useAuth } from "../context/AuthContext";
 
 export default function LoginPage() {
     const router = useRouter();
+    const { login } = useAuth();
 
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
@@ -16,19 +18,22 @@ export default function LoginPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
-        setIsLoading(true);
-
-        // Simulate login request
-        await new Promise((r) => setTimeout(r, 1200));
 
         if (!username || !password) {
             setError("Username dan password harus diisi.");
-            setIsLoading(false);
             return;
         }
 
-        // Redirect to Context Selection page
-        router.push("/select-location");
+        setIsLoading(true);
+        try {
+            await login(username, password);
+            // Redirect to Context Selection page after successful login
+            router.push("/select-location");
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Login gagal. Coba lagi.");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (

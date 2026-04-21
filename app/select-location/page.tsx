@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useAuth } from "../context/AuthContext";
 
 // ─── Mock Locations ────────────────────────────────────────────────────────────
 
@@ -18,6 +19,7 @@ const LOCATIONS = [
 
 export default function SelectLocationPage() {
     const router = useRouter();
+    const { user, logout } = useAuth();
 
     const [selectedLocation, setSelectedLocation] = useState("");
     const [isLoading, setIsLoading] = useState(false);
@@ -33,15 +35,14 @@ export default function SelectLocationPage() {
         }
 
         setIsLoading(true);
-        // Simulate context-setting request
-        await new Promise((r) => setTimeout(r, 800));
-
-        // TODO: persist selected location in session/context
+        // TODO: call API to persist selected location/branch in session
+        // For now, just navigate to the dashboard
+        await new Promise((r) => setTimeout(r, 400));
         router.push("/");
     };
 
-    const handleLogout = () => {
-        router.push("/login");
+    const handleLogout = async () => {
+        await logout();
     };
 
     return (
@@ -72,8 +73,8 @@ export default function SelectLocationPage() {
                         Select Location
                     </h1>
                     <p className="text-[13px] text-slate-500 mb-6 text-center leading-snug">
-                        Hi <span className="font-semibold text-slate-700">Administrator</span>,
-                        here are the available location
+                        Hi <span className="font-semibold text-slate-700">{user?.full_name || user?.username || "Administrator"}</span>,
+                        here are the available locations
                     </p>
 
                     {/* Form */}
