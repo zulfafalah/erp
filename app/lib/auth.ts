@@ -3,8 +3,8 @@ import type { JWTPayload, User } from "./types";
 
 // ─── Cookie names ─────────────────────────────────────────────────────────────
 
-export const ACCESS_COOKIE  = "erp_access";
-export const REFRESH_COOKIE = "erp_refresh";
+export const ACCESS_COOKIE  = "access_token";
+export const REFRESH_COOKIE = "refresh_token";
 
 // Cookie max-ages (seconds)
 const ACCESS_MAX_AGE  = 60 * 60;           // 1 hour
