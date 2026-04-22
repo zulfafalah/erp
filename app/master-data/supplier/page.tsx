@@ -182,7 +182,7 @@ export default function PemasokListPage() {
                                     Export Excel
                                 </button> */}
                                 <Link
-                                    href="/master-data/pemasok/new"
+                                    href="/master-data/supplier/new"
                                     className="w-full sm:w-auto justify-center flex items-center gap-2 px-3 md:px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold hover:bg-primary/90 transition-colors shadow-sm shadow-primary/20"
                                 >
                                     <span className="material-symbols-outlined text-lg">
