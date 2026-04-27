@@ -245,11 +245,6 @@ export default function PemasokListPage() {
                                 </h2>
                                 <p className="text-slate-500 mt-1">
                                     Kelola master data pemasok/supplier Anda.
-                                    {total > 0 && !isLoading && (
-                                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary">
-                                            {total} data
-                                        </span>
-                                    )}
                                 </p>
                             </div>
                             <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 md:gap-3 w-full md:w-auto mt-2 md:mt-0">
@@ -257,16 +252,7 @@ export default function PemasokListPage() {
                                     fields={FILTER_FIELDS}
                                     onApplyFilter={handleApplyFilter}
                                 />
-                                <button
-                                    onClick={() => fetchData(page, search)}
-                                    disabled={isLoading}
-                                    className="flex-none p-2 border border-primary/10 rounded-lg hover:bg-white text-slate-500 hover:text-primary transition-colors disabled:opacity-50"
-                                    title="Refresh data"
-                                >
-                                    <span className={`material-symbols-outlined text-lg ${isLoading ? "animate-spin" : ""}`}>
-                                        refresh
-                                    </span>
-                                </button>
+
                                 <Link
                                     href="/master-data/supplier/new"
                                     className="w-full sm:w-auto justify-center flex items-center gap-2 px-3 md:px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold hover:bg-primary/90 transition-colors shadow-sm shadow-primary/20"
