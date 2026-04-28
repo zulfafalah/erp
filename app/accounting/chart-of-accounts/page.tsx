@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Navbar from "../../components/Navbar";
 import Sidebar from "../../components/Sidebar";
 import StatusBar from "../../components/StatusBar";
@@ -14,32 +14,18 @@ type TipeAkun = "GRUP UTAMA" | "SUB GRUP" | "DETAIL";
 
 interface ChartOfAccount {
     id: string;
+    primarykey: number;
     tipeAkun: TipeAkun;
     grupAkun: string;
     parent: string;
     kodeAkun: string;
     keteranganAkun: string;
+    accounttype: string;
+    isbank: number;
+    coa0: number;
+    currencyname: string;
+    limit_saldo_val: string;
 }
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const allData: ChartOfAccount[] = [
-    { id: "1",  tipeAkun: "GRUP UTAMA", grupAkun: "ASSETS", parent: "",            kodeAkun: "100",       keteranganAkun: "AKTIVA"           },
-    { id: "2",  tipeAkun: "SUB GRUP",   grupAkun: "ASSETS", parent: "AKTIVA",      kodeAkun: "100.00",    keteranganAkun: "AKTIVA LANCAR"    },
-    { id: "3",  tipeAkun: "SUB GRUP",   grupAkun: "ASSETS", parent: "AKTIVA LANCAR", kodeAkun: "110.00.20", keteranganAkun: "KAS & BANK"     },
-    { id: "4",  tipeAkun: "SUB GRUP",   grupAkun: "ASSETS", parent: "KAS & BANK",  kodeAkun: "110.01.20", keteranganAkun: "KAS KECIL"        },
-    { id: "5",  tipeAkun: "DETAIL",     grupAkun: "ASSETS", parent: "KAS KECIL",   kodeAkun: "110.01.01", keteranganAkun: "KAS KECIL GD PIK" },
-    { id: "6",  tipeAkun: "DETAIL",     grupAkun: "ASSETS", parent: "KAS KECIL",   kodeAkun: "110.01.02", keteranganAkun: "KAS KECIL MEDAN"  },
-    { id: "7",  tipeAkun: "DETAIL",     grupAkun: "ASSETS", parent: "KAS KECIL",   kodeAkun: "110.01.03", keteranganAkun: "KAS KECIL SURABAYA" },
-    { id: "8",  tipeAkun: "SUB GRUP",   grupAkun: "ASSETS", parent: "KAS & BANK",  kodeAkun: "110.02.00", keteranganAkun: "KAS BESAR"        },
-    { id: "9",  tipeAkun: "DETAIL",     grupAkun: "ASSETS", parent: "KAS BESAR",   kodeAkun: "110.02.01", keteranganAkun: "KAS BESAR PUSAT"  },
-    { id: "10", tipeAkun: "SUB GRUP",   grupAkun: "ASSETS", parent: "KAS & BANK",  kodeAkun: "120.00.00", keteranganAkun: "BANK"             },
-    { id: "11", tipeAkun: "DETAIL",     grupAkun: "ASSETS", parent: "BANK",        kodeAkun: "120.01.00", keteranganAkun: "BCA PUSAT"        },
-    { id: "12", tipeAkun: "DETAIL",     grupAkun: "ASSETS", parent: "BANK",        kodeAkun: "120.02.00", keteranganAkun: "MANDIRI PUSAT"    },
-    { id: "13", tipeAkun: "SUB GRUP",   grupAkun: "ASSETS", parent: "AKTIVA LANCAR", kodeAkun: "130.00.00", keteranganAkun: "PIUTANG USAHA"  },
-    { id: "14", tipeAkun: "DETAIL",     grupAkun: "ASSETS", parent: "PIUTANG USAHA", kodeAkun: "130.01.00", keteranganAkun: "PIUTANG PELANGGAN" },
-    { id: "15", tipeAkun: "SUB GRUP",   grupAkun: "ASSETS", parent: "AKTIVA",      kodeAkun: "200.00.00", keteranganAkun: "AKTIVA TETAP"     },
-];
 
 // ─── Filter Fields ────────────────────────────────────────────────────────────
 
@@ -75,10 +61,98 @@ const tipeStyles: Record<TipeAkun, string> = {
     "DETAIL":     "bg-slate-100 text-slate-700",
 };
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Map API accounttype → display TipeAkun badge */
+function toTipeAkun(accounttype: string): TipeAkun {
+    const t = (accounttype ?? "").toUpperCase();
+    if (t.includes("GRUP UTAMA") || t.includes("MAIN") || t.includes("HEADER")) return "GRUP UTAMA";
+    if (t.includes("SUB"))     return "SUB GRUP";
+    return "DETAIL";
+}
+
+/** Map API groupname → display grupAkun */
+function toGrupAkun(groupname: string): string {
+    return (groupname ?? "").toUpperCase() || "—";
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ChartOfAccountsListPage() {
-    const [filteredData, setFilteredData] = useState<ChartOfAccount[]>(allData);
+    const [allData,      setAllData]      = useState<ChartOfAccount[]>([]);
+    const [filteredData, setFilteredData] = useState<ChartOfAccount[]>([]);
+    const [loading,      setLoading]      = useState(true);
+    const [error,        setError]        = useState<string | null>(null);
+    const [deletingId,   setDeletingId]   = useState<string | null>(null);
+
+    // Pagination state
+    const [page,     setPage]     = useState(1);
+    const [pageSize] = useState(20);
+    const [total,    setTotal]    = useState(0);
+    const [search,   setSearch]   = useState("");
+
+    // ── Fetch data ────────────────────────────────────────────────────────────
+
+    const fetchData = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const qs = new URLSearchParams({
+                page:      String(page),
+                page_size: String(pageSize),
+            });
+            if (search) qs.set("search", search);
+
+            const res = await fetch(`/api/accounting/accounts?${qs.toString()}`);
+            const json = await res.json() as {
+                ok: boolean;
+                data?: {
+                    primarykey: number;
+                    code: string;
+                    name: string;
+                    accounttype: string;
+                    groupname: string;
+                    parentname: string | null;
+                    isbank: number;
+                    coa0: number;
+                    currencyname: string | null;
+                    limit_saldo_val: string | null;
+                }[];
+                total?: number;
+                message?: string;
+            };
+
+            if (!json.ok) throw new Error(json.message ?? "Gagal memuat data.");
+
+            const mapped: ChartOfAccount[] = (json.data ?? []).map((item) => ({
+                id:             String(item.primarykey),
+                primarykey:     item.primarykey,
+                tipeAkun:       toTipeAkun(item.accounttype),
+                grupAkun:       toGrupAkun(item.groupname),
+                parent:         item.parentname ?? "",
+                kodeAkun:       item.code,
+                keteranganAkun: item.name,
+                accounttype:    item.accounttype,
+                isbank:         item.isbank,
+                coa0:           item.coa0,
+                currencyname:   item.currencyname ?? "",
+                limit_saldo_val: item.limit_saldo_val ?? "",
+            }));
+
+            setAllData(mapped);
+            setFilteredData(mapped);
+            setTotal(json.total ?? mapped.length);
+        } catch (err: unknown) {
+            const e = err as Error;
+            setError(e.message ?? "Terjadi kesalahan.");
+        } finally {
+            setLoading(false);
+        }
+    }, [page, pageSize, search]);
+
+    useEffect(() => { fetchData(); }, [fetchData]);
+
+    // ── Filter ────────────────────────────────────────────────────────────────
 
     const handleApplyFilter = (rules: FilterRule[]) => {
         if (rules.length === 0) {
@@ -91,7 +165,7 @@ export default function ChartOfAccountsListPage() {
                 const itemValue = item[field as keyof ChartOfAccount];
                 if (itemValue === undefined) return true;
                 const itemStr = String(itemValue).toLowerCase();
-                const valStr = value.toLowerCase();
+                const valStr  = value.toLowerCase();
                 switch (operator) {
                     case "contains":    return itemStr.includes(valStr);
                     case "equals":      return itemStr === valStr;
@@ -100,17 +174,43 @@ export default function ChartOfAccountsListPage() {
                     case "ends_with":   return itemStr.endsWith(valStr);
                     default:            return true;
                 }
-            })
+            }),
         );
         setFilteredData(result);
     };
+
+    // ── Delete ────────────────────────────────────────────────────────────────
+
+    const handleDelete = async (item: ChartOfAccount) => {
+        if (!confirm(`Nonaktifkan akun "${item.keteranganAkun}" (${item.kodeAkun})?`)) return;
+        setDeletingId(item.id);
+        try {
+            const res = await fetch(`/api/accounting/accounts/${item.primarykey}`, {
+                method: "DELETE",
+            });
+            const json = await res.json() as { ok: boolean; message?: string };
+            if (!json.ok) throw new Error(json.message);
+            await fetchData();
+        } catch (err: unknown) {
+            const e = err as Error;
+            alert(e.message ?? "Gagal menonaktifkan akun.");
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
+    // ── Pagination ────────────────────────────────────────────────────────────
+
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+    // ── Columns ───────────────────────────────────────────────────────────────
 
     const columns: Column<ChartOfAccount>[] = [
         {
             header: "#",
             key: "id",
-            render: (item, idx) => (
-                <span className="text-sm text-slate-400 font-medium">{(idx ?? 0) + 1}.</span>
+            render: (_item, idx) => (
+                <span className="text-sm text-slate-400 font-medium">{((page - 1) * pageSize) + (idx ?? 0) + 1}.</span>
             ),
         },
         {
@@ -148,11 +248,22 @@ export default function ChartOfAccountsListPage() {
             key: "keteranganAkun",
             render: (item) => (
                 <Link
-                    href={`/accounting/chart-of-accounts/${item.id}`}
+                    href={`/accounting/chart-of-accounts/${item.primarykey}`}
                     className="font-semibold text-primary text-sm tracking-tight hover:underline"
                 >
                     {item.keteranganAkun}
                 </Link>
+            ),
+        },
+        {
+            header: "Status",
+            key: "coa0",
+            render: (item) => (
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    item.coa0 === 1 ? "bg-red-100 text-red-700" : "bg-green-100 text-green-800"
+                }`}>
+                    {item.coa0 === 1 ? "Non Aktif" : "Aktif"}
+                </span>
             ),
         },
         {
@@ -162,35 +273,46 @@ export default function ChartOfAccountsListPage() {
             render: (item) => (
                 <div className="flex items-center justify-end gap-2">
                     <Link
-                        href={`/accounting/chart-of-accounts/${item.id}`}
+                        href={`/accounting/chart-of-accounts/${item.primarykey}`}
                         className="p-1.5 text-slate-400 hover:text-primary transition-colors"
-                        title="View"
+                        title="View / Edit"
                     >
-                        <span className="material-symbols-outlined text-lg">visibility</span>
+                        <span className="material-symbols-outlined text-lg">edit_square</span>
                     </Link>
                     <button
-                        className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"
-                        title="Delete"
+                        className="p-1.5 text-slate-400 hover:text-red-500 transition-colors disabled:opacity-40"
+                        title="Nonaktifkan"
+                        disabled={deletingId === item.id}
+                        onClick={() => handleDelete(item)}
                     >
-                        <span className="material-symbols-outlined text-lg">delete</span>
+                        <span className="material-symbols-outlined text-lg">
+                            {deletingId === item.id ? "hourglass_top" : "delete"}
+                        </span>
                     </button>
                 </div>
             ),
         },
     ];
 
+    // ── Mobile Card ───────────────────────────────────────────────────────────
+
     const renderMobileCard = (item: ChartOfAccount, idx?: number) => (
         <div className="p-4 space-y-3">
             <div className="flex justify-between items-start gap-3">
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs text-slate-400 font-medium">{(idx ?? 0) + 1}.</span>
+                        <span className="text-xs text-slate-400 font-medium">{((page - 1) * pageSize) + (idx ?? 0) + 1}.</span>
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${tipeStyles[item.tipeAkun]}`}>
                             {item.tipeAkun}
                         </span>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                            item.coa0 === 1 ? "bg-red-100 text-red-700" : "bg-green-100 text-green-800"
+                        }`}>
+                            {item.coa0 === 1 ? "Non Aktif" : "Aktif"}
+                        </span>
                     </div>
                     <Link
-                        href={`/accounting/chart-of-accounts/${item.id}`}
+                        href={`/accounting/chart-of-accounts/${item.primarykey}`}
                         className="font-semibold text-primary text-sm hover:underline block mt-1"
                     >
                         {item.keteranganAkun}
@@ -212,18 +334,26 @@ export default function ChartOfAccountsListPage() {
             <div className="flex justify-end items-center pt-2 border-t border-slate-100">
                 <div className="flex items-center gap-1">
                     <Link
-                        href={`/accounting/chart-of-accounts/${item.id}`}
+                        href={`/accounting/chart-of-accounts/${item.primarykey}`}
                         className="p-1.5 text-slate-400 hover:text-primary transition-colors"
                     >
-                        <span className="material-symbols-outlined text-base">visibility</span>
+                        <span className="material-symbols-outlined text-base">edit_square</span>
                     </Link>
-                    <button className="p-1.5 text-slate-400 hover:text-red-500 transition-colors">
-                        <span className="material-symbols-outlined text-base">delete</span>
+                    <button
+                        className="p-1.5 text-slate-400 hover:text-red-500 transition-colors disabled:opacity-40"
+                        disabled={deletingId === item.id}
+                        onClick={() => handleDelete(item)}
+                    >
+                        <span className="material-symbols-outlined text-base">
+                            {deletingId === item.id ? "hourglass_top" : "delete"}
+                        </span>
                     </button>
                 </div>
             </div>
         </div>
     );
+
+    // ── Render ────────────────────────────────────────────────────────────────
 
     return (
         <div className="bg-background-light text-slate-900 font-sans min-h-screen flex flex-col overflow-hidden pb-8">
@@ -249,6 +379,17 @@ export default function ChartOfAccountsListPage() {
                                 </p>
                             </div>
                             <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 md:gap-3 w-full md:w-auto mt-2 md:mt-0">
+                                {/* Search bar */}
+                                <div className="relative w-full sm:w-56">
+                                    <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-base">search</span>
+                                    <input
+                                        type="text"
+                                        placeholder="Cari kode / nama akun…"
+                                        value={search}
+                                        onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                                        className="w-full pl-8 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
+                                    />
+                                </div>
                                 <MultiFilter fields={FILTER_FIELDS} onApplyFilter={handleApplyFilter} />
                                 <Link
                                     href="/accounting/chart-of-accounts/new"
@@ -260,13 +401,88 @@ export default function ChartOfAccountsListPage() {
                             </div>
                         </div>
 
+                        {/* Error Banner */}
+                        {error && (
+                            <div className="flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+                                <span className="material-symbols-outlined text-base">error</span>
+                                {error}
+                                <button
+                                    onClick={fetchData}
+                                    className="ml-auto text-xs font-bold underline hover:no-underline"
+                                >
+                                    Coba lagi
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Loading Skeleton */}
+                        {loading && (
+                            <div className="bg-white rounded-xl border border-primary/10 shadow-sm overflow-hidden">
+                                <div className="p-6 space-y-3">
+                                    {[...Array(6)].map((_, i) => (
+                                        <div key={i} className="h-8 bg-slate-100 rounded animate-pulse" />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         {/* Table Container */}
-                        <DataTable
-                            data={filteredData}
-                            columns={columns}
-                            keyField="id"
-                            renderMobileCard={renderMobileCard}
-                        />
+                        {!loading && (
+                            <DataTable
+                                data={filteredData}
+                                columns={columns}
+                                keyField="id"
+                                renderMobileCard={renderMobileCard}
+                                footer={
+                                    <div className="px-4 md:px-6 py-4 bg-slate-50 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0">
+                                        <p className="text-sm text-slate-500 text-center md:text-left">
+                                            Menampilkan {filteredData.length === 0 ? 0 : ((page - 1) * pageSize) + 1} sampai{" "}
+                                            {Math.min(page * pageSize, total)} dari {total} data
+                                        </p>
+                                        <div className="flex flex-wrap justify-center items-center gap-1">
+                                            <button
+                                                className="p-2 border border-primary/10 rounded hover:bg-white disabled:opacity-50"
+                                                disabled={page <= 1}
+                                                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                                            >
+                                                <span className="material-symbols-outlined text-lg">chevron_left</span>
+                                            </button>
+                                            {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                                .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                                                .reduce<(number | "…")[]>((acc, p, idx, arr) => {
+                                                    if (idx > 0 && (p as number) - (arr[idx - 1] as number) > 1) acc.push("…");
+                                                    acc.push(p);
+                                                    return acc;
+                                                }, [])
+                                                .map((p, i) =>
+                                                    p === "…" ? (
+                                                        <span key={`ellipsis-${i}`} className="px-2 text-slate-400">…</span>
+                                                    ) : (
+                                                        <button
+                                                            key={p}
+                                                            onClick={() => setPage(p as number)}
+                                                            className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                                                                p === page
+                                                                    ? "bg-primary text-white font-bold"
+                                                                    : "hover:bg-white text-slate-600"
+                                                            }`}
+                                                        >
+                                                            {p}
+                                                        </button>
+                                                    ),
+                                                )}
+                                            <button
+                                                className="p-2 border border-primary/10 rounded hover:bg-white disabled:opacity-50"
+                                                disabled={page >= totalPages}
+                                                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                                            >
+                                                <span className="material-symbols-outlined text-lg">chevron_right</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                }
+                            />
+                        )}
                     </div>
                 </section>
             </main>
