@@ -71,15 +71,10 @@ const REGION_OPTIONS = [
     { value: 5, label: "Bali" },
 ];
 
-const COA_OPTIONS = [
-    { value: 0,          label: ":: Pilih Account ::" },
-    { value: 200,        label: "200 - KEWAJIBAN LANCAR" },
-    { value: 210,        label: "210 - HUTANG USAHA" },
-    { value: 300,        label: "300 - MODAL" },
-    { value: 400,        label: "400 - PENDAPATAN" },
-    { value: 500,        label: "500 - HARGA POKOK PENJUALAN" },
-    { value: 2147483647, label: "999 - LAINNYA" },
-];
+interface AccountOption {
+    value: number;
+    label: string;
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -133,6 +128,10 @@ export default function PemasokFormPage() {
     const [isLoading, setIsLoading]     = useState(false);    // submit
     const [error, setError]             = useState<string | null>(null);
     const [success, setSuccess]         = useState(false);
+
+    // ── Accounts (COA) dari API ───────────────────────────────────────────────
+    const [accounts, setAccounts]               = useState<AccountOption[]>([]);
+    const [isFetchingAccounts, setIsFetchingAccounts] = useState(true);
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -198,6 +197,34 @@ export default function PemasokFormPage() {
     useEffect(() => {
         if (!isNew) fetchDetail();
     }, [isNew, fetchDetail]);
+
+    // ── Fetch accounts (COA) untuk dropdown ───────────────────────────────────
+
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            setIsFetchingAccounts(true);
+            try {
+                const res  = await fetch("/api/accounting/accounts?page_size=500");
+                const json = await res.json() as { ok: boolean; data?: { primarykey: number; code: string; name: string }[] };
+                if (!cancelled && json.ok && json.data) {
+                    const opts: AccountOption[] = [
+                        { value: 0, label: ":: Pilih Account ::" },
+                        ...json.data.map((a) => ({
+                            value: a.primarykey,
+                            label: `${a.code} - ${a.name}`,
+                        })),
+                    ];
+                    setAccounts(opts);
+                }
+            } catch {
+                // Gagal fetch accounts — dropdown tetap kosong dengan placeholder
+            } finally {
+                if (!cancelled) setIsFetchingAccounts(false);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, []);
 
     // ── Submit ────────────────────────────────────────────────────────────────
 
@@ -495,14 +522,18 @@ export default function PemasokFormPage() {
 
                                                 {/* Account Code (coa21) */}
                                                 <FormField label="Account Code (COA)">
-                                                    <FormSelect
-                                                        value={String(form.coa21)}
-                                                        onChange={(e) => handleChange("coa21", Number(e.target.value))}
-                                                    >
-                                                        {COA_OPTIONS.map((opt) => (
-                                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                                        ))}
-                                                    </FormSelect>
+                                                    {isFetchingAccounts ? (
+                                                        <div className="h-9 w-full bg-slate-100 rounded-lg animate-pulse" />
+                                                    ) : (
+                                                        <FormSelect
+                                                            value={String(form.coa21)}
+                                                            onChange={(e) => handleChange("coa21", Number(e.target.value))}
+                                                        >
+                                                            {accounts.map((opt) => (
+                                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                            ))}
+                                                        </FormSelect>
+                                                    )}
                                                 </FormField>
 
                                             </div>
