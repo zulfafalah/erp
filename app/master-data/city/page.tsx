@@ -1,152 +1,241 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import Navbar from "../../components/Navbar";
 import Sidebar from "../../components/Sidebar";
 import StatusBar from "../../components/StatusBar";
 import MultiFilter, { FilterField, FilterRule } from "../../components/MultiFilter";
-import DataTable, { Column } from "../../components/DataTable";
 
-interface City {
-    id: string;
-    nama: string;
-    negara: string;
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface CityListItem {
+    cityid: number;
+    cityname: string;
+    bunitid: number;
 }
 
-const allData: City[] = [
-    { id: "CT-001", nama: "EXPORT",     negara: "SINGAPORE" },
-    { id: "CT-002", nama: "JAKARTA",    negara: "INDONESIA" },
-    { id: "CT-003", nama: "JAWA",       negara: "INDONESIA" },
-    { id: "CT-004", nama: "KALIMANTAN", negara: "INDONESIA" },
-    { id: "CT-005", nama: "MEDAN",      negara: "INDONESIA" },
-    { id: "CT-006", nama: "SULAWESI",   negara: "INDONESIA" },
-    { id: "CT-007", nama: "SURABAYA",   negara: "INDONESIA" },
-];
+interface ApiResponse {
+    ok: boolean;
+    data: CityListItem[];
+    page: number;
+    limit: number;
+    total: number;
+    message?: string;
+}
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const PAGE_LIMIT = 10;
 
 const FILTER_FIELDS: FilterField[] = [
-    { key: "nama",   label: "Nama Kota", type: "text" },
-    { key: "negara", label: "Negara",    type: "text" },
+    { key: "cityname", label: "Nama Kota", type: "text" },
 ];
 
-export default function CityListPage() {
-    const [filteredData, setFilteredData] = useState<City[]>(allData);
+// ─── Skeleton Components ───────────────────────────────────────────────────────
 
-    const handleApplyFilter = (rules: FilterRule[]) => {
-        if (rules.length === 0) {
-            setFilteredData(allData);
-            return;
+function SkeletonRow() {
+    return (
+        <tr>
+            <td className="px-6 py-4">
+                <div className="h-4 bg-slate-100 rounded animate-pulse w-3/4" />
+            </td>
+            <td className="px-6 py-4">
+                <div className="h-4 bg-slate-100 rounded animate-pulse w-12" />
+            </td>
+            <td className="px-6 py-4 text-right">
+                <div className="h-4 bg-slate-100 rounded animate-pulse w-12 ml-auto" />
+            </td>
+        </tr>
+    );
+}
+
+function SkeletonCard() {
+    return (
+        <div className="p-4 space-y-3 border-b border-primary/5">
+            <div className="flex justify-between items-start">
+                <div className="space-y-1.5">
+                    <div className="h-3.5 w-40 bg-slate-200 rounded animate-pulse" />
+                    <div className="h-3 w-24 bg-slate-100 rounded animate-pulse" />
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ─── Pagination ───────────────────────────────────────────────────────────────
+
+interface PaginationProps {
+    page: number;
+    total: number;
+    limit: number;
+    isLoading: boolean;
+    onPageChange: (p: number) => void;
+}
+
+function Pagination({ page, total, limit, isLoading, onPageChange }: PaginationProps) {
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    const from = total === 0 ? 0 : (page - 1) * limit + 1;
+    const to   = Math.min(page * limit, total);
+
+    const getPages = (): (number | "…")[] => {
+        if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+        const pages: (number | "…")[] = [];
+        if (page <= 4) {
+            for (let i = 1; i <= 5; i++) pages.push(i);
+            pages.push("…", totalPages);
+        } else if (page >= totalPages - 3) {
+            pages.push(1, "…");
+            for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i);
+        } else {
+            pages.push(1, "…", page - 1, page, page + 1, "…", totalPages);
         }
-        const result = allData.filter((item) =>
-            rules.every((rule) => {
-                const { field, operator, value } = rule;
-                const itemValue = item[field as keyof City];
-                if (itemValue === undefined) return true;
-                const itemStr = String(itemValue).toLowerCase();
-                const valStr = value.toLowerCase();
-                switch (operator) {
-                    case "contains":    return itemStr.includes(valStr);
-                    case "equals":      return itemStr === valStr;
-                    case "not_equals":  return itemStr !== valStr;
-                    case "starts_with": return itemStr.startsWith(valStr);
-                    case "ends_with":   return itemStr.endsWith(valStr);
-                    default:            return true;
-                }
-            })
-        );
-        setFilteredData(result);
+        return pages;
     };
 
-    const columns: Column<City>[] = [
-        {
-            header: "Nama Kota",
-            key: "nama",
-            render: (item) => (
-                <Link
-                    href={`/master-data/city/${item.id}`}
-                    className="font-semibold text-primary text-sm tracking-tight hover:underline"
+    return (
+        <div className="px-4 md:px-6 py-4 bg-slate-50 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 border-t border-primary/5">
+            <p className="text-sm text-slate-500 text-center md:text-left">
+                {total === 0
+                    ? "Tidak ada data"
+                    : `Menampilkan ${from}–${to} dari ${total} data`
+                }
+            </p>
+            <div className="flex flex-wrap justify-center items-center gap-1">
+                <button
+                    onClick={() => onPageChange(page - 1)}
+                    disabled={page === 1 || isLoading}
+                    className="p-2 border border-primary/10 rounded hover:bg-white disabled:opacity-40 transition-colors"
                 >
-                    {item.nama}
-                </Link>
-            ),
-        },
-        {
-            header: "Negara",
-            key: "negara",
-            render: (item) => (
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-primary/10 text-primary uppercase">
-                    {item.negara}
-                </span>
-            ),
-        },
-        {
-            header: "Aksi",
-            key: "aksi",
-            align: "right",
-            render: (item) => (
-                <div className="flex items-center justify-end gap-2">
-                    <Link
-                        href={`/master-data/city/${item.id}`}
-                        className="p-1.5 text-slate-400 hover:text-primary transition-colors"
-                        title="Edit"
-                    >
-                        <span className="material-symbols-outlined text-lg">edit_square</span>
-                    </Link>
-                    <button
-                        className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"
-                        title="Delete"
-                    >
-                        <span className="material-symbols-outlined text-lg">delete</span>
-                    </button>
-                </div>
-            ),
-        },
-    ];
+                    <span className="material-symbols-outlined text-lg">chevron_left</span>
+                </button>
 
-    const renderMobileCard = (item: City) => (
-        <div className="p-4 space-y-3">
-            <div className="flex justify-between items-start">
-                <div>
-                    <Link
-                        href={`/master-data/city/${item.id}`}
-                        className="font-semibold text-primary text-sm hover:underline"
-                    >
-                        {item.nama}
-                    </Link>
-                    <p className="text-xs text-slate-500 mt-0.5">{item.id}</p>
-                </div>
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary uppercase">
-                    {item.negara}
-                </span>
-            </div>
-            <div className="flex justify-end items-center pt-2 border-t border-slate-100 gap-1">
-                <Link
-                    href={`/master-data/city/${item.id}`}
-                    className="p-1.5 text-slate-400 hover:text-primary transition-colors"
+                {getPages().map((p, i) =>
+                    p === "…" ? (
+                        <span key={`ellipsis-${i}`} className="px-2 text-slate-400 text-sm select-none">…</span>
+                    ) : (
+                        <button
+                            key={p}
+                            onClick={() => onPageChange(p as number)}
+                            disabled={isLoading}
+                            className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                                p === page
+                                    ? "bg-primary text-white font-bold shadow-sm"
+                                    : "hover:bg-white text-slate-600 disabled:opacity-50"
+                            }`}
+                        >
+                            {p}
+                        </button>
+                    )
+                )}
+
+                <button
+                    onClick={() => onPageChange(page + 1)}
+                    disabled={page === totalPages || isLoading}
+                    className="p-2 border border-primary/10 rounded hover:bg-white disabled:opacity-40 transition-colors"
                 >
-                    <span className="material-symbols-outlined text-base">edit_square</span>
-                </Link>
-                <button className="p-1.5 text-slate-400 hover:text-red-500 transition-colors">
-                    <span className="material-symbols-outlined text-base">delete</span>
+                    <span className="material-symbols-outlined text-lg">chevron_right</span>
                 </button>
             </div>
         </div>
     );
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
+export default function CityListPage() {
+    const router = useRouter();
+
+    const [data, setData]             = useState<CityListItem[]>([]);
+    const [page, setPage]             = useState(1);
+    const [total, setTotal]           = useState(0);
+    const [isLoading, setIsLoading]   = useState(true);
+    const [error, setError]           = useState<string | null>(null);
+    const [search, setSearch]         = useState("");
+    const [deletingId, setDeletingId] = useState<number | null>(null);
+
+    // ── Fetch ─────────────────────────────────────────────────────────────────
+
+    const fetchData = useCallback(async (targetPage: number, searchStr: string) => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const qs = new URLSearchParams({
+                page:  String(targetPage),
+                limit: String(PAGE_LIMIT),
+                ...(searchStr ? { search: searchStr } : {}),
+            });
+            const res  = await fetch(`/api/master-data/cities?${qs.toString()}`);
+            const json = await res.json() as ApiResponse;
+
+            if (!res.ok || !json.ok) {
+                setError(json.message ?? "Gagal memuat data kota.");
+                return;
+            }
+
+            setData(json.data ?? []);
+            setTotal(json.total ?? 0);
+            setPage(json.page ?? targetPage);
+        } catch {
+            setError("Terjadi kesalahan koneksi. Pastikan server berjalan.");
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchData(page, search);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [page]);
+
+    // ── Filter ────────────────────────────────────────────────────────────────
+
+    const handleApplyFilter = (rules: FilterRule[]) => {
+        const searchRule = rules.find(r => r.operator === "contains" || r.operator === "equals");
+        const q = searchRule?.value ?? "";
+        setSearch(q);
+        setPage(1);
+        fetchData(1, q);
+    };
+
+    const handlePageChange = (p: number) => {
+        setPage(p);
+    };
+
+    // ── Delete ────────────────────────────────────────────────────────────────
+
+    const handleDelete = async (id: number, name: string) => {
+        if (!confirm(`Hapus kota "${name}"? Tindakan ini tidak dapat dibatalkan.`)) return;
+        setDeletingId(id);
+        try {
+            const res  = await fetch(`/api/master-data/cities/${id}`, { method: "DELETE" });
+            const json = await res.json() as { ok: boolean; message?: string };
+            if (!res.ok || !json.ok) {
+                alert(json.message ?? "Gagal menghapus data kota.");
+                return;
+            }
+            fetchData(page, search);
+        } catch {
+            alert("Terjadi kesalahan koneksi saat menghapus data.");
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
+    // ── Render ────────────────────────────────────────────────────────────────
 
     return (
         <div className="bg-background-light text-slate-900 font-sans min-h-screen flex flex-col overflow-hidden pb-8">
-            {/* Top Navigation Bar */}
             <Navbar />
 
             <main className="flex-1 flex overflow-hidden">
-                {/* Sidebar Navigation */}
                 <Sidebar />
 
-                {/* Main Content Area */}
                 <section className="flex-1 flex flex-col bg-background-light overflow-hidden">
                     <div className="flex-1 overflow-y-auto p-4 md:p-8 pb-28 md:pb-8 space-y-4 md:space-y-8">
 
-                        {/* Title & Actions */}
+                        {/* ── Title & Actions ─────────────────────────────── */}
                         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                             <div>
                                 <h2 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">
@@ -161,6 +250,7 @@ export default function CityListPage() {
                                     fields={FILTER_FIELDS}
                                     onApplyFilter={handleApplyFilter}
                                 />
+
                                 <Link
                                     href="/master-data/city/new"
                                     className="w-full sm:w-auto justify-center flex items-center gap-2 px-3 md:px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold hover:bg-primary/90 transition-colors shadow-sm shadow-primary/20"
@@ -171,18 +261,154 @@ export default function CityListPage() {
                             </div>
                         </div>
 
-                        {/* Table Container */}
-                        <DataTable
-                            data={filteredData}
-                            columns={columns}
-                            keyField="id"
-                            renderMobileCard={renderMobileCard}
-                        />
+                        {/* ── Error Banner ─────────────────────────────────── */}
+                        {error && (
+                            <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700 text-sm">
+                                <span className="material-symbols-outlined text-base shrink-0">error</span>
+                                {error}
+                                <button
+                                    onClick={() => fetchData(page, search)}
+                                    className="ml-auto text-xs font-semibold underline hover:no-underline"
+                                >
+                                    Coba lagi
+                                </button>
+                            </div>
+                        )}
+
+                        {/* ── Table Container ──────────────────────────────── */}
+                        <div className="bg-white rounded-xl border border-primary/10 shadow-sm overflow-hidden">
+
+                            {/* Mobile Card View */}
+                            <div className="block md:hidden divide-y divide-primary/5">
+                                {isLoading ? (
+                                    Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
+                                ) : data.length === 0 ? (
+                                    <div className="p-12 text-center">
+                                        <span className="material-symbols-outlined text-5xl text-slate-300">location_city</span>
+                                        <p className="mt-2 text-sm text-slate-500">Tidak ada data kota</p>
+                                    </div>
+                                ) : data.map((item) => (
+                                    <div key={item.cityid} className="p-4 space-y-3">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <Link
+                                                    href={`/master-data/city/${item.cityid}`}
+                                                    className="font-semibold text-primary text-sm hover:underline"
+                                                >
+                                                    {item.cityname}
+                                                </Link>
+                                                <p className="text-xs text-slate-500 mt-0.5">ID: {item.cityid}</p>
+                                            </div>
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-primary/10 text-primary">
+                                                BU: {item.bunitid}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-end items-center pt-2 border-t border-slate-100 gap-1">
+                                            <Link
+                                                href={`/master-data/city/${item.cityid}`}
+                                                className="p-1.5 text-slate-400 hover:text-primary transition-colors"
+                                            >
+                                                <span className="material-symbols-outlined text-base">edit_square</span>
+                                            </Link>
+                                            <button
+                                                onClick={() => handleDelete(item.cityid, item.cityname)}
+                                                disabled={deletingId === item.cityid}
+                                                className="p-1.5 text-slate-400 hover:text-red-500 transition-colors disabled:opacity-50"
+                                            >
+                                                <span className="material-symbols-outlined text-base">delete</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Desktop Table View */}
+                            <div className="hidden md:block overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-slate-50 border-b border-primary/10">
+                                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
+                                                Nama Kota
+                                            </th>
+                                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
+                                                Business Unit ID
+                                            </th>
+                                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 text-right">
+                                                Aksi
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-primary/5">
+                                        {isLoading ? (
+                                            Array.from({ length: PAGE_LIMIT }).map((_, i) => (
+                                                <SkeletonRow key={i} />
+                                            ))
+                                        ) : data.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={3} className="px-6 py-16 text-center">
+                                                    <span className="material-symbols-outlined text-5xl text-slate-300 block">location_city</span>
+                                                    <p className="mt-2 text-sm text-slate-500">Tidak ada data kota</p>
+                                                </td>
+                                            </tr>
+                                        ) : data.map((item) => (
+                                            <tr
+                                                key={item.cityid}
+                                                className="hover:bg-primary/5 transition-colors cursor-pointer"
+                                                onClick={() => router.push(`/master-data/city/${item.cityid}`)}
+                                            >
+                                                <td className="px-6 py-4">
+                                                    <Link
+                                                        href={`/master-data/city/${item.cityid}`}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="font-semibold text-primary text-sm tracking-tight hover:underline"
+                                                    >
+                                                        {item.cityname}
+                                                    </Link>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-primary/10 text-primary">
+                                                        {item.bunitid}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        <Link
+                                                            href={`/master-data/city/${item.cityid}`}
+                                                            className="p-1.5 text-slate-400 hover:text-primary transition-colors"
+                                                            title="Edit"
+                                                        >
+                                                            <span className="material-symbols-outlined text-lg">edit_square</span>
+                                                        </Link>
+                                                        <button
+                                                            onClick={() => handleDelete(item.cityid, item.cityname)}
+                                                            disabled={deletingId === item.cityid}
+                                                            className="p-1.5 text-slate-400 hover:text-red-500 transition-colors disabled:opacity-50"
+                                                            title="Hapus"
+                                                        >
+                                                            <span className="material-symbols-outlined text-lg">delete</span>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Pagination */}
+                            <Pagination
+                                page={page}
+                                total={total}
+                                limit={PAGE_LIMIT}
+                                isLoading={isLoading}
+                                onPageChange={handlePageChange}
+                            />
+                        </div>
+
                     </div>
                 </section>
             </main>
 
-            {/* Footer StatusBar */}
             <StatusBar />
         </div>
     );

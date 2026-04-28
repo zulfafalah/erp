@@ -3,25 +3,31 @@ import { apiFetch } from "@/app/lib/apiClient";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export interface CountryListItem {
+export interface CityListItem {
     cityid: number;
     cityname: string;
+    bunitid: number;
+    created: string;
+    createdby: string;
+    modified: string;
+    modifiedby: string;
 }
 
 // DRF pagination format from backend
-export interface CountryListResponse {
+export interface CityListResponse {
     ok?: boolean;
     count: number;
     next: string | null;
     previous: string | null;
-    results: CountryListItem[];
+    results: CityListItem[];
 }
 
-interface CountryPayload {
+interface CityPayload {
     cityname: string;
+    bunitid: number;
 }
 
-// ─── GET — List countries with pagination ─────────────────────────────────────
+// ─── GET — List cities with pagination ────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
     try {
@@ -35,7 +41,7 @@ export async function GET(req: NextRequest) {
         qs.set("limit", String(limitNum));
         if (searchParams.get("search")) qs.set("search", searchParams.get("search")!);
 
-        const raw = await apiFetch<CountryListResponse>(`/api/v1/countries/?${qs.toString()}`, {
+        const raw = await apiFetch<CityListResponse>(`/api/v1/cities/?${qs.toString()}`, {
             method: "GET",
         });
 
@@ -48,12 +54,12 @@ export async function GET(req: NextRequest) {
         });
     } catch (err: unknown) {
         const error = err as { status?: number; message?: string; body?: unknown };
-        console.error("[GET /api/master-data/countries]", err);
+        console.error("[GET /api/master-data/cities]", err);
 
         return NextResponse.json(
             {
                 ok: false,
-                message: error?.message ?? "Gagal memuat daftar negara.",
+                message: error?.message ?? "Gagal memuat daftar kota.",
                 detail: error?.body,
             },
             { status: error?.status ?? 500 },
@@ -61,13 +67,13 @@ export async function GET(req: NextRequest) {
     }
 }
 
-// ─── POST — Create new country ────────────────────────────────────────────────
+// ─── POST — Create new city ───────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
     try {
-        const body = await req.json() as CountryPayload;
+        const body = await req.json() as CityPayload;
 
-        const data = await apiFetch<unknown>("/api/v1/countries/", {
+        const data = await apiFetch<unknown>("/api/v1/cities/", {
             method: "POST",
             body,
         });
@@ -75,12 +81,12 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: true, data }, { status: 201 });
     } catch (err: unknown) {
         const error = err as { status?: number; message?: string; body?: unknown };
-        console.error("[POST /api/master-data/countries]", err);
+        console.error("[POST /api/master-data/cities]", err);
 
         return NextResponse.json(
             {
                 ok: false,
-                message: error?.message ?? "Gagal menyimpan data negara.",
+                message: error?.message ?? "Gagal menyimpan data kota.",
                 detail: error?.body,
             },
             { status: error?.status ?? 500 },
