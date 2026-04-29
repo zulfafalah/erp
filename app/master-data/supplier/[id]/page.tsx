@@ -60,16 +60,12 @@ const INITIAL_FORM: SupplierFormState = {
     coa21: 0,
 };
 
-// ─── Region & COA options ─────────────────────────────────────────────────────
+// ─── Dropdown option types ────────────────────────────────────────────────────
 
-const REGION_OPTIONS = [
-    { value: 0, label: ":: Pilih Wilayah ::" },
-    { value: 1, label: "DKI Jakarta" },
-    { value: 2, label: "Jawa Barat" },
-    { value: 3, label: "Jawa Tengah" },
-    { value: 4, label: "Jawa Timur" },
-    { value: 5, label: "Bali" },
-];
+interface RegionOption {
+    value: number;
+    label: string;
+}
 
 interface AccountOption {
     value: number;
@@ -128,6 +124,10 @@ export default function PemasokFormPage() {
     const [isLoading, setIsLoading]     = useState(false);    // submit
     const [error, setError]             = useState<string | null>(null);
     const [success, setSuccess]         = useState(false);
+
+    // ── Regions dari API ──────────────────────────────────────────────────────
+    const [regions, setRegions]                   = useState<RegionOption[]>([]);
+    const [isFetchingRegions, setIsFetchingRegions] = useState(true);
 
     // ── Accounts (COA) dari API ───────────────────────────────────────────────
     const [accounts, setAccounts]               = useState<AccountOption[]>([]);
@@ -197,6 +197,37 @@ export default function PemasokFormPage() {
     useEffect(() => {
         if (!isNew) fetchDetail();
     }, [isNew, fetchDetail]);
+
+    // ── Fetch regions untuk dropdown ──────────────────────────────────────────
+
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            setIsFetchingRegions(true);
+            try {
+                const res  = await fetch("/api/master-data/regions?limit=500");
+                const json = await res.json() as {
+                    ok: boolean;
+                    data?: { regionid: number; regionname: string; regioncode: string }[];
+                };
+                if (!cancelled && json.ok && json.data) {
+                    const opts: RegionOption[] = [
+                        { value: 0, label: ":: Pilih Wilayah ::" },
+                        ...json.data.map((r) => ({
+                            value: r.regionid,
+                            label: r.regionname,
+                        })),
+                    ];
+                    setRegions(opts);
+                }
+            } catch {
+                // Gagal fetch regions — dropdown tetap kosong dengan placeholder
+            } finally {
+                if (!cancelled) setIsFetchingRegions(false);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, []);
 
     // ── Fetch accounts (COA) untuk dropdown ───────────────────────────────────
 
@@ -510,14 +541,18 @@ export default function PemasokFormPage() {
 
                                                 {/* Wilayah / Region */}
                                                 <FormField label="Wilayah">
-                                                    <FormSelect
-                                                        value={String(form.region)}
-                                                        onChange={(e) => handleChange("region", Number(e.target.value))}
-                                                    >
-                                                        {REGION_OPTIONS.map((opt) => (
-                                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                                        ))}
-                                                    </FormSelect>
+                                                    {isFetchingRegions ? (
+                                                        <div className="h-9 w-full bg-slate-100 rounded-lg animate-pulse" />
+                                                    ) : (
+                                                        <FormSelect
+                                                            value={String(form.region)}
+                                                            onChange={(e) => handleChange("region", Number(e.target.value))}
+                                                        >
+                                                            {regions.map((opt) => (
+                                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                            ))}
+                                                        </FormSelect>
+                                                    )}
                                                 </FormField>
 
                                                 {/* Account Code (coa21) */}
