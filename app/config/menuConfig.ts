@@ -331,6 +331,23 @@ export function getModuleByKey(key: string): ModuleConfig | undefined {
     return modules.find((m) => m.key === key);
 }
 
+/**
+ * Mengembalikan href item pertama pada sidebar modul yang bukan "#".
+ * Jika tidak ada, fallback ke mod.href.
+ */
+export function getFirstSidebarHref(key: string): string {
+    const mod = getModuleByKey(key);
+    if (!mod) return "/";
+    for (const section of mod.sidebarSections) {
+        for (const item of section.items) {
+            if (item.href && item.href !== "#") {
+                return item.href;
+            }
+        }
+    }
+    return mod.href;
+}
+
 export function getModuleByPath(currentFullPath: string): ModuleConfig | undefined {
     const [pathname] = currentFullPath.split('?');
 

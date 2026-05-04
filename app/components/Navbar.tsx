@@ -2,14 +2,15 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { modules } from "../config/menuConfig";
+import { modules, getFirstSidebarHref } from "../config/menuConfig";
 import { useActiveMenu } from "../context/ActiveMenuContext";
 import { useAuth } from "../context/AuthContext";
 
 export default function Navbar() {
     const pathname = usePathname();
+    const router = useRouter();
     const { activeModule, setActiveModule } = useActiveMenu();
     const { user, logout } = useAuth();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -24,10 +25,12 @@ export default function Navbar() {
     const mobileActiveClass = "block px-4 py-2 text-primary font-semibold bg-primary/10 rounded-lg";
     const mobileInactiveClass = "block px-4 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition-colors";
 
-    const handleModuleClick = (key: string, href: string) => {
+    const handleModuleClick = (key: string) => {
         setActiveModule(key);
-        // If module has a real href, navigation will happen via Link
-        // For modules with "#", we just switch the sidebar
+        const dest = getFirstSidebarHref(key);
+        if (dest && dest !== "#") {
+            router.push(dest);
+        }
     };
 
     // Separate settings from main modules
@@ -53,30 +56,19 @@ export default function Navbar() {
                 </div>
 
                 <nav className="hidden xl:flex items-center gap-4 2xl:gap-6">
-                    {mainModules.map((mod) =>
-                        mod.href !== "#" ? (
-                            <Link
-                                key={mod.key}
-                                className={isModuleActive(mod.key) ? activeClass : inactiveClass}
-                                href={mod.href}
-                                onClick={() => handleModuleClick(mod.key, mod.href)}
-                            >
-                                {mod.label}
-                            </Link>
-                        ) : (
-                            <button
-                                key={mod.key}
-                                className={isModuleActive(mod.key) ? activeClass : inactiveClass}
-                                onClick={() => handleModuleClick(mod.key, mod.href)}
-                            >
-                                {mod.label}
-                            </button>
-                        )
-                    )}
+                    {mainModules.map((mod) => (
+                        <button
+                            key={mod.key}
+                            className={isModuleActive(mod.key) ? activeClass : inactiveClass}
+                            onClick={() => handleModuleClick(mod.key)}
+                        >
+                            {mod.label}
+                        </button>
+                    ))}
                     {settingsModule && (
                         <button
                             className={isModuleActive(settingsModule.key) ? activeClass : inactiveClass}
-                            onClick={() => handleModuleClick(settingsModule.key, settingsModule.href)}
+                            onClick={() => handleModuleClick(settingsModule.key)}
                         >
                             {settingsModule.label}
                         </button>
@@ -178,49 +170,32 @@ export default function Navbar() {
 
                 <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
                     {mainModules.map((mod) => (
-                        mod.href !== "#" ? (
-                            <Link
-                                key={mod.key}
-                                href={mod.href}
-                                className={isModuleActive(mod.key) ? mobileActiveClass : mobileInactiveClass}
-                                onClick={() => {
-                                    handleModuleClick(mod.key, mod.href);
-                                    setIsMobileMenuOpen(false);
-                                }}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <span className="material-symbols-outlined text-lg">{mod.icon}</span>
-                                    {mod.label}
-                                </div>
-                            </Link>
-                        ) : (
-                            <button
-                                key={mod.key}
-                                className={isModuleActive(mod.key) ? mobileActiveClass : mobileInactiveClass}
-                                onClick={() => {
-                                    handleModuleClick(mod.key, mod.href);
-                                    setIsMobileMenuOpen(false);
-                                }}
-                            >
-                                <div className="flex items-center gap-3 text-left">
-                                    <span className="material-symbols-outlined text-lg">{mod.icon}</span>
-                                    {mod.label}
-                                </div>
-                            </button>
-                        )
+                        <button
+                            key={mod.key}
+                            className={`${isModuleActive(mod.key) ? mobileActiveClass : mobileInactiveClass} w-full text-left`}
+                            onClick={() => {
+                                handleModuleClick(mod.key);
+                                setIsMobileMenuOpen(false);
+                            }}
+                        >
+                            <div className="flex items-center gap-3">
+                                <span className="material-symbols-outlined text-lg">{mod.icon}</span>
+                                {mod.label}
+                            </div>
+                        </button>
                     ))}
 
                     <div className="h-px bg-slate-100 my-2"></div>
 
                     {settingsModule && (
                         <button
-                            className={isModuleActive(settingsModule.key) ? mobileActiveClass : mobileInactiveClass}
+                            className={`${isModuleActive(settingsModule.key) ? mobileActiveClass : mobileInactiveClass} w-full text-left`}
                             onClick={() => {
-                                handleModuleClick(settingsModule.key, settingsModule.href);
+                                handleModuleClick(settingsModule.key);
                                 setIsMobileMenuOpen(false);
                             }}
                         >
-                            <div className="flex items-center gap-3 text-left">
+                            <div className="flex items-center gap-3">
                                 <span className="material-symbols-outlined text-lg">{settingsModule.icon}</span>
                                 {settingsModule.label}
                             </div>
@@ -235,24 +210,22 @@ export default function Navbar() {
                     <span className="material-symbols-outlined text-[22px] md:text-2xl mb-1">home</span>
                     <span className="text-[9px] md:text-[10px] font-medium w-full text-center truncate">Dashboard</span>
                 </Link>
-                <Link
-                    href="/purchase-order"
-                    className={`flex flex-col items-center p-1 w-1/5 overflow-hidden ${isActive("/purchase-order") ? "text-primary" : "text-slate-500 hover:text-primary"}`}
-                    onClick={() => handleModuleClick("pembelian", "/purchase-order")}
+                <button
+                    onClick={() => handleModuleClick("pembelian")}
+                    className={`flex flex-col items-center p-1 w-1/5 overflow-hidden ${isModuleActive("pembelian") ? "text-primary" : "text-slate-500 hover:text-primary"}`}
                 >
                     <span className="material-symbols-outlined text-[22px] md:text-2xl mb-1">shopping_bag</span>
                     <span className="text-[9px] md:text-[10px] font-bold w-full text-center truncate">Pembelian</span>
-                </Link>
-                <Link
-                    href="/sales"
-                    onClick={() => handleModuleClick("penjualan", "/sales")}
+                </button>
+                <button
+                    onClick={() => handleModuleClick("penjualan")}
                     className={`flex flex-col items-center p-1 w-1/5 overflow-hidden ${isModuleActive("penjualan") ? "text-primary" : "text-slate-500 hover:text-primary"}`}
                 >
                     <span className="material-symbols-outlined text-[22px] md:text-2xl mb-1">storefront</span>
                     <span className="text-[9px] md:text-[10px] font-medium w-full text-center truncate">Penjualan</span>
-                </Link>
+                </button>
                 <button
-                    onClick={() => handleModuleClick("persediaan", "#")}
+                    onClick={() => handleModuleClick("persediaan")}
                     className={`flex flex-col items-center p-1 w-1/5 overflow-hidden ${isModuleActive("persediaan") ? "text-primary" : "text-slate-500 hover:text-primary"}`}
                 >
                     <span className="material-symbols-outlined text-[22px] md:text-2xl mb-1">inventory_2</span>
