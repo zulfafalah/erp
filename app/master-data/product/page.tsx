@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Navbar from "../../components/Navbar";
 import Sidebar from "../../components/Sidebar";
 import StatusBar from "../../components/StatusBar";
@@ -10,208 +10,247 @@ import DataTable, { Column } from "../../components/DataTable";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface Product {
-    id: string;
-    kode: string;
-    grupBarang: string;
-    namaBarang: string;
-    uom: string;
-    hJualMin: number;
-    hJualMax: number;
-    gambar?: string;
-    barcodes: string[];
-    kodeInternal: string[];
+interface ProductListItem {
+    productid: number;
+    productcode: string;
+    productname: string;
+    productname2: string;
+    productname3: string;
+    prodtype: string | null;
+    familyid: number;
+    familyname: string | null;
+    produnit: string | null;
+    uom_id_prod: number;
+    barcodeno: string | null;
+    barcodeno2: string | null;
+    maxprice: string | null;
+    minprice: string | null;
+    minorder: string;
+    limitstok: number | null;
+    sizeprod: number | null;
+    iscontinue: number | null;
+    prodcur: string;
+    created: string | null;
+    createdby: string | null;
+    modified: string | null;
+    modifiedby: string | null;
 }
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
+interface ApiResponse {
+    ok: boolean;
+    data: ProductListItem[];
+    page: number;
+    limit: number;
+    total: number;
+    message?: string;
+}
 
-const allData: Product[] = [
-    {
-        id: "R0033",
-        kode: "R0033",
-        grupBarang: "PERSONAL CARE",
-        namaBarang: "PONDS FW LGHTNNG DAY CR SPF18 PA12X3X10G",
-        uom: "1 DUS@36.00 Pcs",
-        hJualMin: 0.00,
-        hJualMax: 0.00,
-        barcodes: ["8999999042288"],
-        kodeInternal: ["8999999042288"],
-    },
-    {
-        id: "R0034",
-        kode: "R0034",
-        grupBarang: "PERSONAL CARE",
-        namaBarang: "PONDS AGE MIRACLE NIGHT CREAM 12X3X10GR",
-        uom: "1 DUS@36.00 Pcs",
-        hJualMin: 0.00,
-        hJualMax: 0.00,
-        barcodes: ["GB124924"],
-        kodeInternal: ["GB124924"],
-    },
-    {
-        id: "A0001",
-        kode: "A0001",
-        grupBarang: "PERSONAL CARE",
-        namaBarang: "AXE DEO DORANT BLACK 12X150ML",
-        uom: "1 DUS@12.00 Pcs",
-        hJualMin: 236363.64,
-        hJualMax: 304545.45,
-        barcodes: ["19308300185849"],
-        kodeInternal: ["93008300225527"],
-    },
-    {
-        id: "A0002",
-        kode: "A0002",
-        grupBarang: "PERSONAL CARE",
-        namaBarang: "AXE DEO DORANT BODY SPRAY APOLLO 12X150ML",
-        uom: "1 DUS@12.00 Pcs",
-        hJualMin: 236363.64,
-        hJualMax: 304545.45,
-        barcodes: ["19308300126619"],
-        kodeInternal: ["93008300077813"],
-    },
-    {
-        id: "A0003",
-        kode: "A0003",
-        grupBarang: "PERSONAL CARE",
-        namaBarang: "AXE DEO DORANT DARK 12X150ML",
-        uom: "1 DUS@12.00 Pcs",
-        hJualMin: 236363.64,
-        hJualMax: 304545.45,
-        barcodes: ["44808814133322"],
-        kodeInternal: ["44808833141375"],
-    },
-    {
-        id: "A0004",
-        kode: "A0004",
-        grupBarang: "PERSONAL CARE",
-        namaBarang: "AXE DEO DORANT GOLD 12X150ML",
-        uom: "1 DUS@12.00 Pcs",
-        hJualMin: 236363.64,
-        hJualMax: 304545.45,
-        barcodes: ["19308300150519"],
-        kodeInternal: ["93008300015380"],
-    },
-    {
-        id: "A0005",
-        kode: "A0005",
-        grupBarang: "PERSONAL CARE",
-        namaBarang: "AXE DEO DARK TEMPTATION 12 X 150 ML",
-        uom: "1 DUS@12.00 Pcs",
-        hJualMin: 0.00,
-        hJualMax: 0.00,
-        barcodes: ["8999990049433"],
-        kodeInternal: ["9309990049433"],
-    },
-    {
-        id: "A0006",
-        kode: "A0006",
-        grupBarang: "BEVERAGES",
-        namaBarang: "AADUMMY",
-        uom: "1 DUS@1.00 Pcs",
-        hJualMin: 5350.00,
-        hJualMax: 6020.00,
-        barcodes: [],
-        kodeInternal: [],
-    },
-    {
-        id: "A0007",
-        kode: "A0007",
-        grupBarang: "BEVERAGES",
-        namaBarang: "AITEM133",
-        uom: "1 DUS@1.00 Pcs",
-        hJualMin: 1.00,
-        hJualMax: 1.00,
-        barcodes: [],
-        kodeInternal: [],
-    },
-    {
-        id: "B0001",
-        kode: "B0001",
-        grupBarang: "HOME CARE",
-        namaBarang: "B 29 DETERGENT 288X45GR",
-        uom: "1 DUS@288.00 Pcs",
-        hJualMin: 1.00,
-        hJualMax: 170181.82,
-        barcodes: ["18992929412523"],
-        kodeInternal: ["89932929412526"],
-    },
-];
+// ─── Constants ────────────────────────────────────────────────────────────────
 
-// ─── Filter Fields ────────────────────────────────────────────────────────────
+const PAGE_LIMIT = 10;
 
 const FILTER_FIELDS: FilterField[] = [
-    { key: "kode",       label: "Kode Barang",   type: "text" },
-    { key: "namaBarang", label: "Nama Barang",   type: "text" },
-    { key: "grupBarang", label: "Grup Barang",   type: "text" },
-    { key: "uom",        label: "UOM",           type: "text" },
+    { key: "productcode", label: "Kode Barang", type: "text" },
+    { key: "productname", label: "Nama Barang", type: "text" },
+    { key: "familyname",  label: "Grup Barang", type: "text" },
+    { key: "barcodeno",   label: "Barcode",     type: "text" },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const fmtNum = (n: number) =>
-    n.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtNum = (n: number | string | null) => {
+    if (n === null || n === undefined) return "0.00";
+    const num = typeof n === "string" ? parseFloat(n) : n;
+    if (isNaN(num)) return "0.00";
+    return num.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
+// ─── Pagination ───────────────────────────────────────────────────────────────
+
+interface PaginationProps {
+    page: number;
+    total: number;
+    limit: number;
+    isLoading: boolean;
+    onPageChange: (p: number) => void;
+}
+
+function Pagination({ page, total, limit, isLoading, onPageChange }: PaginationProps) {
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    const from = total === 0 ? 0 : (page - 1) * limit + 1;
+    const to   = Math.min(page * limit, total);
+
+    const getPages = (): (number | "…")[] => {
+        if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+        const pages: (number | "…")[] = [];
+        if (page <= 4) {
+            for (let i = 1; i <= 5; i++) pages.push(i);
+            pages.push("…", totalPages);
+        } else if (page >= totalPages - 3) {
+            pages.push(1, "…");
+            for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i);
+        } else {
+            pages.push(1, "…", page - 1, page, page + 1, "…", totalPages);
+        }
+        return pages;
+    };
+
+    return (
+        <div className="px-4 md:px-6 py-4 bg-slate-50 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 border-t border-primary/5">
+            <p className="text-sm text-slate-500 text-center md:text-left">
+                {total === 0
+                    ? "Tidak ada data"
+                    : `Menampilkan ${from}–${to} dari ${total} data`
+                }
+            </p>
+            <div className="flex flex-wrap justify-center items-center gap-1">
+                <button
+                    onClick={() => onPageChange(page - 1)}
+                    disabled={page === 1 || isLoading}
+                    className="p-2 border border-primary/10 rounded hover:bg-white disabled:opacity-40 transition-colors"
+                >
+                    <span className="material-symbols-outlined text-lg">chevron_left</span>
+                </button>
+
+                {getPages().map((p, i) =>
+                    p === "…" ? (
+                        <span key={`ellipsis-${i}`} className="px-2 text-slate-400 text-sm select-none">…</span>
+                    ) : (
+                        <button
+                            key={p}
+                            onClick={() => onPageChange(p as number)}
+                            disabled={isLoading}
+                            className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                                p === page
+                                    ? "bg-primary text-white font-bold shadow-sm"
+                                    : "hover:bg-white text-slate-600 disabled:opacity-50"
+                            }`}
+                        >
+                            {p}
+                        </button>
+                    )
+                )}
+
+                <button
+                    onClick={() => onPageChange(page + 1)}
+                    disabled={page === totalPages || isLoading}
+                    className="p-2 border border-primary/10 rounded hover:bg-white disabled:opacity-40 transition-colors"
+                >
+                    <span className="material-symbols-outlined text-lg">chevron_right</span>
+                </button>
+            </div>
+        </div>
+    );
+}
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ProductListPage() {
-    const [filteredData, setFilteredData] = useState<Product[]>(allData);
+    const [data, setData]             = useState<ProductListItem[]>([]);
+    const [page, setPage]             = useState(1);
+    const [total, setTotal]           = useState(0);
+    const [isLoading, setIsLoading]   = useState(true);
+    const [error, setError]           = useState<string | null>(null);
+    const [search, setSearch]         = useState("");
+    const [deletingId, setDeletingId] = useState<number | null>(null);
+
+    // ── Fetch ─────────────────────────────────────────────────────────────────
+
+    const fetchData = useCallback(async (targetPage: number, searchStr: string) => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const qs = new URLSearchParams({
+                page: String(targetPage),
+                limit: String(PAGE_LIMIT),
+                ...(searchStr ? { search: searchStr } : {}),
+            });
+            const res  = await fetch(`/api/master-data/products?${qs.toString()}`);
+            const json = await res.json() as ApiResponse;
+
+            if (!res.ok || !json.ok) {
+                setError(json.message ?? "Gagal memuat data produk.");
+                return;
+            }
+
+            setData(json.data ?? []);
+            setTotal(json.total ?? 0);
+            setPage(json.page ?? targetPage);
+        } catch {
+            setError("Terjadi kesalahan koneksi. Pastikan server berjalan.");
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchData(page, search);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [page]);
+
+    // ── Filter ────────────────────────────────────────────────────────────────
 
     const handleApplyFilter = (rules: FilterRule[]) => {
-        if (rules.length === 0) {
-            setFilteredData(allData);
-            return;
-        }
-        const result = allData.filter((item) =>
-            rules.every((rule) => {
-                const { field, operator, value } = rule;
-                const itemValue = item[field as keyof Product];
-                if (itemValue === undefined) return true;
-                const itemStr = String(itemValue).toLowerCase();
-                const valStr = value.toLowerCase();
-                switch (operator) {
-                    case "contains":    return itemStr.includes(valStr);
-                    case "equals":      return itemStr === valStr;
-                    case "not_equals":  return itemStr !== valStr;
-                    case "starts_with": return itemStr.startsWith(valStr);
-                    case "ends_with":   return itemStr.endsWith(valStr);
-                    default:            return true;
-                }
-            })
-        );
-        setFilteredData(result);
+        const searchRule = rules.find(r => r.operator === "contains" || r.operator === "equals");
+        const q = searchRule?.value ?? "";
+        setSearch(q);
+        setPage(1);
+        fetchData(1, q);
     };
 
-    const columns: Column<Product>[] = [
+    const handlePageChange = (p: number) => {
+        setPage(p);
+    };
+
+    // ── Delete ────────────────────────────────────────────────────────────────
+
+    const handleDelete = async (id: number, name: string) => {
+        if (!confirm(`Hapus produk "${name}"? Tindakan ini tidak dapat dibatalkan.`)) return;
+        setDeletingId(id);
+        try {
+            const res  = await fetch(`/api/master-data/products/${id}`, { method: "DELETE" });
+            const json = await res.json() as { ok: boolean; message?: string };
+            if (!res.ok || !json.ok) {
+                alert(json.message ?? "Gagal menghapus data produk.");
+                return;
+            }
+            fetchData(page, search);
+        } catch {
+            alert("Terjadi kesalahan koneksi saat menghapus data.");
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
+    // ── Render Helpers ─────────────────────────────────────────────────────────
+
+    const columns: Column<ProductListItem>[] = [
         {
             header: "Grup Barang",
-            key: "grupBarang",
+            key: "familyname",
             render: (item) => (
-                <span className="text-sm text-slate-600">{item.grupBarang}</span>
+                <span className="text-sm text-slate-600">{item.familyname ?? "-"}</span>
             ),
         },
         {
             header: "Nama Barang",
-            key: "namaBarang",
+            key: "productname",
             render: (item) => (
                 <div>
                     <Link
-                        href={`/master-data/product/${item.id}`}
+                        href={`/master-data/product/${item.productid}`}
                         className="font-semibold text-primary text-sm tracking-tight hover:underline block"
                     >
-                        {item.namaBarang}
+                        {item.productname}
                     </Link>
-                    <div className="flex flex-wrap gap-x-1 mt-0.5">
-                        {item.kodeInternal.map((k, i) => (
-                            <span key={i} className="text-xs text-slate-400">{k}</span>
-                        ))}
-                        {item.kodeInternal.length > 0 && (
-                            <Link
-                                href={`/master-data/product/${item.id}`}
-                                className="text-xs text-primary/60 hover:text-primary"
-                            >
-                                (Show)
-                            </Link>
+                    <div className="flex flex-wrap gap-x-1 mt-0.5 items-center">
+                        <span className="text-xs text-slate-400 font-medium">
+                            {item.productcode}
+                        </span>
+                        {item.barcodeno && (
+                            <span className="text-xs text-slate-400">
+                                · {item.barcodeno}
+                            </span>
                         )}
                     </div>
                 </div>
@@ -219,41 +258,27 @@ export default function ProductListPage() {
         },
         {
             header: "UOM",
-            key: "uom",
-            render: (item) => <span className="text-sm text-slate-600">{item.uom}</span>,
+            key: "produnit",
+            render: (item) => <span className="text-sm text-slate-600">{item.produnit ?? "-"}</span>,
         },
         {
             header: "H. Jual Min",
-            key: "hJualMin",
+            key: "minprice",
             align: "right",
             render: (item) => (
                 <span className="text-sm text-right block">
-                    {fmtNum(item.hJualMin)}
+                    {fmtNum(item.minprice)}
                 </span>
             ),
         },
         {
             header: "H. Jual Max",
-            key: "hJualMax",
+            key: "maxprice",
             align: "right",
             render: (item) => (
                 <span className="text-sm font-medium text-right block">
-                    {fmtNum(item.hJualMax)}
+                    {fmtNum(item.maxprice)}
                 </span>
-            ),
-        },
-        {
-            header: "Gambar",
-            key: "gambar",
-            render: (item) => (
-                <div className="w-10 h-10 rounded-md border border-slate-200 bg-slate-100 flex items-center justify-center overflow-hidden">
-                    {item.gambar ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={item.gambar} alt={item.namaBarang} className="w-full h-full object-cover" />
-                    ) : (
-                        <span className="material-symbols-outlined text-slate-300 text-base">image</span>
-                    )}
-                </div>
             ),
         },
         {
@@ -263,14 +288,16 @@ export default function ProductListPage() {
             render: (item) => (
                 <div className="flex items-center justify-end gap-2">
                     <Link
-                        href={`/master-data/product/${item.id}`}
+                        href={`/master-data/product/${item.productid}`}
                         className="p-1.5 text-slate-400 hover:text-primary transition-colors"
                         title="Edit"
                     >
                         <span className="material-symbols-outlined text-lg">edit_square</span>
                     </Link>
                     <button
-                        className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"
+                        onClick={(e) => { e.stopPropagation(); handleDelete(item.productid, item.productname); }}
+                        disabled={deletingId === item.productid}
+                        className="p-1.5 text-slate-400 hover:text-red-500 transition-colors disabled:opacity-50"
                         title="Delete"
                     >
                         <span className="material-symbols-outlined text-lg">delete</span>
@@ -280,42 +307,40 @@ export default function ProductListPage() {
         },
     ];
 
-    const renderMobileCard = (item: Product) => (
+    const renderMobileCard = (item: ProductListItem) => (
         <div className="p-4 space-y-3">
             <div className="flex justify-between items-start gap-3">
                 <div className="flex-1 min-w-0">
                     <Link
-                        href={`/master-data/product/${item.id}`}
+                        href={`/master-data/product/${item.productid}`}
                         className="font-semibold text-primary text-sm hover:underline block truncate"
                     >
-                        {item.namaBarang}
+                        {item.productname}
                     </Link>
-                    <p className="text-xs text-slate-500 mt-0.5">{item.grupBarang} · {item.uom}</p>
-                </div>
-                <div className="w-10 h-10 shrink-0 rounded-md border border-slate-200 bg-slate-100 flex items-center justify-center">
-                    {item.gambar ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={item.gambar} alt={item.namaBarang} className="w-full h-full object-cover rounded-md" />
-                    ) : (
-                        <span className="material-symbols-outlined text-slate-300 text-base">image</span>
-                    )}
+                    <p className="text-xs text-slate-500 mt-0.5">
+                        {item.familyname ?? "-"} · {item.produnit ?? "-"}
+                    </p>
                 </div>
             </div>
             <div className="flex justify-between items-center pt-2 border-t border-slate-100">
                 <div>
                     <p className="text-xs text-slate-400">Min / Max</p>
                     <p className="text-sm font-semibold text-slate-800">
-                        {fmtNum(item.hJualMin)} / {fmtNum(item.hJualMax)}
+                        {fmtNum(item.minprice)} / {fmtNum(item.maxprice)}
                     </p>
                 </div>
                 <div className="flex items-center gap-1">
                     <Link
-                        href={`/master-data/product/${item.id}`}
+                        href={`/master-data/product/${item.productid}`}
                         className="p-1.5 text-slate-400 hover:text-primary transition-colors"
                     >
                         <span className="material-symbols-outlined text-base">edit_square</span>
                     </Link>
-                    <button className="p-1.5 text-slate-400 hover:text-red-500 transition-colors">
+                    <button 
+                        onClick={() => handleDelete(item.productid, item.productname)}
+                        disabled={deletingId === item.productid}
+                        className="p-1.5 text-slate-400 hover:text-red-500 transition-colors disabled:opacity-50"
+                    >
                         <span className="material-symbols-outlined text-base">delete</span>
                     </button>
                 </div>
@@ -325,16 +350,12 @@ export default function ProductListPage() {
 
     return (
         <div className="bg-background-light text-slate-900 font-sans min-h-screen flex flex-col overflow-hidden pb-8">
-            {/* Top Navigation Bar */}
             <Navbar />
 
             <main className="flex-1 flex overflow-hidden">
-                {/* Sidebar Navigation */}
                 <Sidebar />
 
-                {/* Main Content Area */}
                 <section className="flex-1 flex flex-col bg-background-light overflow-hidden">
-                    {/* Page Body */}
                     <div className="flex-1 overflow-y-auto p-4 md:p-8 pb-28 md:pb-8 space-y-4 md:space-y-8">
                         {/* Title and Actions */}
                         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -358,18 +379,52 @@ export default function ProductListPage() {
                             </div>
                         </div>
 
+                        {/* Error Banner */}
+                        {error && (
+                            <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700 text-sm">
+                                <span className="material-symbols-outlined text-base shrink-0">error</span>
+                                {error}
+                                <button
+                                    onClick={() => fetchData(page, search)}
+                                    className="ml-auto text-xs font-semibold underline hover:no-underline"
+                                >
+                                    Coba lagi
+                                </button>
+                            </div>
+                        )}
+
                         {/* Table Container */}
-                        <DataTable
-                            data={filteredData}
-                            columns={columns}
-                            keyField="id"
-                            renderMobileCard={renderMobileCard}
-                        />
+                        {isLoading && data.length === 0 ? (
+                            <div className="bg-white rounded-xl border border-primary/10 shadow-sm overflow-hidden p-12 text-center">
+                                <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+                                <p className="text-slate-500 text-sm">Memuat data produk...</p>
+                            </div>
+                        ) : data.length === 0 && !error ? (
+                            <div className="bg-white rounded-xl border border-primary/10 shadow-sm overflow-hidden p-12 text-center">
+                                <span className="material-symbols-outlined text-5xl text-slate-300">inventory_2</span>
+                                <p className="mt-2 text-sm text-slate-500">Tidak ada data produk</p>
+                            </div>
+                        ) : (
+                            <DataTable
+                                data={data}
+                                columns={columns}
+                                keyField="productid"
+                                renderMobileCard={renderMobileCard}
+                                footer={
+                                    <Pagination
+                                        page={page}
+                                        total={total}
+                                        limit={PAGE_LIMIT}
+                                        isLoading={isLoading}
+                                        onPageChange={handlePageChange}
+                                    />
+                                }
+                            />
+                        )}
                     </div>
                 </section>
             </main>
 
-            {/* Footer StatusBar */}
             <StatusBar />
         </div>
     );

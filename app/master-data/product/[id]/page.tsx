@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState, useRef } from "react";
+import { useParams, useRouter } from "next/navigation";
+import React, { useState, useRef, useEffect } from "react";
 import Navbar from "../../../components/Navbar";
 import Sidebar from "../../../components/Sidebar";
 import StatusBar from "../../../components/StatusBar";
@@ -20,41 +20,194 @@ const tabs: { key: TabKey; label: string; icon: string }[] = [
     { key: "stok-gudang",   label: "Stok/Gudang",   icon: "warehouse" },
 ];
 
-// ─── Mock Supplier Data ──────────────────────────────────────────────────────
-
-interface SupplierRow {
-    id: string;
-    nama: string;
-    alamat: string;
-    dipilih: boolean;
+interface ProductFormState {
+    familyid: number;
+    productname: string;
+    productname2: string;
+    productname3: string;
+    prodtype: string;
+    barcodeno: string;
+    barcodeno2: string;
+    uom_id_prod: number;
+    qty_outer: string;
+    uom_inner_outer: number;
+    qty_inner: string;
+    qty_gram: string;
+    uom_berat: number;
+    prod_gw: string;
+    prod_nw: string;
+    prod_p: string;
+    prod_l: string;
+    prod_t: string;
+    maxprice: string;
+    minprice: string;
+    minorder: number;
+    limitstok: number;
+    sizeprod: number;
+    iscontinue: number;
+    prodcur: string;
 }
 
-const supplierData: SupplierRow[] = [
-    { id: "S001", nama: "BEKASI SQUARE",       alamat: "Jl. Jend. Ahmad Yani No.8, Pekayam Jaya, Bekasi Sel., Kota Bks, Jawa Barat 17141",                                                                                                      dipilih: true  },
-    { id: "S002", nama: "CARREFOUR BALIKPAPAN", alamat: "Jl. MT Haryono, Grn. Banaraja, Balikpapan Sel., Kota Balikpapan, Kalimantan Timur 76114",                                                                                                dipilih: false },
-    { id: "S003", nama: "CARREFOUR DENPASAR",   alamat: "Sunset Road Building Lt. 3, Jl. Sunset Road, Pemogan, Denpasar Selatan, Kuta, Kabupaten Badung, Bali 8022",                                                                              dipilih: false },
-    { id: "S004", nama: "CARREFOUR DEWI SARTIKA", alamat: "Jalan Dewi Sartika No. 9, Pancoran MAS, Depok, Pancoran MAS, Depok, Jawa Barat 16430",                                                                                                dipilih: false },
-    { id: "S005", nama: "CARREFOUR KIARA CONDONG", alamat: "Jl. Soekarno Hatta No.526, Cipaganti, Buahbatu, Kota Bandung, Jawa Barat 40286",                                                                                                     dipilih: false },
-    { id: "S006", nama: "CARREFOUR LEBAK BULUS", alamat: "Jl. Lebak Bulus Raya No.8, RT.1/RW.10, Pondok Pinang, Kebayoran Lama, Kota Jakarta Selatan, Daerah Khusus Ibukota Jakarta 12310",                                                     dipilih: false },
-    { id: "S007", nama: "CARREFOUR MANGGA DUA",  alamat: "Jl. Gn. Sahari Raya No.10, RT.11/RW.6, Kota Tua, Ancol, Pademangan, Kota Jak Utara, Daerah Khusus Ibukota Jakarta 14420",                                                             dipilih: false },
-    { id: "S008", nama: "CARREFOUR MATARAM",     alamat: "Jl. Selaparang No.60, Mayura, Cakranegara, Kota Mataram, Nusa Tenggara Bar. 83239",                                                                                                    dipilih: false },
-    { id: "S009", nama: "CARREFOUR MEDAN",       alamat: "Kompleks Medan Fair Plaza, Jl. Gatot Subroto No.30, Sekip, Medan Petisah, Kota Medan, Sumatera Utara 20214",                                                                           dipilih: true  },
-    { id: "S010", nama: "CARREFOUR PURI INDAH",  alamat: "Jalan Puri Indah Blok Q No.1, RT1/RW.2, Kembangan Selatan, Kembangan, RT.1/RW.2, Kembangan Sel., Kembangan, RT1/RW.2, Kembangan Sel., Kembangan, Daerah Khusus Ibukota Jakarta 11610", dipilih: false },
-];
+const defaultFormState: ProductFormState = {
+    familyid: 0,
+    productname: "",
+    productname2: "",
+    productname3: "",
+    prodtype: "",
+    barcodeno: "",
+    barcodeno2: "",
+    uom_id_prod: 0,
+    qty_outer: "1.00",
+    uom_inner_outer: 0,
+    qty_inner: "1.00",
+    qty_gram: "0.00",
+    uom_berat: 0,
+    prod_gw: "0.00",
+    prod_nw: "0.00",
+    prod_p: "0.00",
+    prod_l: "0.00",
+    prod_t: "0.00",
+    maxprice: "0.0000",
+    minprice: "0.0000",
+    minorder: 1,
+    limitstok: 10,
+    sizeprod: 0,
+    iscontinue: 1,
+    prodcur: "IDR",
+};
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ProductDetailPage() {
     const router = useRouter();
+    const params = useParams();
+    const idParam = params?.id as string;
+    const isNew = idParam === "new";
+
     const [activeTab, setActiveTab] = useState<TabKey>("data-barang");
-    const [suppliers, setSuppliers] = useState<SupplierRow[]>(supplierData);
     const [previewImage, setPreviewImage] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const toggleSupplier = (id: string) => {
-        setSuppliers((prev) =>
-            prev.map((s) => (s.id === id ? { ...s, dipilih: !s.dipilih } : s))
-        );
+    const [form, setForm] = useState<ProductFormState>(defaultFormState);
+    const [isLoading, setIsLoading] = useState(!isNew);
+    const [isSaving, setIsSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const [readOnlyData, setReadOnlyData] = useState<any>(null);
+
+    // ── Fetch Existing Data ───────────────────────────────────────────────────
+
+    useEffect(() => {
+        if (isNew) return;
+
+        const fetchProduct = async () => {
+            setIsLoading(true);
+            try {
+                const res = await fetch(`/api/master-data/products/${idParam}`);
+                const json = await res.json();
+                if (!res.ok || !json.ok) {
+                    setError(json.message || "Failed to fetch product data");
+                    return;
+                }
+                const data = json.data;
+                setReadOnlyData(data);
+                
+                // Merge data into form state
+                setForm(prev => ({
+                    ...prev,
+                    familyid: data.familyid ?? 0,
+                    productname: data.productname ?? "",
+                    productname2: data.productname2 ?? "",
+                    productname3: data.productname3 ?? "",
+                    prodtype: data.prodtype ?? "",
+                    barcodeno: data.barcodeno ?? "",
+                    barcodeno2: data.barcodeno2 ?? "",
+                    uom_id_prod: data.uom_id_prod ?? 0,
+                    qty_outer: data.qty_outer ?? "1.00",
+                    uom_inner_outer: data.uom_inner_outer ?? 0,
+                    qty_inner: data.qty_inner ?? "1.00",
+                    qty_gram: data.qty_gram ?? "0.00",
+                    uom_berat: data.uom_berat ?? 0,
+                    prod_gw: data.prod_gw ?? "0.00",
+                    prod_nw: data.prod_nw ?? "0.00",
+                    prod_p: data.prod_p ?? "0.00",
+                    prod_l: data.prod_l ?? "0.00",
+                    prod_t: data.prod_t ?? "0.00",
+                    maxprice: data.maxprice ?? "0.0000",
+                    minprice: data.minprice ?? "0.0000",
+                    minorder: typeof data.minorder === "string" ? parseInt(data.minorder) : data.minorder ?? 1,
+                    limitstok: data.limitstok ?? 10,
+                    sizeprod: data.sizeprod ?? 0,
+                    iscontinue: data.iscontinue ?? 1,
+                    prodcur: data.prodcur ?? "IDR",
+                }));
+            } catch (err) {
+                setError("Connection error");
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchProduct();
+    }, [isNew, idParam]);
+
+    // ── Form Handlers ─────────────────────────────────────────────────────────
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value, type } = e.target;
+        setForm(prev => ({
+            ...prev,
+            [name]: type === "number" ? (value === "" ? "" : Number(value)) : value
+        }));
+    };
+
+    const handleSave = async () => {
+        setIsSaving(true);
+        setError(null);
+        try {
+            // Build payload
+            const payload = { ...form };
+            // Ensure numbers are numbers, strings are strings based on schema
+            payload.familyid = Number(payload.familyid) || 0;
+            payload.uom_id_prod = Number(payload.uom_id_prod) || 0;
+            // Provide a default for uom_inner_outer since it's removed from UI
+            payload.uom_inner_outer = Number(payload.uom_inner_outer) || payload.uom_id_prod || 1;
+            payload.uom_berat = Number(payload.uom_berat) || 0;
+            payload.minorder = Number(payload.minorder) || 1;
+            payload.limitstok = Number(payload.limitstok) || 10;
+            payload.sizeprod = Number(payload.sizeprod) || 0;
+            payload.iscontinue = Number(payload.iscontinue);
+
+            // Using FormData if image upload was supported, but API schema accepts JSON.
+            // Sending JSON for now.
+            const url = isNew 
+                ? `/api/master-data/products` 
+                : `/api/master-data/products/${idParam}`;
+            const method = isNew ? "POST" : "PUT";
+
+            const res = await fetch(url, {
+                method,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+            const json = await res.json();
+
+            if (!res.ok || !json.ok) {
+                setError(json.message || "Failed to save product.");
+                if (json.errors) {
+                    console.error("Validation errors:", json.errors);
+                    alert("Validation errors: " + JSON.stringify(json.errors));
+                }
+                return;
+            }
+
+            alert("Product saved successfully.");
+            router.push("/master-data/product");
+        } catch (err) {
+            setError("Connection error during save.");
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -65,18 +218,23 @@ export default function ProductDetailPage() {
         }
     };
 
+    // ── Render ────────────────────────────────────────────────────────────────
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-background-light">
+                <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+            </div>
+        );
+    }
+
     return (
         <div className="bg-background-light text-slate-900 font-sans min-h-screen flex flex-col overflow-hidden pb-8">
-            {/* Top Navigation Bar */}
             <Navbar />
-
             <main className="flex-1 flex overflow-hidden">
-                {/* Sidebar Navigation */}
                 <Sidebar />
-
-                {/* Main Content Area */}
                 <section className="flex-1 flex flex-col bg-background-light overflow-hidden">
-
+                    
                     {/* Action Header */}
                     <div className="px-4 md:px-6 py-3 md:py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-primary/5 bg-white/50 backdrop-blur-sm shrink-0">
                         <div className="flex items-start md:items-center gap-3 md:gap-4 w-full md:w-auto">
@@ -89,7 +247,7 @@ export default function ProductDetailPage() {
                             <div>
                                 <div className="flex flex-wrap items-center gap-2">
                                     <h1 className="text-lg md:text-xl font-bold text-slate-900 leading-tight">
-                                        :: Data Barang
+                                        {isNew ? "Tambah Produk Baru" : `Edit Produk: ${readOnlyData?.productcode || idParam}`}
                                     </h1>
                                 </div>
                                 <p className="text-[10px] md:text-xs text-slate-500 font-medium mt-1">
@@ -98,24 +256,33 @@ export default function ProductDetailPage() {
                             </div>
                         </div>
                         <div className="flex flex-wrap items-center gap-2 md:gap-3 w-full md:w-auto">
-                            <button className="flex-1 md:flex-none justify-center px-3 md:px-4 py-2 text-xs md:text-sm font-semibold text-slate-700 hover:bg-slate-200/50 rounded-lg transition-all border border-slate-200 md:border-transparent flex items-center gap-2">
+                            <button 
+                                onClick={() => setForm(defaultFormState)}
+                                className="flex-1 md:flex-none justify-center px-3 md:px-4 py-2 text-xs md:text-sm font-semibold text-slate-700 hover:bg-slate-200/50 rounded-lg transition-all border border-slate-200 md:border-transparent flex items-center gap-2"
+                            >
                                 <span className="material-symbols-outlined text-sm">refresh</span>
                                 Reset
                             </button>
-                            <button className="flex-1 md:flex-none justify-center px-3 md:px-4 py-2 text-xs md:text-sm font-semibold bg-white text-slate-700 border border-slate-200 hover:border-slate-400 rounded-lg transition-all flex items-center gap-2">
-                                <span className="material-symbols-outlined text-sm">help</span>
-                                Info
-                            </button>
-                            <button className="w-full md:w-auto justify-center px-4 md:px-5 py-2 text-xs md:text-sm font-bold bg-primary text-white hover:bg-primary/90 rounded-lg shadow-lg shadow-primary/20 flex items-center gap-2">
+                            <button 
+                                onClick={handleSave}
+                                disabled={isSaving}
+                                className="w-full md:w-auto justify-center px-4 md:px-5 py-2 text-xs md:text-sm font-bold bg-primary text-white hover:bg-primary/90 rounded-lg shadow-lg shadow-primary/20 flex items-center gap-2 disabled:opacity-50"
+                            >
                                 <span className="material-symbols-outlined text-sm">save</span>
-                                Simpan
+                                {isSaving ? "Menyimpan..." : "Simpan"}
                             </button>
                         </div>
                     </div>
 
+                    {error && (
+                        <div className="mx-4 md:mx-6 mt-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center gap-2">
+                            <span className="material-symbols-outlined text-base">error</span>
+                            {error}
+                        </div>
+                    )}
+
                     {/* Tab System Container */}
                     <div className="flex-1 flex flex-col overflow-hidden p-4 md:p-6 pb-28 md:pb-6 gap-4 md:gap-6">
-                        {/* Tabs Selector */}
                         <div className="flex overflow-x-auto no-scrollbar border-b border-slate-200 shrink-0">
                             {tabs.map((tab) => (
                                 <button
@@ -137,253 +304,184 @@ export default function ProductDetailPage() {
                         {activeTab === "data-barang" && (
                             <div className="flex-1 overflow-y-auto no-scrollbar pb-6">
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-                                    {/* Left: Form */}
                                     <div className="lg:col-span-2 space-y-6">
                                         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                                            {/* Card Header */}
                                             <div className="px-4 md:px-6 py-3 md:py-4 border-b border-slate-100 flex items-center gap-2">
                                                 <span className="material-symbols-outlined text-primary">inventory_2</span>
                                                 <h3 className="font-bold text-slate-800">Informasi Barang</h3>
                                             </div>
-                                            {/* Card Body */}
                                             <div className="p-4 md:p-6 space-y-4">
 
-                                                {/* Grup Barang ~ Kode Barang */}
+                                                {/* Group / Family ID */}
                                                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
                                                     <label className="text-sm font-medium text-slate-700 sm:col-span-1">
-                                                        Grup Barang ~ Kode Barang
+                                                        Family ID
                                                     </label>
-                                                    <div className="sm:col-span-3 flex gap-2">
-                                                        <FormSelect className="flex-1">
-                                                            <option>PERSONAL CARE</option>
-                                                            <option>BEVERAGES</option>
-                                                            <option>HOME CARE</option>
-                                                            <option>FOOD</option>
-                                                            <option>GA</option>
-                                                            <option>IT</option>
-                                                        </FormSelect>
-                                                        <FormInput
-                                                            defaultValue="P."
-                                                            className="w-16 text-center"
-                                                            readOnly
+                                                    <div className="sm:col-span-3">
+                                                        <FormInput 
+                                                            name="familyid" 
+                                                            type="number" 
+                                                            value={form.familyid} 
+                                                            onChange={handleChange} 
+                                                            className="w-full sm:w-1/2" 
+                                                            required 
                                                         />
                                                     </div>
                                                 </div>
 
-                                                {/* Barcode Luar ~ Dalam */}
+                                                {/* Barcode */}
                                                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
                                                     <label className="text-sm font-medium text-slate-700 sm:col-span-1">
                                                         Barcode Luar ~ Dalam
                                                     </label>
                                                     <div className="sm:col-span-3 flex gap-2">
-                                                        <FormInput defaultValue="8999999042288" className="flex-1" />
-                                                        <FormInput defaultValue="8999999042288" className="flex-1" />
+                                                        <FormInput name="barcodeno" value={form.barcodeno} onChange={handleChange} className="flex-1" placeholder="Barcode 1" required />
+                                                        <FormInput name="barcodeno2" value={form.barcodeno2} onChange={handleChange} className="flex-1" placeholder="Barcode 2" required />
                                                     </div>
                                                 </div>
 
-                                                {/* Nama Barang (Bahasa) */}
+                                                {/* Name 1 */}
                                                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-start">
                                                     <label className="text-sm font-medium text-slate-700 sm:col-span-1 pt-2">
-                                                        Nama Barang (Bahasa)
+                                                        Nama Barang
                                                     </label>
                                                     <div className="sm:col-span-3">
-                                                        <FormInput defaultValue="PONDS FW LGHTNNG DAY CR SPF18 PA12X3X10G" className="w-full" />
-                                                        <p className="text-xs text-slate-400 mt-1">*max 50 karakter</p>
+                                                        <FormInput name="productname" value={form.productname} onChange={handleChange} className="w-full" required maxLength={200} />
                                                     </div>
                                                 </div>
 
-                                                {/* Nama Barang (English) */}
-                                                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
-                                                    <label className="text-sm font-medium text-slate-700 sm:col-span-1">
-                                                        Nama Barang (English)
-                                                    </label>
-                                                    <div className="sm:col-span-3">
-                                                        <FormInput defaultValue="PONDS FW LGHTNNG DAY CR SPF18 PA12X3X10G" className="w-full" />
-                                                    </div>
-                                                </div>
-
-                                                {/* SKU Code/Number */}
+                                                {/* Name 2 & 3 */}
                                                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-start">
                                                     <label className="text-sm font-medium text-slate-700 sm:col-span-1 pt-2">
-                                                        SKU Code/Number
+                                                        Nama Barang Alt
                                                     </label>
-                                                    <div className="sm:col-span-3">
-                                                        <FormInput defaultValue="" placeholder="" className="w-full" />
-                                                        <p className="text-xs text-slate-400 mt-1">*max 20 karakter</p>
-                                                    </div>
-                                                </div>
-
-                                                {/* Keterangan Tambahan */}
-                                                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
-                                                    <label className="text-sm font-medium text-slate-700 sm:col-span-1">
-                                                        Keterangan Tambahan
-                                                    </label>
-                                                    <div className="sm:col-span-3">
-                                                        <FormInput defaultValue="PONDS FW LGHTNNG DAY CR SPF18 PA12X3X10G" className="w-full" />
+                                                    <div className="sm:col-span-3 flex gap-2">
+                                                        <FormInput name="productname2" value={form.productname2} onChange={handleChange} className="flex-1" placeholder="Nama Alt 1" />
+                                                        <FormInput name="productname3" value={form.productname3} onChange={handleChange} className="flex-1" placeholder="Nama Alt 2" />
                                                     </div>
                                                 </div>
 
                                                 <div className="border-t border-slate-100 pt-4 space-y-4">
-                                                    {/* Isi Qty ~ UOM Satuan Besar */}
-                                                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
-                                                        <label className="text-sm font-medium text-slate-700 sm:col-span-1">
-                                                            Isi Qty ~ UOM Satuan Besar
-                                                        </label>
-                                                        <div className="sm:col-span-3 flex gap-2">
-                                                            <FormInput defaultValue="1.00" type="number" className="w-24" />
-                                                            <FormSelect className="w-32">
-                                                                <option>DUS</option>
-                                                                <option>BOX</option>
-                                                                <option>CARTON</option>
-                                                                <option>PCS</option>
-                                                            </FormSelect>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Berat Kotor Satuan Besar (KG) */}
-                                                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
-                                                        <label className="text-sm font-medium text-slate-700 sm:col-span-1">
-                                                            Berat Kotor Satuan Besar (KG)
-                                                        </label>
-                                                        <div className="sm:col-span-3 flex items-center gap-2">
-                                                            <FormInput defaultValue="1.50" type="number" className="w-24" />
-                                                            <span className="text-sm text-slate-500">(KG)</span>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Berat Bersih Satuan Besar (KG) */}
-                                                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
-                                                        <label className="text-sm font-medium text-slate-700 sm:col-span-1">
-                                                            Berat Bersih Satuan Besar (KG)
-                                                        </label>
-                                                        <div className="sm:col-span-3 flex items-center gap-2">
-                                                            <FormInput defaultValue="0.40" type="number" className="w-24" />
-                                                            <span className="text-sm text-slate-500">(KG)</span>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Isi Qty ~ UOM Satuan Kecil */}
+                                                    {/* UOM Satuan Kecil */}
                                                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
                                                         <label className="text-sm font-medium text-slate-700 sm:col-span-1">
                                                             Isi Qty ~ UOM Satuan Kecil
                                                         </label>
-                                                        <div className="sm:col-span-3 flex gap-2">
-                                                            <FormInput defaultValue="36.00" type="number" className="w-24" />
-                                                            <FormSelect className="w-32">
-                                                                <option>Pcs</option>
-                                                                <option>Gram</option>
-                                                                <option>Liter</option>
-                                                                <option>Ml</option>
-                                                            </FormSelect>
+                                                        <div className="sm:col-span-3 flex items-center gap-2">
+                                                            <span className="hidden sm:inline-block font-bold text-slate-700">:</span>
+                                                            <div className="w-20">
+                                                                <FormInput name="qty_inner" type="number" step="0.01" value={form.qty_inner} onChange={handleChange} required />
+                                                            </div>
+                                                            <div className="w-32">
+                                                                <FormSelect name="uom_id_prod" value={form.uom_id_prod} onChange={handleChange} required>
+                                                                    <option value={0}>-- Pilih --</option>
+                                                                    <option value={1}>PCS</option>
+                                                                    <option value={2}>BOX</option>
+                                                                    <option value={3}>PACK</option>
+                                                                </FormSelect>
+                                                            </div>
                                                         </div>
                                                     </div>
 
-                                                    {/* Berat Satuan Kecil ~ UOM */}
+                                                    {/* Berat Satuan Kecil */}
                                                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
                                                         <label className="text-sm font-medium text-slate-700 sm:col-span-1">
                                                             Berat Satuan Kecil ~ UOM
                                                         </label>
-                                                        <div className="sm:col-span-3 flex gap-2">
-                                                            <FormInput defaultValue="10.00" type="number" className="w-24" />
-                                                            <FormSelect className="w-32">
-                                                                <option>Gram</option>
-                                                                <option>Kg</option>
-                                                                <option>Ml</option>
-                                                                <option>Liter</option>
-                                                            </FormSelect>
+                                                        <div className="sm:col-span-3 flex items-center gap-2">
+                                                            <span className="hidden sm:inline-block font-bold text-slate-700">:</span>
+                                                            <div className="w-20">
+                                                                <FormInput name="qty_gram" type="number" step="0.01" value={form.qty_gram} onChange={handleChange} />
+                                                            </div>
+                                                            <div className="w-32">
+                                                                <FormSelect name="uom_berat" value={form.uom_berat} onChange={handleChange}>
+                                                                    <option value={0}>-- Pilih --</option>
+                                                                    <option value={4}>GRAM</option>
+                                                                    <option value={5}>KG</option>
+                                                                </FormSelect>
+                                                            </div>
                                                         </div>
                                                     </div>
 
-                                                    {/* P X L X T */}
+                                                    {/* Weight / Size */}
                                                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
                                                         <label className="text-sm font-medium text-slate-700 sm:col-span-1">
                                                             P X L X T
                                                         </label>
                                                         <div className="sm:col-span-3 flex items-center gap-2 flex-wrap">
-                                                            <FormInput defaultValue="24.00" type="number" className="w-20" />
-                                                            <span className="text-slate-400">X</span>
-                                                            <FormInput defaultValue="19.50" type="number" className="w-20" />
-                                                            <span className="text-slate-400">X</span>
-                                                            <FormInput defaultValue="15.50" type="number" className="w-20" />
-                                                            <span className="text-sm text-slate-500">=</span>
-                                                            <FormInput defaultValue="0.00725400" readOnly className="w-28 bg-slate-50" />
-                                                            <span className="text-sm text-slate-500">(M3)</span>
+                                                            <span className="hidden sm:inline-block font-bold text-slate-700">:</span>
+                                                            <div className="w-20">
+                                                                <FormInput name="prod_p" type="number" step="0.01" value={form.prod_p} onChange={handleChange} />
+                                                            </div>
+                                                            <span className="text-slate-400 font-medium">X</span>
+                                                            <div className="w-20">
+                                                                <FormInput name="prod_l" type="number" step="0.01" value={form.prod_l} onChange={handleChange} />
+                                                            </div>
+                                                            <span className="text-slate-400 font-medium">X</span>
+                                                            <div className="w-20">
+                                                                <FormInput name="prod_t" type="number" step="0.01" value={form.prod_t} onChange={handleChange} />
+                                                            </div>
+                                                            <span className="text-slate-400 font-medium">=</span>
+                                                            <div className="w-32">
+                                                                <FormInput 
+                                                                    name="volume" 
+                                                                    value={((Number(form.prod_p) || 0) * (Number(form.prod_l) || 0) * (Number(form.prod_t) || 0) / 1000000).toFixed(8)} 
+                                                                    readOnly 
+                                                                    className="bg-slate-100 text-slate-500 cursor-not-allowed" 
+                                                                />
+                                                            </div>
+                                                            <span className="text-sm font-medium text-slate-700">(M3)</span>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
+                                                        <label className="text-sm font-medium text-slate-700 sm:col-span-1">
+                                                            GW / NW
+                                                        </label>
+                                                        <div className="sm:col-span-3 flex items-center gap-2 flex-wrap">
+                                                            <span className="hidden sm:inline-block font-bold text-slate-700">:</span>
+                                                            <div className="w-24">
+                                                                <FormInput name="prod_gw" type="number" step="0.01" value={form.prod_gw} onChange={handleChange} placeholder="GW" />
+                                                            </div>
+                                                            <div className="w-24">
+                                                                <FormInput name="prod_nw" type="number" step="0.01" value={form.prod_nw} onChange={handleChange} placeholder="NW" />
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
 
                                                 <div className="border-t border-slate-100 pt-4 space-y-4">
-                                                    {/* Mata Uang */}
+                                                    {/* Prices */}
                                                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
                                                         <label className="text-sm font-medium text-slate-700 sm:col-span-1">
-                                                            Mata Uang
-                                                        </label>
-                                                        <div className="sm:col-span-3">
-                                                            <FormSelect className="w-40">
-                                                                <option>Rupiah</option>
-                                                                <option>USD</option>
-                                                                <option>EUR</option>
-                                                                <option>SGD</option>
-                                                            </FormSelect>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Harga Jual ~ Min ~ Beli */}
-                                                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
-                                                        <label className="text-sm font-medium text-slate-700 sm:col-span-1">
-                                                            Harga Jual ~ Min ~ Beli
+                                                            Harga Min ~ Max
                                                         </label>
                                                         <div className="sm:col-span-3 flex gap-2 flex-wrap">
-                                                            <FormInput defaultValue="0.00" type="number" className="w-28" />
-                                                            <FormInput defaultValue="0.00" type="number" className="w-28" />
-                                                            <FormInput defaultValue="123,000.00" readOnly className="w-32 bg-slate-50" />
+                                                            <FormInput name="minprice" type="number" step="0.01" value={form.minprice} onChange={handleChange} className="w-32" placeholder="Min" />
+                                                            <FormInput name="maxprice" type="number" step="0.01" value={form.maxprice} onChange={handleChange} className="w-32" placeholder="Max" />
                                                         </div>
                                                     </div>
 
-                                                    {/* Min Order ~ Limit Warning Stock */}
+                                                    {/* Min Order & Limit */}
                                                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
                                                         <label className="text-sm font-medium text-slate-700 sm:col-span-1">
-                                                            Min Order ~ Limit Warning Stock
+                                                            Min Order ~ Limit Stok
                                                         </label>
                                                         <div className="sm:col-span-3 flex gap-2">
-                                                            <FormInput defaultValue="1" type="number" className="w-24" />
-                                                            <FormInput defaultValue="10" type="number" className="w-24" />
+                                                            <FormInput name="minorder" type="number" value={form.minorder} onChange={handleChange} className="w-24" />
+                                                            <FormInput name="limitstok" type="number" value={form.limitstok} onChange={handleChange} className="w-24" />
                                                         </div>
                                                     </div>
 
-                                                    {/* Stok saat ini */}
+                                                    {/* Is Continue */}
                                                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
                                                         <label className="text-sm font-medium text-slate-700 sm:col-span-1">
-                                                            Stok saat ini
+                                                            Status Lanjut?
                                                         </label>
                                                         <div className="sm:col-span-3">
-                                                            <FormInput defaultValue="10" readOnly className="w-24 bg-slate-50" />
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Jasa? */}
-                                                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
-                                                        <label className="text-sm font-medium text-slate-700 sm:col-span-1">
-                                                            Jasa ?
-                                                        </label>
-                                                        <div className="sm:col-span-3 flex items-center gap-2 flex-wrap">
-                                                            <FormSelect className="w-32">
-                                                                <option>Bukan</option>
-                                                                <option>Ya</option>
-                                                            </FormSelect>
-                                                            <span className="text-xs text-slate-400">(Pilih : &apos;Bukan&apos;, jika barang ini memerlukan stok untuk dapat dijual)</span>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Tampilkan? */}
-                                                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
-                                                        <label className="text-sm font-medium text-slate-700 sm:col-span-1">
-                                                            Tampilkan ?
-                                                        </label>
-                                                        <div className="sm:col-span-3">
-                                                            <FormSelect className="w-40">
-                                                                <option>Tampilkan</option>
-                                                                <option>Sembunyikan</option>
+                                                            <FormSelect name="iscontinue" value={form.iscontinue} onChange={handleChange} className="w-40">
+                                                                <option value={1}>Ya (Tampilkan)</option>
+                                                                <option value={0}>Tidak (Sembunyikan)</option>
                                                             </FormSelect>
                                                         </div>
                                                     </div>
@@ -393,425 +491,26 @@ export default function ProductDetailPage() {
                                         </div>
                                     </div>
 
-                                    {/* Right: Summary / Info */}
-                                    <div className="space-y-6">
-                                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden sticky top-0">
-                                            <div className="px-4 md:px-6 py-3 md:py-4 border-b border-slate-100 flex items-center gap-2">
-                                                <span className="material-symbols-outlined text-primary">info</span>
-                                                <h3 className="font-bold text-slate-800">Informasi</h3>
-                                            </div>
-                                            <div className="p-4 md:p-6 space-y-3">
-                                                <p className="text-xs text-slate-500 leading-relaxed">
-                                                    Data barang adalah master produk yang digunakan dalam seluruh transaksi penjualan, pembelian, dan pengelolaan persediaan.
-                                                </p>
-                                                <div className="pt-3 border-t border-slate-100 space-y-2">
-                                                    <div className="flex justify-between items-center text-xs">
-                                                        <span className="text-slate-500">Kode Barang</span>
-                                                        <span className="font-semibold text-slate-700">R0033</span>
-                                                    </div>
-                                                    <div className="flex justify-between items-center text-xs">
-                                                        <span className="text-slate-500">Dibuat oleh</span>
-                                                        <span className="font-semibold text-slate-700">ADMINISTRATOR</span>
-                                                    </div>
-                                                    <div className="flex justify-between items-center text-xs">
-                                                        <span className="text-slate-500">Tanggal</span>
-                                                        <span className="font-semibold text-slate-700">—</span>
-                                                    </div>
-                                                    <div className="flex justify-between items-center text-xs">
-                                                        <span className="text-slate-500">Status</span>
-                                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                            Aktif
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            {/* Action Area */}
-                                            <div className="p-4 bg-slate-50 border-t border-slate-100 grid grid-cols-2 gap-2">
-                                                <button className="col-span-2 py-3 bg-primary text-white rounded font-bold hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20">
-                                                    <span className="material-symbols-outlined">save</span> SIMPAN
-                                                </button>
-                                                <button className="py-2 bg-white border border-slate-200 text-slate-600 rounded text-xs font-bold hover:bg-slate-100 transition-colors flex items-center justify-center gap-1">
-                                                    <span className="material-symbols-outlined !text-sm">refresh</span> RESET
-                                                </button>
-                                                <button className="py-2 bg-white border border-slate-200 text-slate-600 rounded text-xs font-bold hover:bg-slate-100 transition-colors flex items-center justify-center gap-1">
-                                                    <span className="material-symbols-outlined !text-sm">help</span> INFO
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
+
                                 </div>
                             </div>
                         )}
 
-                        {/* ── Tab: Gambar ────────────────────────────────────────── */}
-                        {activeTab === "gambar" && (
-                            <div className="flex-1 overflow-y-auto no-scrollbar pb-6">
-                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-                                    <div className="lg:col-span-2">
-                                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                                            <div className="px-4 md:px-6 py-3 md:py-4 border-b border-slate-100 flex items-center gap-2">
-                                                <span className="material-symbols-outlined text-primary">image</span>
-                                                <h3 className="font-bold text-slate-800">
-                                                    Gambar PONDS FW LGHTNNG DAY CR SPF18 PA12X3X10G
-                                                </h3>
-                                            </div>
-                                            <div className="p-4 md:p-6">
-                                                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-start">
-                                                    <label className="text-sm font-medium text-slate-700">
-                                                        Gambar
-                                                    </label>
-                                                    <div className="sm:col-span-3 space-y-3">
-                                                        {/* Image Preview */}
-                                                        <div
-                                                            className="w-48 h-48 border-2 border-dashed border-slate-300 rounded-lg bg-slate-50 flex items-center justify-center overflow-hidden cursor-pointer hover:border-primary/40 transition-colors"
-                                                            onClick={() => fileInputRef.current?.click()}
-                                                        >
-                                                            {previewImage ? (
-                                                                // eslint-disable-next-line @next/next/no-img-element
-                                                                <img
-                                                                    src={previewImage}
-                                                                    alt="Preview"
-                                                                    className="w-full h-full object-cover"
-                                                                />
-                                                            ) : (
-                                                                <div className="text-center p-4">
-                                                                    <span className="material-symbols-outlined text-4xl text-slate-300">
-                                                                        image
-                                                                    </span>
-                                                                    <p className="text-xs text-slate-400 mt-2">No Image</p>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        {/* File Input */}
-                                                        <div className="flex items-center gap-2">
-                                                            <input
-                                                                ref={fileInputRef}
-                                                                type="file"
-                                                                accept="image/*"
-                                                                className="hidden"
-                                                                onChange={handleFileChange}
-                                                            />
-                                                            <button
-                                                                onClick={() => fileInputRef.current?.click()}
-                                                                className="px-4 py-2 text-sm border border-slate-300 rounded hover:bg-slate-50 transition-colors font-medium text-slate-700 flex items-center gap-2"
-                                                            >
-                                                                <span className="material-symbols-outlined text-sm">upload_file</span>
-                                                                Choose File
-                                                            </button>
-                                                            <span className="text-sm text-slate-400">
-                                                                {previewImage ? "File dipilih" : "No file chosen"}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                        </div>
-                                    </div>
-                                    <div className="space-y-6">
-                                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                                            <div className="px-4 md:px-6 py-3 md:py-4 border-b border-slate-100 flex items-center gap-2">
-                                                <span className="material-symbols-outlined text-primary">info</span>
-                                                <h3 className="font-bold text-slate-800">Panduan</h3>
-                                            </div>
-                                            <div className="p-4 md:p-6 space-y-2">
-                                                <p className="text-xs text-slate-500 leading-relaxed">
-                                                    Upload gambar produk dalam format JPG, PNG, atau WEBP.
-                                                    Ukuran maksimal file adalah 2MB.
-                                                </p>
-                                                <p className="text-xs text-slate-500 leading-relaxed">
-                                                    Resolusi yang disarankan adalah 400×400 piksel atau lebih untuk tampilan yang optimal.
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* ── Tab: Account Code ─────────────────────────────────── */}
-                        {activeTab === "account-code" && (
-                            <div className="flex-1 overflow-y-auto no-scrollbar pb-6">
-                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-                                    <div className="lg:col-span-2">
-                                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                                            <div className="px-4 md:px-6 py-3 md:py-4 border-b border-slate-100 flex items-center gap-2">
-                                                <span className="material-symbols-outlined text-primary">account_tree</span>
-                                                <h3 className="font-bold text-slate-800">Account Code of</h3>
-                                            </div>
-                                            <div className="p-4 md:p-6 space-y-4">
-
-                                                {/* Invt Sales */}
-                                                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
-                                                    <label className="text-sm font-medium text-slate-700 sm:col-span-1">
-                                                        Invt Sales
-                                                    </label>
-                                                    <div className="sm:col-span-3">
-                                                        <FormSelect className="w-full">
-                                                            <option>400.01.01 - PENJUALAN BARANG LOKAL</option>
-                                                            <option>400.01.02 - PENJUALAN BARANG IMPOR</option>
-                                                            <option>400.02.01 - PENJUALAN JASA</option>
-                                                        </FormSelect>
-                                                    </div>
-                                                </div>
-
-                                                {/* Invt COGS */}
-                                                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
-                                                    <label className="text-sm font-medium text-slate-700 sm:col-span-1">
-                                                        Invt COGS
-                                                    </label>
-                                                    <div className="sm:col-span-3">
-                                                        <FormSelect className="w-full">
-                                                            <option>420.01.01 - HPP</option>
-                                                            <option>420.01.02 - HPP IMPOR</option>
-                                                        </FormSelect>
-                                                    </div>
-                                                </div>
-
-                                                {/* Invt Account */}
-                                                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
-                                                    <label className="text-sm font-medium text-slate-700 sm:col-span-1">
-                                                        Invt Account
-                                                    </label>
-                                                    <div className="sm:col-span-3">
-                                                        <FormSelect className="w-full">
-                                                            <option>140.01.01 - PERSEDIAAN BARANG DAGANGAN</option>
-                                                            <option>140.01.02 - PERSEDIAAN BARANG IMPOR</option>
-                                                            <option>140.02.01 - PERSEDIAAN BAHAN BAKU</option>
-                                                        </FormSelect>
-                                                    </div>
-                                                </div>
-
-                                            </div>
-
-                                        </div>
-                                    </div>
-                                    <div className="space-y-6">
-                                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                                            <div className="px-4 md:px-6 py-3 md:py-4 border-b border-slate-100 flex items-center gap-2">
-                                                <span className="material-symbols-outlined text-primary">info</span>
-                                                <h3 className="font-bold text-slate-800">Informasi</h3>
-                                            </div>
-                                            <div className="p-4 md:p-6">
-                                                <p className="text-xs text-slate-500 leading-relaxed">
-                                                    Kode akun digunakan untuk pemetaan jurnal otomatis saat transaksi terkait barang ini terjadi di sistem akuntansi.
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* ── Tab: Pemasok ──────────────────────────────────────── */}
-                        {activeTab === "pemasok" && (
-                            <div className="flex-1 flex flex-col overflow-hidden">
-                                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col flex-1">
-                                    {/* Table Header */}
-                                    <div className="px-4 md:px-6 py-3 md:py-4 border-b border-slate-100 flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <span className="material-symbols-outlined text-primary">local_shipping</span>
-                                            <h3 className="font-bold text-slate-800">
-                                                Pemasok atas Produk PONDS FW LGHTNNG DAY CR SPF18 PA12X3X10G
-                                            </h3>
-                                        </div>
-                                    </div>
-
-                                    {/* Desktop Table */}
-                                    <div className="hidden md:block overflow-x-auto">
-                                        <table className="w-full text-left border-collapse">
-                                            <thead>
-                                                <tr className="bg-slate-50 border-b border-primary/10">
-                                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 w-12">No.</th>
-                                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
-                                                        <div className="flex items-center gap-1 cursor-pointer select-none hover:text-slate-700">
-                                                            Nama Supplier
-                                                            <span className="material-symbols-outlined text-sm">unfold_more</span>
-                                                        </div>
-                                                    </th>
-                                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Alamat</th>
-                                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 text-center w-24">Pilih</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-primary/5">
-                                                {suppliers.map((supplier, idx) => (
-                                                    <tr
-                                                        key={supplier.id}
-                                                        className="hover:bg-primary/5 transition-colors cursor-pointer"
-                                                        onClick={() => toggleSupplier(supplier.id)}
-                                                    >
-                                                        <td className="px-6 py-4 text-sm text-slate-500">{idx + 1}.</td>
-                                                        <td className="px-6 py-4 text-sm font-semibold text-slate-800">{supplier.nama}</td>
-                                                        <td className="px-6 py-4 text-sm text-slate-500 max-w-xs">
-                                                            <span className="line-clamp-2">{supplier.alamat}</span>
-                                                        </td>
-                                                        <td className="px-6 py-4 text-center">
-                                                            <div className="flex items-center justify-center">
-                                                                {supplier.dipilih ? (
-                                                                    <div className="w-6 h-6 rounded bg-primary flex items-center justify-center shadow shadow-primary/30">
-                                                                        <span className="material-symbols-outlined text-white text-sm">check</span>
-                                                                    </div>
-                                                                ) : (
-                                                                    <div className="w-6 h-6 rounded border-2 border-slate-300 hover:border-primary transition-colors" />
-                                                                )}
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-
-                                    {/* Mobile Card - Pemasok */}
-                                    <div className="block md:hidden divide-y divide-primary/5">
-                                        {suppliers.map((supplier, idx) => (
-                                            <div
-                                                key={supplier.id}
-                                                className="p-4 space-y-2 cursor-pointer hover:bg-primary/5"
-                                                onClick={() => toggleSupplier(supplier.id)}
-                                            >
-                                                <div className="flex justify-between items-start gap-3">
-                                                    <div className="flex-1">
-                                                        <p className="text-sm font-semibold text-slate-800">{idx + 1}. {supplier.nama}</p>
-                                                        <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{supplier.alamat}</p>
-                                                    </div>
-                                                    <div className="shrink-0 mt-1">
-                                                        {supplier.dipilih ? (
-                                                            <div className="w-6 h-6 rounded bg-primary flex items-center justify-center shadow shadow-primary/30">
-                                                                <span className="material-symbols-outlined text-white text-sm">check</span>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="w-6 h-6 rounded border-2 border-slate-300" />
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    {/* Pagination */}
-                                    <div className="px-4 md:px-6 py-4 bg-slate-50 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0">
-                                        <p className="text-sm text-slate-500 text-center md:text-left">
-                                            Menampilkan 1 sampai {suppliers.length} dari {suppliers.length} data
-                                        </p>
-                                        <div className="flex flex-wrap justify-center items-center gap-1">
-                                            <button className="p-2 border border-primary/10 rounded hover:bg-white disabled:opacity-50" disabled>
-                                                <span className="material-symbols-outlined text-lg">chevron_left</span>
-                                            </button>
-                                            <button className="px-3 py-1 bg-primary text-white rounded text-sm font-bold">1</button>
-                                            <button className="p-2 border border-primary/10 rounded hover:bg-white">
-                                                <span className="material-symbols-outlined text-lg">chevron_right</span>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* ── Tab: Stok / Gudang ───────────────────────────── */}
-                        {activeTab === "stok-gudang" && (
-                            <div className="flex-1 flex flex-col overflow-hidden">
-                                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col flex-1">
-                                    {/* Card Header */}
-                                    <div className="px-4 md:px-6 py-3 md:py-4 border-b border-slate-100 flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <span className="material-symbols-outlined text-primary">warehouse</span>
-                                            <h3 className="font-bold text-slate-800">
-                                                Persediaan atas Produk PONDS FW LGHTNNG DAY CR SPF18 PA12X3X10G
-                                            </h3>
-                                        </div>
-                                    </div>
-
-                                    {/* Desktop Table */}
-                                    <div className="hidden md:block overflow-x-auto">
-                                        <table className="w-full text-left border-collapse">
-                                            <thead>
-                                                <tr className="bg-slate-50 border-b border-primary/10">
-                                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 w-12">No.</th>
-                                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
-                                                        <div className="flex items-center gap-1 cursor-pointer select-none hover:text-slate-700">
-                                                            Gudang
-                                                            <span className="material-symbols-outlined text-sm">unfold_more</span>
-                                                        </div>
-                                                    </th>
-                                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 text-right">
-                                                        <div className="flex items-center justify-end gap-1 cursor-pointer select-none hover:text-slate-700">
-                                                            Qty
-                                                            <span className="material-symbols-outlined text-sm">unfold_more</span>
-                                                        </div>
-                                                    </th>
-                                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">UOM</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-primary/5">
-                                                {/* Data row */}
-                                                <tr className="hover:bg-primary/5 transition-colors">
-                                                    <td className="px-6 py-4 text-sm text-slate-500">1.</td>
-                                                    <td className="px-6 py-4 text-sm font-medium text-slate-800">GUDANG DAOP AB</td>
-                                                    <td className="px-6 py-4 text-sm font-semibold text-right text-slate-800">10.00</td>
-                                                    <td className="px-6 py-4 text-sm text-slate-600">DUS</td>
-                                                </tr>
-                                            </tbody>
-                                            {/* Total row */}
-                                            <tfoot>
-                                                <tr className="bg-slate-50 border-t border-primary/10">
-                                                    <td className="px-6 py-4" />
-                                                    <td className="px-6 py-4" />
-                                                    <td className="px-6 py-4 text-sm font-black text-right text-slate-900">10.00</td>
-                                                    <td className="px-6 py-4 text-sm font-bold text-slate-700">DUS</td>
-                                                </tr>
-                                            </tfoot>
-                                        </table>
-                                    </div>
-
-                                    {/* Mobile Card - Stok/Gudang */}
-                                    <div className="block md:hidden divide-y divide-primary/5">
-                                        <div className="p-4 space-y-2">
-                                            <div className="flex justify-between items-center">
-                                                <div>
-                                                    <p className="text-sm font-semibold text-slate-800">1. GUDANG DAOP AB</p>
-                                                </div>
-                                                <div className="text-right">
-                                                    <p className="text-sm font-bold text-slate-900">10.00</p>
-                                                    <p className="text-xs text-slate-500">DUS</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        {/* Mobile Total */}
-                                        <div className="p-4 bg-slate-50">
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Total</span>
-                                                <div className="text-right">
-                                                    <p className="text-sm font-black text-slate-900">10.00</p>
-                                                    <p className="text-xs text-slate-500">DUS</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Pagination */}
-                                    <div className="px-4 md:px-6 py-4 bg-slate-50 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0">
-                                        <p className="text-sm text-slate-500 text-center md:text-left">
-                                            Showing 1 to 1 of 1 entries
-                                        </p>
-                                        <div className="flex flex-wrap justify-center items-center gap-1">
-                                            <button className="p-2 border border-primary/10 rounded hover:bg-white disabled:opacity-50" disabled>
-                                                <span className="material-symbols-outlined text-lg">chevron_left</span>
-                                            </button>
-                                            <button className="px-3 py-1 bg-primary text-white rounded text-sm font-bold">1</button>
-                                            <button className="p-2 border border-primary/10 rounded hover:bg-white disabled:opacity-50" disabled>
-                                                <span className="material-symbols-outlined text-lg">chevron_right</span>
-                                            </button>
-                                        </div>
-                                    </div>
+                        {/* Other Tabs Content Placeholder */}
+                        {activeTab !== "data-barang" && (
+                            <div className="flex-1 flex items-center justify-center bg-white rounded-xl border border-slate-200 shadow-sm p-12">
+                                <div className="text-center">
+                                    <span className="material-symbols-outlined text-5xl text-slate-300">construction</span>
+                                    <h3 className="mt-4 text-lg font-bold text-slate-800">Tab Belum Tersedia</h3>
+                                    <p className="mt-2 text-sm text-slate-500 max-w-sm mx-auto">
+                                        Modul tambahan ini sedang dalam pengembangan atau tidak tercakup dalam integrasi saat ini.
+                                    </p>
                                 </div>
                             </div>
                         )}
                     </div>
                 </section>
             </main>
-
-            {/* Footer StatusBar */}
             <StatusBar />
         </div>
     );
