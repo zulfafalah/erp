@@ -1,79 +1,214 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Navbar from "../../components/Navbar";
 import Sidebar from "../../components/Sidebar";
 import StatusBar from "../../components/StatusBar";
 import MultiFilter, { FilterField, FilterRule } from "../../components/MultiFilter";
 import DataTable, { Column } from "../../components/DataTable";
 
-interface ProductCategory {
-    id: string;
-    kode: string;
-    nama: string;
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface ProductCategoryListItem {
+    familyid: number;
+    famno: string | null;
+    productfamily: string;
 }
 
-const allData: ProductCategory[] = [
-    { id: "PC-001", kode: "B.0001", nama: "BEVERAGES" },
-    { id: "PC-002", kode: "F.0001", nama: "FOOD" },
-    { id: "PC-003", kode: "G.0001", nama: "GA" },
-    { id: "PC-004", kode: "H.0001", nama: "HOME CARE" },
-    { id: "PC-005", kode: "I.0001", nama: "IT" },
-    { id: "PC-006", kode: "P.0001", nama: "PERSONAL CARE" },
-];
+interface ApiResponse {
+    ok: boolean;
+    data: ProductCategoryListItem[];
+    page: number;
+    limit: number;
+    total: number;
+    message?: string;
+}
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const PAGE_LIMIT = 10;
 
 const FILTER_FIELDS: FilterField[] = [
-    { key: "kode", label: "Kode", type: "text" },
-    { key: "nama", label: "Nama Kategori", type: "text" },
+    { key: "famno", label: "Kode", type: "text" },
+    { key: "productfamily", label: "Nama Kategori", type: "text" },
 ];
 
-export default function ProductCategoryListPage() {
-    const [filteredData, setFilteredData] = useState<ProductCategory[]>(allData);
+// ─── Pagination ───────────────────────────────────────────────────────────────
 
-    const handleApplyFilter = (rules: FilterRule[]) => {
-        if (rules.length === 0) {
-            setFilteredData(allData);
-            return;
+interface PaginationProps {
+    page: number;
+    total: number;
+    limit: number;
+    isLoading: boolean;
+    onPageChange: (p: number) => void;
+}
+
+function Pagination({ page, total, limit, isLoading, onPageChange }: PaginationProps) {
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    const from = total === 0 ? 0 : (page - 1) * limit + 1;
+    const to   = Math.min(page * limit, total);
+
+    const getPages = (): (number | "…")[] => {
+        if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+        const pages: (number | "…")[] = [];
+        if (page <= 4) {
+            for (let i = 1; i <= 5; i++) pages.push(i);
+            pages.push("…", totalPages);
+        } else if (page >= totalPages - 3) {
+            pages.push(1, "…");
+            for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i);
+        } else {
+            pages.push(1, "…", page - 1, page, page + 1, "…", totalPages);
         }
-        const result = allData.filter((item) =>
-            rules.every((rule) => {
-                const { field, operator, value } = rule;
-                const itemValue = item[field as keyof ProductCategory];
-                if (itemValue === undefined) return true;
-                const itemStr = String(itemValue).toLowerCase();
-                const valStr = value.toLowerCase();
-                switch (operator) {
-                    case "contains":    return itemStr.includes(valStr);
-                    case "equals":      return itemStr === valStr;
-                    case "not_equals":  return itemStr !== valStr;
-                    case "starts_with": return itemStr.startsWith(valStr);
-                    case "ends_with":   return itemStr.endsWith(valStr);
-                    default:            return true;
-                }
-            })
-        );
-        setFilteredData(result);
+        return pages;
     };
 
-    const columns: Column<ProductCategory>[] = [
+    return (
+        <div className="px-4 md:px-6 py-4 bg-slate-50 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 border-t border-primary/5">
+            <p className="text-sm text-slate-500 text-center md:text-left">
+                {total === 0
+                    ? "Tidak ada data"
+                    : `Menampilkan ${from}–${to} dari ${total} data`
+                }
+            </p>
+            <div className="flex flex-wrap justify-center items-center gap-1">
+                <button
+                    onClick={() => onPageChange(page - 1)}
+                    disabled={page === 1 || isLoading}
+                    className="p-2 border border-primary/10 rounded hover:bg-white disabled:opacity-40 transition-colors"
+                >
+                    <span className="material-symbols-outlined text-lg">chevron_left</span>
+                </button>
+
+                {getPages().map((p, i) =>
+                    p === "…" ? (
+                        <span key={`ellipsis-${i}`} className="px-2 text-slate-400 text-sm select-none">…</span>
+                    ) : (
+                        <button
+                            key={p}
+                            onClick={() => onPageChange(p as number)}
+                            disabled={isLoading}
+                            className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                                p === page
+                                    ? "bg-primary text-white font-bold shadow-sm"
+                                    : "hover:bg-white text-slate-600 disabled:opacity-50"
+                            }`}
+                        >
+                            {p}
+                        </button>
+                    )
+                )}
+
+                <button
+                    onClick={() => onPageChange(page + 1)}
+                    disabled={page === totalPages || isLoading}
+                    className="p-2 border border-primary/10 rounded hover:bg-white disabled:opacity-40 transition-colors"
+                >
+                    <span className="material-symbols-outlined text-lg">chevron_right</span>
+                </button>
+            </div>
+        </div>
+    );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+export default function ProductCategoryListPage() {
+    const [data, setData]             = useState<ProductCategoryListItem[]>([]);
+    const [page, setPage]             = useState(1);
+    const [total, setTotal]           = useState(0);
+    const [isLoading, setIsLoading]   = useState(true);
+    const [error, setError]           = useState<string | null>(null);
+    const [search, setSearch]         = useState("");
+    const [deletingId, setDeletingId] = useState<number | null>(null);
+
+    // ── Fetch ─────────────────────────────────────────────────────────────────
+
+    const fetchData = useCallback(async (targetPage: number, searchStr: string) => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const qs = new URLSearchParams({
+                page: String(targetPage),
+                limit: String(PAGE_LIMIT),
+                ...(searchStr ? { search: searchStr } : {}),
+            });
+            const res  = await fetch(`/api/master-data/product-category?${qs.toString()}`);
+            const json = await res.json() as ApiResponse;
+
+            if (!res.ok || !json.ok) {
+                setError(json.message ?? "Gagal memuat data kategori produk.");
+                return;
+            }
+
+            setData(json.data ?? []);
+            setTotal(json.total ?? 0);
+            setPage(json.page ?? targetPage);
+        } catch {
+            setError("Terjadi kesalahan koneksi. Pastikan server berjalan.");
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchData(page, search);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [page]);
+
+    // ── Filter ────────────────────────────────────────────────────────────────
+
+    const handleApplyFilter = (rules: FilterRule[]) => {
+        const searchRule = rules.find(r => r.operator === "contains" || r.operator === "equals");
+        const q = searchRule?.value ?? "";
+        setSearch(q);
+        setPage(1);
+        fetchData(1, q);
+    };
+
+    const handlePageChange = (p: number) => {
+        setPage(p);
+    };
+
+    // ── Delete ────────────────────────────────────────────────────────────────
+
+    const handleDelete = async (id: number, name: string) => {
+        if (!confirm(`Hapus kategori produk "${name}"? Tindakan ini tidak dapat dibatalkan.`)) return;
+        setDeletingId(id);
+        try {
+            const res  = await fetch(`/api/master-data/product-category/${id}`, { method: "DELETE" });
+            const json = await res.json() as { ok: boolean; message?: string };
+            if (!res.ok || !json.ok) {
+                alert(json.message ?? "Gagal menghapus data kategori produk.");
+                return;
+            }
+            fetchData(page, search);
+        } catch {
+            alert("Terjadi kesalahan koneksi saat menghapus data.");
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
+    const columns: Column<ProductCategoryListItem>[] = [
         {
             header: "Kode",
-            key: "kode",
+            key: "famno",
             render: (item) => (
                 <Link
-                    href={`/master-data/product-category/${item.id}`}
-                    className="font-semibold text-primary text-sm tracking-tight hover:underline"
+                    href={`/master-data/product-category/${item.familyid}`}
+                    className="font-semibold text-primary text-sm tracking-tight hover:underline block"
                 >
-                    {item.kode}
+                    {item.famno ?? "-"}
                 </Link>
             ),
         },
         {
             header: "Nama Kategori",
-            key: "nama",
+            key: "productfamily",
             render: (item) => (
-                <span className="text-sm text-slate-800 font-medium">{item.nama}</span>
+                <span className="text-sm text-slate-800 font-medium">{item.productfamily}</span>
             ),
         },
         {
@@ -83,14 +218,16 @@ export default function ProductCategoryListPage() {
             render: (item) => (
                 <div className="flex items-center justify-end gap-2">
                     <Link
-                        href={`/master-data/product-category/${item.id}`}
+                        href={`/master-data/product-category/${item.familyid}`}
                         className="p-1.5 text-slate-400 hover:text-primary transition-colors"
                         title="Edit"
                     >
                         <span className="material-symbols-outlined text-lg">edit_square</span>
                     </Link>
                     <button
-                        className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"
+                        onClick={(e) => { e.stopPropagation(); handleDelete(item.familyid, item.productfamily); }}
+                        disabled={deletingId === item.familyid}
+                        className="p-1.5 text-slate-400 hover:text-red-500 transition-colors disabled:opacity-50"
                         title="Delete"
                     >
                         <span className="material-symbols-outlined text-lg">delete</span>
@@ -100,17 +237,17 @@ export default function ProductCategoryListPage() {
         },
     ];
 
-    const renderMobileCard = (item: ProductCategory) => (
+    const renderMobileCard = (item: ProductCategoryListItem) => (
         <div className="p-4 space-y-3">
             <div className="flex justify-between items-start">
                 <div>
                     <Link
-                        href={`/master-data/product-category/${item.id}`}
-                        className="font-semibold text-primary text-sm hover:underline"
+                        href={`/master-data/product-category/${item.familyid}`}
+                        className="font-semibold text-primary text-sm hover:underline block"
                     >
-                        {item.kode}
+                        {item.famno ?? "-"}
                     </Link>
-                    <p className="text-xs text-slate-500 mt-0.5">{item.nama}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{item.productfamily}</p>
                 </div>
                 <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-primary/10 text-primary uppercase">
                     Kategori
@@ -118,12 +255,16 @@ export default function ProductCategoryListPage() {
             </div>
             <div className="flex justify-end items-center pt-2 border-t border-slate-100 gap-1">
                 <Link
-                    href={`/master-data/product-category/${item.id}`}
+                    href={`/master-data/product-category/${item.familyid}`}
                     className="p-1.5 text-slate-400 hover:text-primary transition-colors"
                 >
                     <span className="material-symbols-outlined text-base">edit_square</span>
                 </Link>
-                <button className="p-1.5 text-slate-400 hover:text-red-500 transition-colors">
+                <button
+                    onClick={() => handleDelete(item.familyid, item.productfamily)}
+                    disabled={deletingId === item.familyid}
+                    className="p-1.5 text-slate-400 hover:text-red-500 transition-colors disabled:opacity-50"
+                >
                     <span className="material-symbols-outlined text-base">delete</span>
                 </button>
             </div>
@@ -168,13 +309,48 @@ export default function ProductCategoryListPage() {
                             </div>
                         </div>
 
+                        {/* Error Banner */}
+                        {error && (
+                            <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700 text-sm">
+                                <span className="material-symbols-outlined text-base shrink-0">error</span>
+                                {error}
+                                <button
+                                    onClick={() => fetchData(page, search)}
+                                    className="ml-auto text-xs font-semibold underline hover:no-underline"
+                                >
+                                    Coba lagi
+                                </button>
+                            </div>
+                        )}
+
                         {/* Table Container */}
-                        <DataTable
-                            data={filteredData}
-                            columns={columns}
-                            keyField="id"
-                            renderMobileCard={renderMobileCard}
-                        />
+                        {isLoading && data.length === 0 ? (
+                            <div className="bg-white rounded-xl border border-primary/10 shadow-sm overflow-hidden p-12 text-center">
+                                <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+                                <p className="text-slate-500 text-sm">Memuat data kategori...</p>
+                            </div>
+                        ) : data.length === 0 && !error ? (
+                            <div className="bg-white rounded-xl border border-primary/10 shadow-sm overflow-hidden p-12 text-center">
+                                <span className="material-symbols-outlined text-5xl text-slate-300">category</span>
+                                <p className="mt-2 text-sm text-slate-500">Tidak ada data kategori produk</p>
+                            </div>
+                        ) : (
+                            <DataTable
+                                data={data}
+                                columns={columns}
+                                keyField="familyid"
+                                renderMobileCard={renderMobileCard}
+                                footer={
+                                    <Pagination
+                                        page={page}
+                                        total={total}
+                                        limit={PAGE_LIMIT}
+                                        isLoading={isLoading}
+                                        onPageChange={handlePageChange}
+                                    />
+                                }
+                            />
+                        )}
                     </div>
                 </section>
             </main>
