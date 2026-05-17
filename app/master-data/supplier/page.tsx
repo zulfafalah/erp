@@ -7,6 +7,7 @@ import Navbar from "../../components/Navbar";
 import Sidebar from "../../components/Sidebar";
 import StatusBar from "../../components/StatusBar";
 import MultiFilter, { FilterField, FilterRule } from "../../components/MultiFilter";
+import DataTable, { Column } from "../../components/DataTable";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -49,41 +50,6 @@ const FILTER_FIELDS: FilterField[] = [
         ],
     },
 ];
-
-// ─── Skeleton Row ─────────────────────────────────────────────────────────────
-
-function SkeletonRow() {
-    return (
-        <tr>
-            {Array.from({ length: 5 }).map((_, i) => (
-                <td key={i} className="px-6 py-4">
-                    <div className="h-4 bg-slate-100 rounded animate-pulse w-3/4" />
-                </td>
-            ))}
-            <td className="px-6 py-4 text-right">
-                <div className="h-4 bg-slate-100 rounded animate-pulse w-12 ml-auto" />
-            </td>
-        </tr>
-    );
-}
-
-function SkeletonCard() {
-    return (
-        <div className="p-4 space-y-3 border-b border-primary/5">
-            <div className="flex justify-between items-start">
-                <div className="space-y-1.5">
-                    <div className="h-3.5 w-40 bg-slate-200 rounded animate-pulse" />
-                    <div className="h-3 w-24 bg-slate-100 rounded animate-pulse" />
-                </div>
-                <div className="h-5 w-16 bg-slate-100 rounded-full animate-pulse" />
-            </div>
-            <div className="space-y-1">
-                <div className="h-3.5 w-32 bg-slate-100 rounded animate-pulse" />
-                <div className="h-3 w-48 bg-slate-100 rounded animate-pulse" />
-            </div>
-        </div>
-    );
-}
 
 // ─── Pagination ───────────────────────────────────────────────────────────────
 
@@ -225,6 +191,125 @@ export default function PemasokListPage() {
         // fetchData akan dipanggil via useEffect[page]
     };
 
+    // ── Column & Card Definitions ─────────────────────────────────────────────
+
+    const columns: Column<SupplierListItem>[] = [
+        {
+            header: "Kode & Nama",
+            key: "suppcode",
+            render: (item) => (
+                <Link
+                    href={`/master-data/supplier/${item.supplierid}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="font-semibold text-primary text-sm tracking-tight hover:underline flex flex-col"
+                >
+                    <span>{item.suppcode}</span>
+                    <span className="text-slate-700 font-medium">{item.companyname}</span>
+                </Link>
+            ),
+        },
+        {
+            header: "Kontak & Telp",
+            key: "contactname",
+            render: (item) => (
+                <div>
+                    <div className="font-medium text-slate-900 text-sm">{item.contactname || "—"}</div>
+                    <div className="text-slate-500 text-xs">{item.phone || "—"}</div>
+                </div>
+            ),
+        },
+        {
+            header: "Alamat",
+            key: "address",
+            render: (item) => (
+                <span className="text-sm text-slate-600 max-w-[200px] truncate block">{item.address || "—"}</span>
+            ),
+        },
+        {
+            header: "Jenis",
+            key: "islocal",
+            render: (item) => (
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                    item.islocal === 1
+                        ? "bg-green-100 text-green-800"
+                        : "bg-blue-100 text-blue-800"
+                }`}>
+                    {item.islocal === 1 ? "Lokal" : "Importir"}
+                </span>
+            ),
+        },
+        {
+            header: "Tempo Bayar",
+            key: "tempobyr",
+            render: (item) => (
+                <span className="text-sm text-slate-600">
+                    {item.tempobyr != null ? `${item.tempobyr} hari` : "—"}
+                </span>
+            ),
+        },
+        {
+            header: "Aksi",
+            key: "aksi",
+            align: "right",
+            render: (item) => (
+                <div className="flex items-center justify-end gap-2">
+                    <Link
+                        href={`/master-data/supplier/${item.supplierid}`}
+                        className="p-1.5 text-slate-400 hover:text-primary transition-colors"
+                        title="Edit"
+                    >
+                        <span className="material-symbols-outlined text-lg">edit_square</span>
+                    </Link>
+                    <button
+                        className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"
+                        title="Hapus"
+                    >
+                        <span className="material-symbols-outlined text-lg">delete</span>
+                    </button>
+                </div>
+            ),
+        },
+    ];
+
+    const renderMobileCard = (item: SupplierListItem) => (
+        <div className="p-4 space-y-3">
+            <div className="flex justify-between items-start">
+                <div>
+                    <Link
+                        href={`/master-data/supplier/${item.supplierid}`}
+                        className="font-semibold text-primary text-sm hover:underline"
+                    >
+                        {item.suppcode} — {item.companyname}
+                    </Link>
+                    <p className="text-xs text-slate-500 mt-0.5">{item.address || "—"}</p>
+                </div>
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                    item.islocal === 1
+                        ? "bg-green-100 text-green-800"
+                        : "bg-blue-100 text-blue-800"
+                }`}>
+                    {item.islocal === 1 ? "Lokal" : "Importir"}
+                </span>
+            </div>
+            <div>
+                <p className="text-sm font-medium text-slate-900">
+                    {item.contactname || "—"}{item.phone ? ` · ${item.phone}` : ""}
+                </p>
+            </div>
+            <div className="flex justify-end items-center pt-2 border-t border-slate-100 gap-1">
+                <Link
+                    href={`/master-data/supplier/${item.supplierid}`}
+                    className="p-1.5 text-slate-400 hover:text-primary transition-colors"
+                >
+                    <span className="material-symbols-outlined text-base">edit_square</span>
+                </Link>
+                <button className="p-1.5 text-slate-400 hover:text-red-500 transition-colors">
+                    <span className="material-symbols-outlined text-base">delete</span>
+                </button>
+            </div>
+        </div>
+    );
+
     // ── Render ────────────────────────────────────────────────────────────────
 
     return (
@@ -278,161 +363,25 @@ export default function PemasokListPage() {
                         )}
 
                         {/* ── Table Container ──────────────────────────────── */}
-                        <div className="bg-white rounded-xl border border-primary/10 shadow-sm overflow-hidden">
-
-                            {/* Mobile Card View */}
-                            <div className="block md:hidden divide-y divide-primary/5">
-                                {isLoading ? (
-                                    Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
-                                ) : data.length === 0 ? (
-                                    <div className="p-12 text-center">
-                                        <span className="material-symbols-outlined text-5xl text-slate-300">inventory_2</span>
-                                        <p className="mt-2 text-sm text-slate-500">Tidak ada data pemasok</p>
-                                    </div>
-                                ) : data.map((p) => (
-                                    <div key={p.supplierid} className="p-4 space-y-3">
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <Link
-                                                    href={`/master-data/supplier/${p.supplierid}`}
-                                                    className="font-semibold text-primary text-sm hover:underline"
-                                                >
-                                                    {p.suppcode} — {p.companyname}
-                                                </Link>
-                                                <p className="text-xs text-slate-500 mt-0.5">{p.address || "—"}</p>
-                                            </div>
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                                                p.islocal === 1
-                                                    ? "bg-green-100 text-green-800"
-                                                    : "bg-blue-100 text-blue-800"
-                                            }`}>
-                                                {p.islocal === 1 ? "Lokal" : "Importir"}
-                                            </span>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-medium text-slate-900">
-                                                {p.contactname || "—"}{p.phone ? ` · ${p.phone}` : ""}
-                                            </p>
-                                        </div>
-                                        <div className="flex justify-end items-center pt-2 border-t border-slate-100 gap-1">
-                                            <Link
-                                                href={`/master-data/supplier/${p.supplierid}`}
-                                                className="p-1.5 text-slate-400 hover:text-primary transition-colors"
-                                            >
-                                                <span className="material-symbols-outlined text-base">edit_square</span>
-                                            </Link>
-                                            <button className="p-1.5 text-slate-400 hover:text-red-500 transition-colors">
-                                                <span className="material-symbols-outlined text-base">delete</span>
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-
-                            {/* Desktop Table View */}
-                            <div className="hidden md:block overflow-x-auto">
-                                <table className="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr className="bg-slate-50 border-b border-primary/10">
-                                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
-                                                Kode &amp; Nama
-                                            </th>
-                                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
-                                                Kontak &amp; Telp
-                                            </th>
-                                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
-                                                Alamat
-                                            </th>
-                                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
-                                                Jenis
-                                            </th>
-                                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
-                                                Tempo Bayar
-                                            </th>
-                                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 text-right">
-                                                Aksi
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-primary/5">
-                                        {isLoading ? (
-                                            Array.from({ length: PAGE_LIMIT }).map((_, i) => (
-                                                <SkeletonRow key={i} />
-                                            ))
-                                        ) : data.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={6} className="px-6 py-16 text-center">
-                                                    <span className="material-symbols-outlined text-5xl text-slate-300 block">inventory_2</span>
-                                                    <p className="mt-2 text-sm text-slate-500">Tidak ada data pemasok</p>
-                                                </td>
-                                            </tr>
-                                        ) : data.map((p) => (
-                                            <tr
-                                                key={p.supplierid}
-                                                className="hover:bg-primary/5 transition-colors cursor-pointer"
-                                                onClick={() => router.push(`/master-data/supplier/${p.supplierid}`)}
-                                            >
-                                                <td className="px-6 py-4">
-                                                    <Link
-                                                        href={`/master-data/supplier/${p.supplierid}`}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        className="font-semibold text-primary text-sm tracking-tight hover:underline flex flex-col"
-                                                    >
-                                                        <span>{p.suppcode}</span>
-                                                        <span className="text-slate-700 font-medium">{p.companyname}</span>
-                                                    </Link>
-                                                </td>
-                                                <td className="px-6 py-4 text-sm">
-                                                    <div className="font-medium text-slate-900">{p.contactname || "—"}</div>
-                                                    <div className="text-slate-500 text-xs">{p.phone || "—"}</div>
-                                                </td>
-                                                <td className="px-6 py-4 text-sm text-slate-600 max-w-[200px] truncate">
-                                                    {p.address || "—"}
-                                                </td>
-                                                <td className="px-6 py-4 text-sm">
-                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                                                        p.islocal === 1
-                                                            ? "bg-green-100 text-green-800"
-                                                            : "bg-blue-100 text-blue-800"
-                                                    }`}>
-                                                        {p.islocal === 1 ? "Lokal" : "Importir"}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 text-sm text-slate-600">
-                                                    {p.tempobyr != null ? `${p.tempobyr} hari` : "—"}
-                                                </td>
-                                                <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
-                                                    <div className="flex items-center justify-end gap-2">
-                                                        <Link
-                                                            href={`/master-data/supplier/${p.supplierid}`}
-                                                            className="p-1.5 text-slate-400 hover:text-primary transition-colors"
-                                                            title="Edit"
-                                                        >
-                                                            <span className="material-symbols-outlined text-lg">edit_square</span>
-                                                        </Link>
-                                                        <button
-                                                            className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"
-                                                            title="Hapus"
-                                                        >
-                                                            <span className="material-symbols-outlined text-lg">delete</span>
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {/* Pagination */}
-                            <Pagination
-                                page={page}
-                                total={total}
-                                limit={PAGE_LIMIT}
-                                isLoading={isLoading}
-                                onPageChange={handlePageChange}
-                            />
-                        </div>
+                        <DataTable
+                            data={data}
+                            columns={columns}
+                            keyField="supplierid"
+                            renderMobileCard={renderMobileCard}
+                            isLoading={isLoading}
+                            skeletonRows={PAGE_LIMIT}
+                            emptyIcon="inventory_2"
+                            emptyText="Tidak ada data pemasok"
+                            footer={
+                                <Pagination
+                                    page={page}
+                                    total={total}
+                                    limit={PAGE_LIMIT}
+                                    isLoading={isLoading}
+                                    onPageChange={handlePageChange}
+                                />
+                            }
+                        />
 
                     </div>
                 </section>

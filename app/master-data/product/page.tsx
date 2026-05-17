@@ -394,33 +394,25 @@ export default function ProductListPage() {
                         )}
 
                         {/* Table Container */}
-                        {isLoading && data.length === 0 ? (
-                            <div className="bg-white rounded-xl border border-primary/10 shadow-sm overflow-hidden p-12 text-center">
-                                <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
-                                <p className="text-slate-500 text-sm">Memuat data produk...</p>
-                            </div>
-                        ) : data.length === 0 && !error ? (
-                            <div className="bg-white rounded-xl border border-primary/10 shadow-sm overflow-hidden p-12 text-center">
-                                <span className="material-symbols-outlined text-5xl text-slate-300">inventory_2</span>
-                                <p className="mt-2 text-sm text-slate-500">Tidak ada data produk</p>
-                            </div>
-                        ) : (
-                            <DataTable
-                                data={data}
-                                columns={columns}
-                                keyField="productid"
-                                renderMobileCard={renderMobileCard}
-                                footer={
-                                    <Pagination
-                                        page={page}
-                                        total={total}
-                                        limit={PAGE_LIMIT}
-                                        isLoading={isLoading}
-                                        onPageChange={handlePageChange}
-                                    />
-                                }
-                            />
-                        )}
+                        <DataTable
+                            data={data}
+                            columns={columns}
+                            keyField="productid"
+                            renderMobileCard={renderMobileCard}
+                            isLoading={isLoading}
+                            skeletonRows={PAGE_LIMIT}
+                            emptyIcon="inventory_2"
+                            emptyText="Tidak ada data produk"
+                            footer={
+                                <Pagination
+                                    page={page}
+                                    total={total}
+                                    limit={PAGE_LIMIT}
+                                    isLoading={isLoading}
+                                    onPageChange={handlePageChange}
+                                />
+                            }
+                        />
                     </div>
                 </section>
             </main>
