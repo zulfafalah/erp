@@ -1,109 +1,240 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Navbar from "../../components/Navbar";
 import Sidebar from "../../components/Sidebar";
 import StatusBar from "../../components/StatusBar";
 import MultiFilter, { FilterField, FilterRule } from "../../components/MultiFilter";
 import DataTable, { Column } from "../../components/DataTable";
 
-interface Warehouse {
-    id: string;
-    kode: string;
-    nama: string;
-    alamat: string;
-    telp: string;
-    pic: string;
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface WarehouseListItem {
+    whsid: number;
+    whscode: string;
+    whsname: string;
+    whsloc: string | null;
+    whstelp: string | null;
+    whsman: string | null;
 }
 
-const allData: Warehouse[] = [
-    { id: "WH-001", kode: "GDCTC",   nama: "GUDANG CARREFOUR TANGERANG CENTER", alamat: "Kompleks Mahkota Mas, Jl. M.H. Thamrin, Cikokol, RT.006/RW.036, Cikokol, Kec. Tangerang, Kota Tangerang, Banten 15117", telp: "085777764725", pic: "Bapak M. Nor" },
-    { id: "WH-002", kode: "GDPA8",   nama: "GUDANG DADAP A8",                  alamat: "PERGUDANGAN MUTIARA KOSAMBI 1 BLOK A8 NO. 25-26",                                                                           telp: "",              pic: "BAPAK BEBEN NICCO" },
-    { id: "WH-003", kode: "GDPB3A8", nama: "GUDANG DADAP B3 A8",               alamat: "GUDANG DADAP B3 A8",                                                                                                          telp: "",              pic: "GUDANG DADAP B3 A8" },
-    { id: "WH-004", kode: "GDPB3C7", nama: "GUDANG DADAP B3C7",                alamat: "GDPB3C7",                                                                                                                     telp: "",              pic: "GUDANG DADAP B3 A8" },
-    { id: "WH-005", kode: "GDPC7",   nama: "GUDANG DADAP C7",                  alamat: "PBK. MUATIARA KOSAMBI 1 BLOK C7 NO.16",                                                                                      telp: "",              pic: "BAPAK BEBEN NICCO" },
-    { id: "WH-006", kode: "GDGK8",   nama: "GUDANG GIANT KALIBATA",            alamat: "Jl. Rawajati Timur I, RT.3/RW.2, Rawajati, Pancoran, Kota Jakarta Selatan, Daerah Khusus Ibukota Jakarta 12710",             telp: "0800 199 8677 , 0811 9880 711", pic: "BPK. ZAINAL" },
-    { id: "WH-007", kode: "GDGUM",   nama: "GUDANG GIANT UJUNG MENTENG",       alamat: "Jl. Raya Bekasi KM.25, RW.1, Ujung Menteng, Cakung, Kota Jakarta Timur, Daerah Khusus Ibukota Jakarta 13960",               telp: "021-46802401 , 0815 9880 711", pic: "BPK. ZAINAL" },
-    { id: "WH-008", kode: "GDNDK",   nama: "GUDANG MANDALA DHARMA KRIDA",      alamat: "BISNIS UNIT DISTRIBUSI JL. RAYA PEMDA NO. 50 SUKARAJA BOGOR JAWA BARAT",                                                    telp: "08118500805",  pic: "BPK. DADANG DIAYADI" },
-    { id: "WH-009", kode: "GGPK",    nama: "Gudang Kapuk",                     alamat: "Alamat gudang, berikut kota, negara dan kodepos",                                                                             telp: "No. Tilp / No. Fax", pic: "Person in charge GD1" },
-    { id: "WH-010", kode: "GGPKB1",  nama: "GUDANG KAPUK B1",                  alamat: "GUDANG KAPUK B1",                                                                                                             telp: "",              pic: "GUDANG KAPUK B1" },
-];
+interface ApiResponse {
+    ok: boolean;
+    data: WarehouseListItem[];
+    page: number;
+    limit: number;
+    total: number;
+    message?: string;
+}
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const PAGE_LIMIT = 10;
 
 const FILTER_FIELDS: FilterField[] = [
-    { key: "kode",  label: "Kode",          type: "text" },
-    { key: "nama",  label: "Nama Gudang",   type: "text" },
-    { key: "alamat", label: "Alamat",       type: "text" },
-    { key: "pic",   label: "PIC",           type: "text" },
+    { key: "whscode", label: "Kode",        type: "text" },
+    { key: "whsname", label: "Nama Gudang", type: "text" },
+    { key: "whsloc",  label: "Alamat",      type: "text" },
+    { key: "whsman",  label: "PIC",         type: "text" },
 ];
 
-export default function WarehouseListPage() {
-    const [filteredData, setFilteredData] = useState<Warehouse[]>(allData);
+// ─── Pagination ───────────────────────────────────────────────────────────────
 
-    const handleApplyFilter = (rules: FilterRule[]) => {
-        if (rules.length === 0) {
-            setFilteredData(allData);
-            return;
+interface PaginationProps {
+    page: number;
+    total: number;
+    limit: number;
+    isLoading: boolean;
+    onPageChange: (p: number) => void;
+}
+
+function Pagination({ page, total, limit, isLoading, onPageChange }: PaginationProps) {
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    const from = total === 0 ? 0 : (page - 1) * limit + 1;
+    const to   = Math.min(page * limit, total);
+
+    const getPages = (): (number | "…")[] => {
+        if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+        const pages: (number | "…")[] = [];
+        if (page <= 4) {
+            for (let i = 1; i <= 5; i++) pages.push(i);
+            pages.push("…", totalPages);
+        } else if (page >= totalPages - 3) {
+            pages.push(1, "…");
+            for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i);
+        } else {
+            pages.push(1, "…", page - 1, page, page + 1, "…", totalPages);
         }
-        const result = allData.filter((item) =>
-            rules.every((rule) => {
-                const { field, operator, value } = rule;
-                const itemValue = item[field as keyof Warehouse];
-                if (itemValue === undefined) return true;
-                const itemStr = String(itemValue).toLowerCase();
-                const valStr = value.toLowerCase();
-                switch (operator) {
-                    case "contains":    return itemStr.includes(valStr);
-                    case "equals":      return itemStr === valStr;
-                    case "not_equals":  return itemStr !== valStr;
-                    case "starts_with": return itemStr.startsWith(valStr);
-                    case "ends_with":   return itemStr.endsWith(valStr);
-                    default:            return true;
-                }
-            })
-        );
-        setFilteredData(result);
+        return pages;
     };
 
-    const columns: Column<Warehouse>[] = [
+    return (
+        <div className="px-4 md:px-6 py-4 bg-slate-50 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 border-t border-primary/5">
+            <p className="text-sm text-slate-500 text-center md:text-left">
+                {total === 0
+                    ? "Tidak ada data"
+                    : `Menampilkan ${from}–${to} dari ${total} data`
+                }
+            </p>
+            <div className="flex flex-wrap justify-center items-center gap-1">
+                <button
+                    onClick={() => onPageChange(page - 1)}
+                    disabled={page === 1 || isLoading}
+                    className="p-2 border border-primary/10 rounded hover:bg-white disabled:opacity-40 transition-colors"
+                >
+                    <span className="material-symbols-outlined text-lg">chevron_left</span>
+                </button>
+
+                {getPages().map((p, i) =>
+                    p === "…" ? (
+                        <span key={`ellipsis-${i}`} className="px-2 text-slate-400 text-sm select-none">…</span>
+                    ) : (
+                        <button
+                            key={p}
+                            onClick={() => onPageChange(p as number)}
+                            disabled={isLoading}
+                            className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                                p === page
+                                    ? "bg-primary text-white font-bold shadow-sm"
+                                    : "hover:bg-white text-slate-600 disabled:opacity-50"
+                            }`}
+                        >
+                            {p}
+                        </button>
+                    )
+                )}
+
+                <button
+                    onClick={() => onPageChange(page + 1)}
+                    disabled={page === totalPages || isLoading}
+                    className="p-2 border border-primary/10 rounded hover:bg-white disabled:opacity-40 transition-colors"
+                >
+                    <span className="material-symbols-outlined text-lg">chevron_right</span>
+                </button>
+            </div>
+        </div>
+    );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+export default function WarehouseListPage() {
+    const [data, setData]             = useState<WarehouseListItem[]>([]);
+    const [page, setPage]             = useState(1);
+    const [total, setTotal]           = useState(0);
+    const [isLoading, setIsLoading]   = useState(true);
+    const [error, setError]           = useState<string | null>(null);
+    const [search, setSearch]         = useState("");
+    const [deletingId, setDeletingId] = useState<number | null>(null);
+
+    // ── Fetch ─────────────────────────────────────────────────────────────────
+
+    const fetchData = useCallback(async (targetPage: number, searchStr: string) => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const qs = new URLSearchParams({
+                page: String(targetPage),
+                limit: String(PAGE_LIMIT),
+                ...(searchStr ? { search: searchStr } : {}),
+            });
+            const res  = await fetch(`/api/master-data/warehouses?${qs.toString()}`);
+            const json = await res.json() as ApiResponse;
+
+            if (!res.ok || !json.ok) {
+                setError(json.message ?? "Gagal memuat data gudang.");
+                return;
+            }
+
+            setData(json.data ?? []);
+            setTotal(json.total ?? 0);
+            setPage(json.page ?? targetPage);
+        } catch {
+            setError("Terjadi kesalahan koneksi. Pastikan server berjalan.");
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchData(page, search);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [page]);
+
+    // ── Filter ────────────────────────────────────────────────────────────────
+
+    const handleApplyFilter = (rules: FilterRule[]) => {
+        const searchRule = rules.find(r => r.operator === "contains" || r.operator === "equals");
+        const q = searchRule?.value ?? "";
+        setSearch(q);
+        setPage(1);
+        fetchData(1, q);
+    };
+
+    const handlePageChange = (p: number) => {
+        setPage(p);
+    };
+
+    // ── Delete ────────────────────────────────────────────────────────────────
+
+    const handleDelete = async (id: number, name: string) => {
+        if (!confirm(`Hapus gudang "${name}"? Tindakan ini tidak dapat dibatalkan.`)) return;
+        setDeletingId(id);
+        try {
+            const res  = await fetch(`/api/master-data/warehouses/${id}`, { method: "DELETE" });
+            const json = await res.json() as { ok: boolean; message?: string };
+            if (!res.ok || !json.ok) {
+                alert(json.message ?? "Gagal menghapus data gudang.");
+                return;
+            }
+            fetchData(page, search);
+        } catch {
+            alert("Terjadi kesalahan koneksi saat menghapus data.");
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
+    const columns: Column<WarehouseListItem>[] = [
         {
             header: "Kode",
-            key: "kode",
+            key: "whscode",
             render: (item) => (
                 <Link
-                    href={`/master-data/warehouse/${item.id}`}
-                    className="font-semibold text-primary text-sm tracking-tight hover:underline"
+                    href={`/master-data/warehouse/${item.whsid}`}
+                    className="font-semibold text-primary text-sm tracking-tight hover:underline block"
                 >
-                    {item.kode}
+                    {item.whscode}
                 </Link>
             ),
         },
         {
             header: "Nama Gudang",
-            key: "nama",
+            key: "whsname",
             render: (item) => (
-                <span className="text-sm font-medium text-slate-800">{item.nama}</span>
+                <span className="text-sm font-medium text-slate-800">{item.whsname}</span>
             ),
         },
         {
             header: "Alamat",
-            key: "alamat",
+            key: "whsloc",
             render: (item) => (
-                <span className="text-sm text-slate-500 line-clamp-2 max-w-xs">{item.alamat}</span>
+                <span className="text-sm text-slate-500 line-clamp-2 max-w-xs">{item.whsloc || "—"}</span>
             ),
         },
         {
             header: "Telp",
-            key: "telp",
+            key: "whstelp",
             render: (item) => (
-                <span className="text-sm text-slate-600">{item.telp || "—"}</span>
+                <span className="text-sm text-slate-600">{item.whstelp || "—"}</span>
             ),
         },
         {
             header: "PIC",
-            key: "pic",
+            key: "whsman",
             render: (item) => (
-                <span className="text-sm text-slate-600">{item.pic || "—"}</span>
+                <span className="text-sm text-slate-600">{item.whsman || "—"}</span>
             ),
         },
         {
@@ -113,14 +244,16 @@ export default function WarehouseListPage() {
             render: (item) => (
                 <div className="flex items-center justify-end gap-2">
                     <Link
-                        href={`/master-data/warehouse/${item.id}`}
+                        href={`/master-data/warehouse/${item.whsid}`}
                         className="p-1.5 text-slate-400 hover:text-primary transition-colors"
                         title="Edit"
                     >
                         <span className="material-symbols-outlined text-lg">edit_square</span>
                     </Link>
                     <button
-                        className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"
+                        onClick={(e) => { e.stopPropagation(); handleDelete(item.whsid, item.whsname); }}
+                        disabled={deletingId === item.whsid}
+                        className="p-1.5 text-slate-400 hover:text-red-500 transition-colors disabled:opacity-50"
                         title="Delete"
                     >
                         <span className="material-symbols-outlined text-lg">delete</span>
@@ -130,17 +263,17 @@ export default function WarehouseListPage() {
         },
     ];
 
-    const renderMobileCard = (item: Warehouse) => (
+    const renderMobileCard = (item: WarehouseListItem) => (
         <div className="p-4 space-y-3">
             <div className="flex justify-between items-start">
                 <div>
                     <Link
-                        href={`/master-data/warehouse/${item.id}`}
-                        className="font-semibold text-primary text-sm hover:underline"
+                        href={`/master-data/warehouse/${item.whsid}`}
+                        className="font-semibold text-primary text-sm hover:underline block"
                     >
-                        {item.kode}
+                        {item.whscode}
                     </Link>
-                    <p className="text-xs text-slate-500 mt-0.5">{item.nama}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{item.whsname}</p>
                 </div>
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
                     <span className="material-symbols-outlined text-xs mr-1">warehouse</span>
@@ -148,26 +281,30 @@ export default function WarehouseListPage() {
                 </span>
             </div>
             <div>
-                <p className="text-xs text-slate-500 line-clamp-2">{item.alamat}</p>
+                <p className="text-xs text-slate-500 line-clamp-2">{item.whsloc || "—"}</p>
             </div>
             <div className="grid grid-cols-2 gap-2 text-xs">
                 <div>
                     <span className="text-slate-400 uppercase font-semibold">Telp</span>
-                    <p className="text-slate-700 font-medium mt-0.5">{item.telp || "—"}</p>
+                    <p className="text-slate-700 font-medium mt-0.5">{item.whstelp || "—"}</p>
                 </div>
                 <div>
                     <span className="text-slate-400 uppercase font-semibold">PIC</span>
-                    <p className="text-slate-700 font-medium mt-0.5">{item.pic || "—"}</p>
+                    <p className="text-slate-700 font-medium mt-0.5">{item.whsman || "—"}</p>
                 </div>
             </div>
             <div className="flex justify-end items-center pt-2 border-t border-slate-100 gap-1">
                 <Link
-                    href={`/master-data/warehouse/${item.id}`}
+                    href={`/master-data/warehouse/${item.whsid}`}
                     className="p-1.5 text-slate-400 hover:text-primary transition-colors"
                 >
                     <span className="material-symbols-outlined text-base">edit_square</span>
                 </Link>
-                <button className="p-1.5 text-slate-400 hover:text-red-500 transition-colors">
+                <button
+                    onClick={() => handleDelete(item.whsid, item.whsname)}
+                    disabled={deletingId === item.whsid}
+                    className="p-1.5 text-slate-400 hover:text-red-500 transition-colors disabled:opacity-50"
+                >
                     <span className="material-symbols-outlined text-base">delete</span>
                 </button>
             </div>
@@ -212,13 +349,48 @@ export default function WarehouseListPage() {
                             </div>
                         </div>
 
+                        {/* Error Banner */}
+                        {error && (
+                            <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700 text-sm">
+                                <span className="material-symbols-outlined text-base shrink-0">error</span>
+                                {error}
+                                <button
+                                    onClick={() => fetchData(page, search)}
+                                    className="ml-auto text-xs font-semibold underline hover:no-underline"
+                                >
+                                    Coba lagi
+                                </button>
+                            </div>
+                        )}
+
                         {/* Table Container */}
-                        <DataTable
-                            data={filteredData}
-                            columns={columns}
-                            keyField="id"
-                            renderMobileCard={renderMobileCard}
-                        />
+                        {isLoading && data.length === 0 ? (
+                            <div className="bg-white rounded-xl border border-primary/10 shadow-sm overflow-hidden p-12 text-center">
+                                <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+                                <p className="text-slate-500 text-sm">Memuat data gudang...</p>
+                            </div>
+                        ) : data.length === 0 && !error ? (
+                            <div className="bg-white rounded-xl border border-primary/10 shadow-sm overflow-hidden p-12 text-center">
+                                <span className="material-symbols-outlined text-5xl text-slate-300">warehouse</span>
+                                <p className="mt-2 text-sm text-slate-500">Tidak ada data gudang</p>
+                            </div>
+                        ) : (
+                            <DataTable
+                                data={data}
+                                columns={columns}
+                                keyField="whsid"
+                                renderMobileCard={renderMobileCard}
+                                footer={
+                                    <Pagination
+                                        page={page}
+                                        total={total}
+                                        limit={PAGE_LIMIT}
+                                        isLoading={isLoading}
+                                        onPageChange={handlePageChange}
+                                    />
+                                }
+                            />
+                        )}
                     </div>
                 </section>
             </main>
