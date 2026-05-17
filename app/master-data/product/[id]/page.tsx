@@ -10,14 +10,26 @@ import FormSelect from "../../../components/FormSelect";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+interface ProductCategoryOption {
+    familyid: number;
+    famno: string | null;
+    productfamily: string;
+}
+
+interface UnitOption {
+    unitid: number;
+    unit: string;
+    unitname: string;
+}
+
 type TabKey = "data-barang" | "gambar" | "account-code" | "pemasok" | "stok-gudang";
 
 const tabs: { key: TabKey; label: string; icon: string }[] = [
-    { key: "data-barang",   label: "Data Barang",   icon: "inventory_2" },
-    { key: "gambar",        label: "Gambar",        icon: "image" },
-    { key: "account-code",  label: "Account Code",  icon: "account_tree" },
-    { key: "pemasok",       label: "R/Pemasok",     icon: "local_shipping" },
-    { key: "stok-gudang",   label: "Stok/Gudang",   icon: "warehouse" },
+    { key: "data-barang", label: "Data Barang", icon: "inventory_2" },
+    { key: "gambar", label: "Gambar", icon: "image" },
+    { key: "account-code", label: "Account Code", icon: "account_tree" },
+    { key: "pemasok", label: "R/Pemasok", icon: "local_shipping" },
+    { key: "stok-gudang", label: "Stok/Gudang", icon: "warehouse" },
 ];
 
 interface ProductFormState {
@@ -26,6 +38,8 @@ interface ProductFormState {
     productname2: string;
     productname3: string;
     prodtype: string;
+    skucode: string;
+    keterangan: string;
     barcodeno: string;
     barcodeno2: string;
     uom_id_prod: number;
@@ -39,11 +53,13 @@ interface ProductFormState {
     prod_p: string;
     prod_l: string;
     prod_t: string;
+    sellprice: string;
     maxprice: string;
     minprice: string;
     minorder: number;
     limitstok: number;
     sizeprod: number;
+    isjasa: number;
     iscontinue: number;
     prodcur: string;
 }
@@ -54,6 +70,8 @@ const defaultFormState: ProductFormState = {
     productname2: "",
     productname3: "",
     prodtype: "",
+    skucode: "",
+    keterangan: "",
     barcodeno: "",
     barcodeno2: "",
     uom_id_prod: 0,
@@ -67,11 +85,13 @@ const defaultFormState: ProductFormState = {
     prod_p: "0.00",
     prod_l: "0.00",
     prod_t: "0.00",
-    maxprice: "0.0000",
-    minprice: "0.0000",
+    sellprice: "0.00",
+    maxprice: "0.00",
+    minprice: "0.00",
     minorder: 1,
     limitstok: 10,
     sizeprod: 0,
+    isjasa: 0,
     iscontinue: 1,
     prodcur: "IDR",
 };
@@ -95,6 +115,54 @@ export default function ProductDetailPage() {
 
     const [readOnlyData, setReadOnlyData] = useState<any>(null);
 
+    // ── Product Category Options ──────────────────────────────────────────────
+    const [categories, setCategories] = useState<ProductCategoryOption[]>([]);
+    const [isCategoriesLoading, setIsCategoriesLoading] = useState(true);
+
+    // ── Unit Options ──────────────────────────────────────────────────────
+    const [units, setUnits] = useState<UnitOption[]>([]);
+    const [isUnitsLoading, setIsUnitsLoading] = useState(true);
+
+    // ── Fetch Product Categories ──────────────────────────────────────────────
+
+    useEffect(() => {
+        const fetchCategories = async () => {
+            setIsCategoriesLoading(true);
+            try {
+                const res = await fetch(`/api/master-data/product-category?limit=999`);
+                const json = await res.json();
+                if (res.ok && json.ok) {
+                    setCategories(json.data ?? []);
+                }
+            } catch {
+                // Silently fail — dropdown will just be empty
+            } finally {
+                setIsCategoriesLoading(false);
+            }
+        };
+        fetchCategories();
+    }, []);
+
+    // ── Fetch Units ──────────────────────────────────────────────────────────
+
+    useEffect(() => {
+        const fetchUnits = async () => {
+            setIsUnitsLoading(true);
+            try {
+                const res = await fetch(`/api/master-data/units`);
+                const json = await res.json();
+                if (res.ok && json.ok) {
+                    setUnits(json.data ?? []);
+                }
+            } catch {
+                // Silently fail — dropdown will just be empty
+            } finally {
+                setIsUnitsLoading(false);
+            }
+        };
+        fetchUnits();
+    }, []);
+
     // ── Fetch Existing Data ───────────────────────────────────────────────────
 
     useEffect(() => {
@@ -111,7 +179,7 @@ export default function ProductDetailPage() {
                 }
                 const data = json.data;
                 setReadOnlyData(data);
-                
+
                 // Merge data into form state
                 setForm(prev => ({
                     ...prev,
@@ -120,6 +188,8 @@ export default function ProductDetailPage() {
                     productname2: data.productname2 ?? "",
                     productname3: data.productname3 ?? "",
                     prodtype: data.prodtype ?? "",
+                    skucode: data.skucode ?? "",
+                    keterangan: data.keterangan ?? "",
                     barcodeno: data.barcodeno ?? "",
                     barcodeno2: data.barcodeno2 ?? "",
                     uom_id_prod: data.uom_id_prod ?? 0,
@@ -133,11 +203,13 @@ export default function ProductDetailPage() {
                     prod_p: data.prod_p ?? "0.00",
                     prod_l: data.prod_l ?? "0.00",
                     prod_t: data.prod_t ?? "0.00",
-                    maxprice: data.maxprice ?? "0.0000",
-                    minprice: data.minprice ?? "0.0000",
+                    sellprice: data.sellprice ?? "0.00",
+                    maxprice: data.maxprice ?? "0.00",
+                    minprice: data.minprice ?? "0.00",
                     minorder: typeof data.minorder === "string" ? parseInt(data.minorder) : data.minorder ?? 1,
                     limitstok: data.limitstok ?? 10,
                     sizeprod: data.sizeprod ?? 0,
+                    isjasa: data.isjasa ?? 0,
                     iscontinue: data.iscontinue ?? 1,
                     prodcur: data.prodcur ?? "IDR",
                 }));
@@ -177,11 +249,12 @@ export default function ProductDetailPage() {
             payload.limitstok = Number(payload.limitstok) || 10;
             payload.sizeprod = Number(payload.sizeprod) || 0;
             payload.iscontinue = Number(payload.iscontinue);
+            payload.isjasa = Number(payload.isjasa);
 
             // Using FormData if image upload was supported, but API schema accepts JSON.
             // Sending JSON for now.
-            const url = isNew 
-                ? `/api/master-data/products` 
+            const url = isNew
+                ? `/api/master-data/products`
                 : `/api/master-data/products/${idParam}`;
             const method = isNew ? "POST" : "PUT";
 
@@ -234,7 +307,7 @@ export default function ProductDetailPage() {
             <main className="flex-1 flex overflow-hidden">
                 <Sidebar />
                 <section className="flex-1 flex flex-col bg-background-light overflow-hidden">
-                    
+
                     {/* Action Header */}
                     <div className="px-4 md:px-6 py-3 md:py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-primary/5 bg-white/50 backdrop-blur-sm shrink-0">
                         <div className="flex items-start md:items-center gap-3 md:gap-4 w-full md:w-auto">
@@ -256,14 +329,14 @@ export default function ProductDetailPage() {
                             </div>
                         </div>
                         <div className="flex flex-wrap items-center gap-2 md:gap-3 w-full md:w-auto">
-                            <button 
+                            <button
                                 onClick={() => setForm(defaultFormState)}
                                 className="flex-1 md:flex-none justify-center px-3 md:px-4 py-2 text-xs md:text-sm font-semibold text-slate-700 hover:bg-slate-200/50 rounded-lg transition-all border border-slate-200 md:border-transparent flex items-center gap-2"
                             >
                                 <span className="material-symbols-outlined text-sm">refresh</span>
                                 Reset
                             </button>
-                            <button 
+                            <button
                                 onClick={handleSave}
                                 disabled={isSaving}
                                 className="w-full md:w-auto justify-center px-4 md:px-5 py-2 text-xs md:text-sm font-bold bg-primary text-white hover:bg-primary/90 rounded-lg shadow-lg shadow-primary/20 flex items-center gap-2 disabled:opacity-50"
@@ -288,11 +361,10 @@ export default function ProductDetailPage() {
                                 <button
                                     key={tab.key}
                                     onClick={() => setActiveTab(tab.key)}
-                                    className={`px-4 md:px-6 py-3 text-xs md:text-sm font-medium flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
-                                        activeTab === tab.key
-                                            ? "font-bold border-primary text-primary"
-                                            : "text-slate-500 hover:text-slate-700 border-transparent"
-                                    }`}
+                                    className={`px-4 md:px-6 py-3 text-xs md:text-sm font-medium flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${activeTab === tab.key
+                                        ? "font-bold border-primary text-primary"
+                                        : "text-slate-500 hover:text-slate-700 border-transparent"
+                                        }`}
                                 >
                                     <span className="material-symbols-outlined text-lg">{tab.icon}</span>
                                     {tab.label}
@@ -312,104 +384,154 @@ export default function ProductDetailPage() {
                                             </div>
                                             <div className="p-4 md:p-6 space-y-4">
 
-                                                {/* Group / Family ID */}
+                                                {/* 1. Grup Barang ~ Kode Barang */}
                                                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
                                                     <label className="text-sm font-medium text-slate-700 sm:col-span-1">
-                                                        Family ID
+                                                        Grup Barang ~ Kode Barang
                                                     </label>
-                                                    <div className="sm:col-span-3">
-                                                        <FormInput 
-                                                            name="familyid" 
-                                                            type="number" 
-                                                            value={form.familyid} 
-                                                            onChange={handleChange} 
-                                                            className="w-full sm:w-1/2" 
-                                                            required 
-                                                        />
+                                                    <div className="sm:col-span-3 flex gap-2">
+                                                        <FormSelect name="familyid" value={form.familyid} onChange={handleChange} className="flex-1" required>
+                                                            <option value={0}>{isCategoriesLoading ? "Memuat..." : "-- Pilih Kategori --"}</option>
+                                                            {categories.map((cat) => (
+                                                                <option key={cat.familyid} value={cat.familyid}>
+                                                                    {cat.famno ? `${cat.famno} - ${cat.productfamily}` : cat.productfamily}
+                                                                </option>
+                                                            ))}
+                                                        </FormSelect>
+                                                        <FormInput name="productcode" value={readOnlyData?.productcode ?? ""} readOnly className="flex-1 bg-slate-100 text-slate-500 cursor-not-allowed" placeholder="Kode Barang (otomatis)" />
                                                     </div>
                                                 </div>
 
-                                                {/* Barcode */}
+                                                {/* 2. Barcode Luar ~ Dalam */}
                                                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
-                                                    <label className="text-sm font-medium text-slate-700 sm:col-span-1">
-                                                        Barcode Luar ~ Dalam
-                                                    </label>
+                                                    <label className="text-sm font-medium text-slate-700 sm:col-span-1">Barcode Luar ~ Dalam</label>
                                                     <div className="sm:col-span-3 flex gap-2">
-                                                        <FormInput name="barcodeno" value={form.barcodeno} onChange={handleChange} className="flex-1" placeholder="Barcode 1" required />
-                                                        <FormInput name="barcodeno2" value={form.barcodeno2} onChange={handleChange} className="flex-1" placeholder="Barcode 2" required />
+                                                        <FormInput name="barcodeno" value={form.barcodeno} onChange={handleChange} className="flex-1" placeholder="Barcode Luar" required />
+                                                        <FormInput name="barcodeno2" value={form.barcodeno2} onChange={handleChange} className="flex-1" placeholder="Barcode Dalam" required />
                                                     </div>
                                                 </div>
 
-                                                {/* Name 1 */}
+                                                {/* 3. Nama Barang (Bahasa) */}
                                                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-start">
-                                                    <label className="text-sm font-medium text-slate-700 sm:col-span-1 pt-2">
-                                                        Nama Barang
-                                                    </label>
+                                                    <label className="text-sm font-medium text-slate-700 sm:col-span-1 pt-2">Nama Barang (Bahasa)</label>
                                                     <div className="sm:col-span-3">
-                                                        <FormInput name="productname" value={form.productname} onChange={handleChange} className="w-full" required maxLength={200} />
+                                                        <FormInput name="productname" value={form.productname} onChange={handleChange} className="w-full" required maxLength={60} />
+                                                        <p className="text-xs text-slate-400 mt-1">*max 60 karakter</p>
                                                     </div>
                                                 </div>
 
-                                                {/* Name 2 & 3 */}
+                                                {/* 4. Nama Barang (English) */}
                                                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-start">
-                                                    <label className="text-sm font-medium text-slate-700 sm:col-span-1 pt-2">
-                                                        Nama Barang Alt
-                                                    </label>
-                                                    <div className="sm:col-span-3 flex gap-2">
-                                                        <FormInput name="productname2" value={form.productname2} onChange={handleChange} className="flex-1" placeholder="Nama Alt 1" />
-                                                        <FormInput name="productname3" value={form.productname3} onChange={handleChange} className="flex-1" placeholder="Nama Alt 2" />
+                                                    <label className="text-sm font-medium text-slate-700 sm:col-span-1 pt-2">Nama Barang (English)</label>
+                                                    <div className="sm:col-span-3">
+                                                        <FormInput name="productname2" value={form.productname2} onChange={handleChange} className="w-full" />
+                                                    </div>
+                                                </div>
+
+                                                {/* 5. SKU Code/Number */}
+                                                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-start">
+                                                    <label className="text-sm font-medium text-slate-700 sm:col-span-1 pt-2">SKU Code/Number</label>
+                                                    <div className="sm:col-span-3">
+                                                        <FormInput name="prodtype" value={form.prodtype} onChange={handleChange} className="w-full" maxLength={20} />
+                                                        <p className="text-xs text-slate-400 mt-1">*max 20 karakter</p>
+                                                    </div>
+                                                </div>
+
+                                                {/* 6. Keterangan Tambahan */}
+                                                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-start">
+                                                    <label className="text-sm font-medium text-slate-700 sm:col-span-1 pt-2">Keterangan Tambahan</label>
+                                                    <div className="sm:col-span-3">
+                                                        <FormInput name="productname3" value={form.productname3} onChange={handleChange} className="w-full" />
                                                     </div>
                                                 </div>
 
                                                 <div className="border-t border-slate-100 pt-4 space-y-4">
-                                                    {/* UOM Satuan Kecil */}
+                                                    {/* 7. Isi Qty ~ UOM Satuan Besar */}
                                                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
-                                                        <label className="text-sm font-medium text-slate-700 sm:col-span-1">
-                                                            Isi Qty ~ UOM Satuan Kecil
-                                                        </label>
+                                                        <label className="text-sm font-medium text-slate-700 sm:col-span-1">Isi Qty ~ UOM Satuan Besar</label>
                                                         <div className="sm:col-span-3 flex items-center gap-2">
-                                                            <span className="hidden sm:inline-block font-bold text-slate-700">:</span>
+                                                            <div className="w-20">
+                                                                <FormInput name="qty_outer" type="number" step="0.01" value={form.qty_outer} onChange={handleChange} required />
+                                                            </div>
+                                                            <div className="w-32">
+                                                                <FormSelect name="uom_inner_outer" value={form.uom_inner_outer} onChange={handleChange} required>
+                                                                    <option value={0}>{isUnitsLoading ? "Memuat..." : "-- Pilih --"}</option>
+                                                                    {units.map((u) => (
+                                                                        <option key={u.unitid} value={u.unitid}>
+                                                                            {u.unitname}
+                                                                        </option>
+                                                                    ))}
+                                                                </FormSelect>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* 8. Berat Kotor Satuan Besar (KG) */}
+                                                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
+                                                        <label className="text-sm font-medium text-slate-700 sm:col-span-1">Berat Kotor Satuan Besar (KG)</label>
+                                                        <div className="sm:col-span-3 flex items-center gap-2">
+                                                            <div className="w-24">
+                                                                <FormInput name="prod_gw" type="number" step="0.01" value={form.prod_gw} onChange={handleChange} />
+                                                            </div>
+                                                            <span className="text-sm text-slate-500">(KG)</span>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* 9. Berat Bersih Satuan Besar (KG) */}
+                                                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
+                                                        <label className="text-sm font-medium text-slate-700 sm:col-span-1">Berat Bersih Satuan Besar (KG)</label>
+                                                        <div className="sm:col-span-3 flex items-center gap-2">
+                                                            <div className="w-24">
+                                                                <FormInput name="prod_nw" type="number" step="0.01" value={form.prod_nw} onChange={handleChange} />
+                                                            </div>
+                                                            <span className="text-sm text-slate-500">(KG)</span>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* 10. Isi Qty ~ UOM Satuan Kecil */}
+                                                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
+                                                        <label className="text-sm font-medium text-slate-700 sm:col-span-1">Isi Qty ~ UOM Satuan Kecil</label>
+                                                        <div className="sm:col-span-3 flex items-center gap-2">
                                                             <div className="w-20">
                                                                 <FormInput name="qty_inner" type="number" step="0.01" value={form.qty_inner} onChange={handleChange} required />
                                                             </div>
                                                             <div className="w-32">
                                                                 <FormSelect name="uom_id_prod" value={form.uom_id_prod} onChange={handleChange} required>
-                                                                    <option value={0}>-- Pilih --</option>
-                                                                    <option value={1}>PCS</option>
-                                                                    <option value={2}>BOX</option>
-                                                                    <option value={3}>PACK</option>
+                                                                    <option value={0}>{isUnitsLoading ? "Memuat..." : "-- Pilih --"}</option>
+                                                                    {units.map((u) => (
+                                                                        <option key={u.unitid} value={u.unitid}>
+                                                                            {u.unitname}
+                                                                        </option>
+                                                                    ))}
                                                                 </FormSelect>
                                                             </div>
                                                         </div>
                                                     </div>
 
-                                                    {/* Berat Satuan Kecil */}
+                                                    {/* 11. Berat Satuan Kecil ~ UOM */}
                                                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
-                                                        <label className="text-sm font-medium text-slate-700 sm:col-span-1">
-                                                            Berat Satuan Kecil ~ UOM
-                                                        </label>
+                                                        <label className="text-sm font-medium text-slate-700 sm:col-span-1">Berat Satuan Kecil ~ UOM</label>
                                                         <div className="sm:col-span-3 flex items-center gap-2">
-                                                            <span className="hidden sm:inline-block font-bold text-slate-700">:</span>
                                                             <div className="w-20">
                                                                 <FormInput name="qty_gram" type="number" step="0.01" value={form.qty_gram} onChange={handleChange} />
                                                             </div>
                                                             <div className="w-32">
                                                                 <FormSelect name="uom_berat" value={form.uom_berat} onChange={handleChange}>
-                                                                    <option value={0}>-- Pilih --</option>
-                                                                    <option value={4}>GRAM</option>
-                                                                    <option value={5}>KG</option>
+                                                                    <option value={0}>{isUnitsLoading ? "Memuat..." : "-- Pilih --"}</option>
+                                                                    {units.map((u) => (
+                                                                        <option key={u.unitid} value={u.unitid}>
+                                                                            {u.unitname}
+                                                                        </option>
+                                                                    ))}
                                                                 </FormSelect>
                                                             </div>
                                                         </div>
                                                     </div>
 
-                                                    {/* Weight / Size */}
+                                                    {/* 12. P X L X T */}
                                                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
-                                                        <label className="text-sm font-medium text-slate-700 sm:col-span-1">
-                                                            P X L X T
-                                                        </label>
+                                                        <label className="text-sm font-medium text-slate-700 sm:col-span-1">P X L X T</label>
                                                         <div className="sm:col-span-3 flex items-center gap-2 flex-wrap">
-                                                            <span className="hidden sm:inline-block font-bold text-slate-700">:</span>
                                                             <div className="w-20">
                                                                 <FormInput name="prod_p" type="number" step="0.01" value={form.prod_p} onChange={handleChange} />
                                                             </div>
@@ -423,71 +545,88 @@ export default function ProductDetailPage() {
                                                             </div>
                                                             <span className="text-slate-400 font-medium">=</span>
                                                             <div className="w-32">
-                                                                <FormInput 
-                                                                    name="volume" 
-                                                                    value={((Number(form.prod_p) || 0) * (Number(form.prod_l) || 0) * (Number(form.prod_t) || 0) / 1000000).toFixed(8)} 
-                                                                    readOnly 
-                                                                    className="bg-slate-100 text-slate-500 cursor-not-allowed" 
-                                                                />
+                                                                <FormInput name="volume" value={((Number(form.prod_p) || 0) * (Number(form.prod_l) || 0) * (Number(form.prod_t) || 0) / 1000000).toFixed(8)} readOnly className="bg-slate-100 text-slate-500 cursor-not-allowed" />
                                                             </div>
                                                             <span className="text-sm font-medium text-slate-700">(M3)</span>
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
-                                                        <label className="text-sm font-medium text-slate-700 sm:col-span-1">
-                                                            GW / NW
-                                                        </label>
-                                                        <div className="sm:col-span-3 flex items-center gap-2 flex-wrap">
-                                                            <span className="hidden sm:inline-block font-bold text-slate-700">:</span>
-                                                            <div className="w-24">
-                                                                <FormInput name="prod_gw" type="number" step="0.01" value={form.prod_gw} onChange={handleChange} placeholder="GW" />
-                                                            </div>
-                                                            <div className="w-24">
-                                                                <FormInput name="prod_nw" type="number" step="0.01" value={form.prod_nw} onChange={handleChange} placeholder="NW" />
-                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
 
                                                 <div className="border-t border-slate-100 pt-4 space-y-4">
-                                                    {/* Prices */}
+                                                    {/* 13. Mata Uang */}
                                                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
-                                                        <label className="text-sm font-medium text-slate-700 sm:col-span-1">
-                                                            Harga Min ~ Max
-                                                        </label>
-                                                        <div className="sm:col-span-3 flex gap-2 flex-wrap">
-                                                            <FormInput name="minprice" type="number" step="0.01" value={form.minprice} onChange={handleChange} className="w-32" placeholder="Min" />
-                                                            <FormInput name="maxprice" type="number" step="0.01" value={form.maxprice} onChange={handleChange} className="w-32" placeholder="Max" />
+                                                        <label className="text-sm font-medium text-slate-700 sm:col-span-1">Mata Uang</label>
+                                                        <div className="sm:col-span-3">
+                                                            <FormSelect name="prodcur" value={form.prodcur} onChange={handleChange} className="w-40">
+                                                                <option value="IDR">Rupiah</option>
+                                                                <option value="USD">US Dollar</option>
+                                                                <option value="EUR">Euro</option>
+                                                                <option value="SGD">SGD</option>
+                                                            </FormSelect>
                                                         </div>
                                                     </div>
 
-                                                    {/* Min Order & Limit */}
+                                                    {/* 14. Harga Jual ~ Min ~ Beli */}
                                                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
-                                                        <label className="text-sm font-medium text-slate-700 sm:col-span-1">
-                                                            Min Order ~ Limit Stok
-                                                        </label>
+                                                        <label className="text-sm font-medium text-slate-700 sm:col-span-1">Harga Jual ~ Min ~ Beli</label>
+                                                        <div className="sm:col-span-3 flex items-center gap-2 flex-wrap">
+                                                            <div className="w-28">
+                                                                <FormInput name="sellprice" type="number" step="0.01" value={form.sellprice} onChange={handleChange} placeholder="Jual" />
+                                                            </div>
+                                                            <span className="text-slate-400 font-medium">~</span>
+                                                            <div className="w-28">
+                                                                <FormInput name="minprice" type="number" step="0.01" value={form.minprice} onChange={handleChange} placeholder="Min" />
+                                                            </div>
+                                                            <span className="text-slate-400 font-medium">~</span>
+                                                            <div className="w-28">
+                                                                <FormInput name="maxprice" type="number" step="0.01" value={form.maxprice} onChange={handleChange} className="bg-slate-50" placeholder="Beli" />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* 15. Min Order ~ Limit Warning Stock */}
+                                                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
+                                                        <label className="text-sm font-medium text-slate-700 sm:col-span-1">Min Order ~ Limit Warning Stock</label>
                                                         <div className="sm:col-span-3 flex gap-2">
                                                             <FormInput name="minorder" type="number" value={form.minorder} onChange={handleChange} className="w-24" />
                                                             <FormInput name="limitstok" type="number" value={form.limitstok} onChange={handleChange} className="w-24" />
                                                         </div>
                                                     </div>
 
-                                                    {/* Is Continue */}
+                                                    {/* 16. Stok saat ini */}
                                                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
-                                                        <label className="text-sm font-medium text-slate-700 sm:col-span-1">
-                                                            Status Lanjut?
-                                                        </label>
+                                                        <label className="text-sm font-medium text-slate-700 sm:col-span-1">Stok saat ini</label>
+                                                        <div className="sm:col-span-3">
+                                                            <FormInput name="sizeprod" type="number" value={form.sizeprod} readOnly className="w-24 bg-slate-100 text-slate-500 cursor-not-allowed" />
+                                                        </div>
+                                                    </div>
+
+                                                    {/* 17. Jasa ? */}
+                                                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
+                                                        <label className="text-sm font-medium text-slate-700 sm:col-span-1">Jasa ?</label>
+                                                        <div className="sm:col-span-3 flex items-center gap-2 flex-wrap">
+                                                            <FormSelect name="isjasa" value={form.isjasa} onChange={handleChange} className="w-32">
+                                                                <option value={0}>Bukan</option>
+                                                                <option value={1}>Ya</option>
+                                                            </FormSelect>
+                                                            <span className="text-xs text-slate-400">(Pilih : &apos;Bukan&apos;, jika barang ini memerlukan stok untuk dapat dijual)</span>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* 18. Tampilkan ? */}
+                                                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
+                                                        <label className="text-sm font-medium text-slate-700 sm:col-span-1">Tampilkan ?</label>
                                                         <div className="sm:col-span-3">
                                                             <FormSelect name="iscontinue" value={form.iscontinue} onChange={handleChange} className="w-40">
-                                                                <option value={1}>Ya (Tampilkan)</option>
-                                                                <option value={0}>Tidak (Sembunyikan)</option>
+                                                                <option value={1}>Tampilkan</option>
+                                                                <option value={0}>Sembunyikan</option>
                                                             </FormSelect>
                                                         </div>
                                                     </div>
                                                 </div>
 
                                             </div>
+
                                         </div>
                                     </div>
 
