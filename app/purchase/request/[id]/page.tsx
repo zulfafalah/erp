@@ -409,10 +409,10 @@ export default function PurchaseRequestDetailPage() {
                                                 {/* Sub Total */}
                                                 <div className="flex justify-between items-center text-sm">
                                                     <span className="text-slate-500 w-28 shrink-0">Sub Total</span>
-                                                    <input
+                                                    <FormInput
                                                         readOnly
                                                         value={formatRupiah(subTotal)}
-                                                        className="flex-1 text-right bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-sm font-semibold text-slate-700 cursor-not-allowed"
+                                                        className="!flex-1 text-right !py-1.5 !px-2 font-semibold text-slate-700"
                                                     />
                                                 </div>
 
@@ -420,17 +420,17 @@ export default function PurchaseRequestDetailPage() {
                                                 <div className="flex justify-between items-center text-sm gap-2">
                                                     <div className="flex items-center gap-1 w-28 shrink-0">
                                                         <span className="text-slate-500">Disc</span>
-                                                        <input
-                                                            className="w-10 h-7 px-1 text-center bg-slate-50 border border-slate-200 rounded text-xs"
+                                                        <FormInput
+                                                            className="!w-10 !h-7 !px-1 !py-0 text-center !rounded text-xs"
                                                             type="text"
                                                             defaultValue="0"
                                                         />
                                                         <span className="text-slate-400 text-xs">%</span>
                                                     </div>
-                                                    <input
+                                                    <FormInput
                                                         readOnly
                                                         value="0.00"
-                                                        className="flex-1 text-right bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-sm font-semibold text-red-500 cursor-not-allowed"
+                                                        className="!flex-1 text-right !py-1.5 !px-2 font-semibold text-red-500"
                                                     />
                                                 </div>
 
@@ -438,17 +438,17 @@ export default function PurchaseRequestDetailPage() {
                                                 <div className="flex justify-between items-center text-sm gap-2">
                                                     <div className="flex items-center gap-1 w-28 shrink-0">
                                                         <span className="text-slate-500">PPN</span>
-                                                        <input
-                                                            className="w-10 h-7 px-1 text-center bg-slate-50 border border-slate-200 rounded text-xs"
+                                                        <FormInput
+                                                            className="!w-10 !h-7 !px-1 !py-0 text-center !rounded text-xs"
                                                             type="text"
                                                             defaultValue="11"
                                                         />
                                                         <span className="text-slate-400 text-xs">%</span>
                                                     </div>
-                                                    <input
+                                                    <FormInput
                                                         readOnly
                                                         value={formatRupiah(subTotal * 0.11)}
-                                                        className="flex-1 text-right bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-sm font-semibold text-slate-700 cursor-not-allowed"
+                                                        className="!flex-1 text-right !py-1.5 !px-2 font-semibold text-slate-700"
                                                     />
                                                 </div>
 
@@ -458,15 +458,15 @@ export default function PurchaseRequestDetailPage() {
                                                         Grand Total ~ Total Konversi
                                                     </p>
                                                     <div className="flex gap-2">
-                                                        <input
+                                                        <FormInput
                                                             readOnly
                                                             value={formatRupiah(subTotal * 1.11)}
-                                                            className="flex-1 text-right bg-primary/5 border border-primary/20 rounded px-2 py-1.5 text-sm font-black text-primary cursor-not-allowed"
+                                                            className="!flex-1 text-right !bg-primary/5 !border-primary/20 !py-1.5 !px-2 font-black !text-primary !opacity-100"
                                                         />
-                                                        <input
+                                                        <FormInput
                                                             readOnly
                                                             value={formatRupiah(subTotal * 1.11)}
-                                                            className="flex-1 text-right bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-sm font-semibold text-slate-700 cursor-not-allowed"
+                                                            className="!flex-1 text-right !py-1.5 !px-2 font-semibold text-slate-700"
                                                         />
                                                     </div>
                                                 </div>
@@ -477,15 +477,15 @@ export default function PurchaseRequestDetailPage() {
                                                         Total Uang Muka ~ Biaya
                                                     </p>
                                                     <div className="flex gap-2">
-                                                        <input
+                                                        <FormInput
                                                             type="text"
                                                             defaultValue="0.00"
-                                                            className="flex-1 text-right bg-white border border-slate-200 rounded px-2 py-1.5 text-sm font-semibold text-slate-700 focus:outline-none focus:border-primary"
+                                                            className="!flex-1 text-right !bg-white !py-1.5 !px-2 font-semibold text-slate-700"
                                                         />
-                                                        <input
+                                                        <FormInput
                                                             readOnly
                                                             value="0.00"
-                                                            className="flex-1 text-right bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-sm font-semibold text-slate-700 cursor-not-allowed"
+                                                            className="!flex-1 text-right !py-1.5 !px-2 font-semibold text-slate-700"
                                                         />
                                                     </div>
                                                 </div>
