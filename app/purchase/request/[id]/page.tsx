@@ -289,7 +289,7 @@ export default function PurchaseRequestDetailPage() {
                                                 {/* No. + Lokal dropdown */}
                                                 <FormField label="No.">
                                                     <div className="flex gap-2">
-                                                        <FormInput defaultValue="PRF 2401-0005" readOnly />
+                                                        <FormInput defaultValue="Generate" readOnly />
                                                         <FormSelect>
                                                             <option>Lokal</option>
                                                             <option>Import</option>
