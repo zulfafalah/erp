@@ -10,7 +10,7 @@ export default function FormInput({
 }: FormInputProps) {
     return (
         <input
-            className={`w-full bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-primary focus:border-primary py-2 px-3 ${readOnly || disabled ? "cursor-not-allowed text-slate-400 opacity-60" : ""} ${className ?? ""}`}
+            className={`w-full bg-slate-50 border border-slate-200 rounded-lg text-sm py-2 px-3 ${readOnly || disabled ? "cursor-not-allowed text-slate-400 opacity-60 focus:ring-0 focus:border-slate-200 focus:outline-none" : "focus:ring-primary focus:border-primary"} ${className ?? ""}`}
             readOnly={readOnly}
             disabled={disabled}
             {...props}
