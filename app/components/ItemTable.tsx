@@ -1,160 +1,353 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import type { ReactNode } from "react";
+
+// ── Default item shape for purchase pages ──────────────────────────────────
 export interface ProductItem {
     name: string;
-    sku: string;
+    barcode: string;
+    uom: string;
     qty: number;
-    unitPrice: number;
-    subtotal: number;
+    hargaDasar: number;
+    discount: number;
+    ppn: number;
+    hargaFinal: number;
+    jumlah: number;
 }
 
-interface ProductTableProps {
-    items: ProductItem[];
-    onAddProduct?: () => void;
-    onInsertQuickRow?: () => void;
-    onUpdateItem?: (index: number, field: keyof ProductItem, value: any) => void;
+// ── Column definition ──────────────────────────────────────────────────────
+export interface ColumnDef<T = Record<string, unknown>> {
+    /** Key of the data field to display */
+    key: string;
+    /** Column header label */
+    label: string;
+    /** Tailwind width class, e.g. "w-28" */
+    width?: string;
+    align?: "left" | "center" | "right";
+    /** Renders an editable input in the cell instead of read-only text */
+    editable?: boolean;
+    editType?: "number" | "text";
+    /** Custom cell renderer */
+    render?: (value: unknown, item: T, index: number) => ReactNode;
+    /**
+     * Footer aggregation.
+     * - "sum"  → automatically sums the numeric field
+     * - function → receives all items and returns a ReactNode
+     * - omit / undefined → empty footer cell
+     */
+    footer?: "sum" | ((items: T[]) => ReactNode);
+}
+
+const _fmt = (v: number) =>
+    (v ?? 0).toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+// ── Pre-built columns for standard purchase item tables ───────────────────
+export const defaultPurchaseColumns: ColumnDef<ProductItem>[] = [
+    { key: "barcode", label: "Barcode", width: "w-28", align: "left" },
+    {
+        key: "name",
+        label: "Nama Barang",
+        render: (v) => (
+            <p className="font-semibold text-slate-800 leading-tight">{String(v || "—")}</p>
+        ),
+    },
+    { key: "uom", label: "UOM", width: "w-20", align: "center" },
+    {
+        key: "qty",
+        label: "Qty",
+        width: "w-24",
+        align: "right",
+        editable: true,
+        editType: "number",
+        footer: "sum",
+    },
+    {
+        key: "hargaDasar",
+        label: "Harga Dasar",
+        width: "w-32",
+        align: "right",
+        render: (v) => _fmt(v as number),
+    },
+    {
+        key: "discount",
+        label: "Discount",
+        width: "w-28",
+        align: "right",
+        render: (v) => _fmt(v as number),
+    },
+    {
+        key: "ppn",
+        label: "PPN",
+        width: "w-28",
+        align: "right",
+        render: (v) => _fmt(v as number),
+    },
+    {
+        key: "hargaFinal",
+        label: "Harga Final",
+        width: "w-32",
+        align: "right",
+        render: (v) => <span className="font-medium">{_fmt(v as number)}</span>,
+    },
+    {
+        key: "jumlah",
+        label: "Jumlah",
+        width: "w-36",
+        align: "right",
+        render: (v) => <span className="font-bold">{_fmt(v as number)}</span>,
+        footer: "sum",
+    },
+];
+
+// ── Props ──────────────────────────────────────────────────────────────────
+interface ItemTableProps<T> {
+    items: T[];
+    columns: ColumnDef<T>[];
+    onUpdateItem?: (index: number, field: keyof T, value: unknown) => void;
     onRemoveItem?: (index: number) => void;
+    onEditItem?: (index: number) => void;
+    emptyMessage?: string;
 }
 
-export default function ItemTable({ items, onAddProduct, onInsertQuickRow, onUpdateItem, onRemoveItem }: ProductTableProps) {
-    const totalRows = items.length;
-    const totalQty = items.reduce((sum, item) => sum + item.qty, 0);
+const alignClass: Record<string, string> = {
+    left: "text-left",
+    center: "text-center",
+    right: "text-right",
+};
+
+export default function ItemTable<T extends object>({
+    items,
+    columns,
+    onUpdateItem,
+    onRemoveItem,
+    onEditItem,
+    emptyMessage = "Belum ada item.",
+}: ItemTableProps<T>) {
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+
+    // Reset to page 1 when items change (add/remove)
+    useEffect(() => {
+        setPage(1);
+    }, [items.length]);
+
+    const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
+    const clampedPage = Math.min(page, totalPages);
+    const pagedItems = items.slice((clampedPage - 1) * pageSize, clampedPage * pageSize);
+
+    const hasFooter = columns.some((c) => !!c.footer);
+    // +1 for the # column, +1 for the actions column
+    const totalColSpan = columns.length + 2;
 
     return (
-        <div className="flex-1 flex flex-col bg-white rounded-xl border border-primary/5 shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
-                <h3 className="text-sm font-bold text-slate-900">Product Items</h3>
-                <button
-                    type="button"
-                    onClick={onAddProduct}
-                    className="bg-primary text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-primary/90 transition-all"
-                >
-                    <span className="material-symbols-outlined text-base">add</span>
-                    Add Product
-                </button>
-            </div>
-
+        <div className="flex-1 flex flex-col bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             {/* Table Wrapper */}
             <div className="flex-1 overflow-auto no-scrollbar">
-                <table className="w-full text-left border-collapse">
-                    <thead className="bg-slate-50 sticky top-0 z-10">
+                <table className="w-full text-left border-collapse text-xs">
+                    <thead className="bg-slate-50 sticky top-0 z-10 border-b border-slate-200">
                         <tr>
-                            <th className="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                                Item/Product
+                            <th className="px-3 py-2.5 font-bold text-slate-500 uppercase tracking-wider w-8 text-center">
+                                #
                             </th>
-                            <th className="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-24">
-                                Qty
-                            </th>
-                            <th className="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-32 text-right">
-                                Unit Price
-                            </th>
-                            <th className="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-32 text-right">
-                                Subtotal
-                            </th>
-                            <th className="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-16"></th>
+                            {columns.map((col) => (
+                                <th
+                                    key={col.key}
+                                    className={`px-3 py-2.5 font-bold text-slate-500 uppercase tracking-wider ${col.width ?? ""} ${alignClass[col.align ?? "left"]}`}
+                                >
+                                    {col.label}
+                                </th>
+                            ))}
+                            <th className="px-3 py-2.5 font-bold text-slate-500 uppercase tracking-wider w-16" />
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                        {items.map((item, index) => (
-                            <tr
-                                key={index}
-                                className="hover:bg-primary/5 transition-colors group"
-                            >
-                                <td className="px-5 py-3">
-                                    <input
-                                        type="text"
-                                        value={item.name}
-                                        onChange={(e) => onUpdateItem?.(index, 'name', e.target.value)}
-                                        className="w-full bg-transparent border-none focus:ring-1 focus:ring-primary focus:bg-white rounded px-2 py-1 text-sm font-semibold text-slate-900 outline-none hover:bg-slate-50"
-                                        placeholder="Product Name"
-                                    />
-                                    <input
-                                        type="text"
-                                        value={item.sku}
-                                        onChange={(e) => onUpdateItem?.(index, 'sku', e.target.value)}
-                                        className="w-full bg-transparent border-none focus:ring-1 focus:ring-primary focus:bg-white rounded px-2 py-1 text-[10px] text-slate-500 mt-1 outline-none hover:bg-slate-50"
-                                        placeholder="SKU"
-                                    />
-                                </td>
-                                <td className="px-5 py-3">
-                                    <input
-                                        className="w-full bg-transparent border-none focus:ring-1 focus:ring-primary focus:bg-white rounded px-2 py-1 text-sm font-medium outline-none hover:bg-slate-50"
-                                        type="number"
-                                        value={item.qty}
-                                        onChange={(e) => onUpdateItem?.(index, 'qty', Number(e.target.value))}
-                                        min="1"
-                                    />
-                                </td>
-                                <td className="px-5 py-3 text-right">
-                                    <div className="flex items-center justify-end gap-1">
-                                        <span className="text-sm font-medium text-slate-500">$</span>
-                                        <input
-                                            className="w-24 bg-transparent border-none focus:ring-1 focus:ring-primary focus:bg-white rounded px-2 py-1 text-sm font-medium text-right outline-none hover:bg-slate-50"
-                                            type="number"
-                                            value={item.unitPrice}
-                                            onChange={(e) => onUpdateItem?.(index, 'unitPrice', Number(e.target.value))}
-                                            min="0"
-                                            step="0.01"
-                                        />
-                                    </div>
-                                </td>
-                                <td className="px-5 py-3 text-right">
-                                    <span className="text-sm font-bold text-slate-900 px-2 py-1">
-                                        ${item.subtotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                                    </span>
-                                </td>
-                                <td className="px-5 py-3 text-right">
-                                    <button
-                                        onClick={() => onRemoveItem?.(index)}
-                                        className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded hover:bg-red-50"
-                                    >
-                                        <span className="material-symbols-outlined text-lg">
-                                            delete
-                                        </span>
-                                    </button>
+                        {items.length === 0 ? (
+                            <tr>
+                                <td
+                                    colSpan={totalColSpan}
+                                    className="px-4 py-12 text-center text-sm text-slate-400"
+                                >
+                                    {emptyMessage}
                                 </td>
                             </tr>
-                        ))}
+                        ) : (
+                            pagedItems.map((item, pageIndex) => {
+                                const index = (clampedPage - 1) * pageSize + pageIndex;
+                                return (
+                                    <tr
+                                        key={index}
+                                        className="hover:bg-primary/5 transition-colors group"
+                                    >
+                                        <td className="px-3 py-2.5 text-center text-slate-400 font-medium">
+                                            {index + 1}.
+                                        </td>
+                                        {columns.map((col) => {
+                                            const value = (item as Record<string, unknown>)[col.key];
+                                            const align = alignClass[col.align ?? "left"];
 
-                        {/* Quick add row */}
-                        <tr className="bg-slate-50/50">
-                            <td className="px-5 py-4" colSpan={5}>
-                                <button
-                                    type="button"
-                                    onClick={onInsertQuickRow}
-                                    className="text-xs font-bold text-primary flex items-center gap-1 hover:underline"
-                                >
-                                    <span className="material-symbols-outlined text-sm">
-                                        add_circle
-                                    </span>
-                                    Insert quick row (Enter)
-                                </button>
-                            </td>
-                        </tr>
+                                            if (col.editable) {
+                                                return (
+                                                    <td key={col.key} className={`px-3 py-2.5 ${align}`}>
+                                                        <input
+                                                            className="w-20 border border-yellow-300 bg-yellow-50 focus:border-primary focus:ring-1 focus:ring-primary/30 rounded px-2 py-1 font-medium text-right outline-none transition-colors ml-auto block"
+                                                            type={col.editType ?? "text"}
+                                                            value={value as string | number}
+                                                            onChange={(e) =>
+                                                                onUpdateItem?.(
+                                                                    index,
+                                                                    col.key as keyof T,
+                                                                    col.editType === "number"
+                                                                        ? Number(e.target.value)
+                                                                        : e.target.value
+                                                                )
+                                                            }
+                                                        />
+                                                    </td>
+                                                );
+                                            }
+
+                                            return (
+                                                <td key={col.key} className={`px-3 py-2.5 ${align}`}>
+                                                    {col.render
+                                                        ? col.render(value, item, index)
+                                                        : String(value ?? "—")}
+                                                </td>
+                                            );
+                                        })}
+                                        <td className="px-3 py-2.5">
+                                            <div className="flex items-center justify-center gap-0.5">
+                                                <button
+                                                    onClick={() => onEditItem?.(index)}
+                                                    className="text-slate-400 hover:text-primary px-1.5 py-1 rounded hover:bg-primary/10 transition-colors font-medium"
+                                                    title="Edit"
+                                                >
+                                                    <span className="material-symbols-outlined text-sm">
+                                                        edit
+                                                    </span>
+                                                </button>
+                                                <button
+                                                    onClick={() => onRemoveItem?.(index)}
+                                                    className="text-slate-400 hover:text-red-500 px-1.5 py-1 rounded hover:bg-red-50 transition-colors"
+                                                    title="Hapus"
+                                                >
+                                                    <span className="material-symbols-outlined text-sm">
+                                                        delete
+                                                    </span>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })
+                        )}
                     </tbody>
+                    {items.length > 0 && hasFooter && (
+                        <tfoot className="border-t-2 border-slate-200 bg-slate-50">
+                            <tr className="font-bold text-slate-700">
+                                <td className="px-3 py-2.5 text-right text-xs uppercase tracking-wider text-slate-500">
+                                    Total
+                                </td>
+                                {columns.map((col) => {
+                                    const align = alignClass[col.align ?? "left"];
+                                    if (!col.footer) return <td key={col.key} />;
+                                    if (typeof col.footer === "function") {
+                                        return (
+                                            <td key={col.key} className={`px-3 py-2.5 ${align}`}>
+                                                {col.footer(items)}
+                                            </td>
+                                        );
+                                    }
+                                    // "sum"
+                                    const sum = items.reduce(
+                                        (acc, item) =>
+                                            acc +
+                                            (Number((item as Record<string, unknown>)[col.key]) || 0),
+                                        0
+                                    );
+                                    return (
+                                        <td key={col.key} className={`px-3 py-2.5 ${align} text-sm`}>
+                                            {_fmt(sum)}
+                                        </td>
+                                    );
+                                })}
+                                <td />
+                            </tr>
+                        </tfoot>
+                    )}
                 </table>
             </div>
 
-            {/* Table Footer */}
-            <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 flex justify-between items-center shrink-0">
-                <div className="flex gap-4">
-                    <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase">
-                            Rows:
-                        </span>
-                        <span className="text-xs font-bold">{totalRows}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase">
-                            Qty:
-                        </span>
-                        <span className="text-xs font-bold">{totalQty}</span>
-                    </div>
+            {/* Table Footer with Pagination */}
+            <div className="px-4 py-2 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center gap-x-5 gap-y-2 shrink-0">
+                {/* Left: row summary */}
+                <span className="text-[10px] font-bold text-slate-500 uppercase">
+                    ROWS: <span className="text-slate-700 ml-1">{items.length}</span>
+                </span>
+
+                {/* Spacer */}
+                <div className="flex-1" />
+
+                {/* Page size selector */}
+                <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Per Halaman</span>
+                    <select
+                        value={pageSize}
+                        onChange={(e) => {
+                            setPageSize(Number(e.target.value));
+                            setPage(1);
+                        }}
+                        className="border border-slate-200 rounded px-1.5 py-0.5 text-[11px] font-semibold text-slate-700 bg-white focus:outline-none focus:border-primary"
+                    >
+                        {[5, 10, 25, 50, 100].map((n) => (
+                            <option key={n} value={n}>
+                                {n}
+                            </option>
+                        ))}
+                    </select>
                 </div>
-                <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-500 italic">
-                        Press &apos;Tab&apos; for next cell, &apos;Ins&apos; for new row
-                    </span>
+
+                {/* Page info */}
+                <span className="text-[10px] font-bold text-slate-500 uppercase">
+                    Hal <span className="text-slate-700">{clampedPage}</span>
+                    {" / "}
+                    <span className="text-slate-700">{totalPages}</span>
+                </span>
+
+                {/* Pagination controls */}
+                <div className="flex items-center gap-0.5">
+                    <button
+                        onClick={() => setPage(1)}
+                        disabled={clampedPage === 1}
+                        className="size-6 flex items-center justify-center rounded hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        title="Halaman pertama"
+                    >
+                        <span className="material-symbols-outlined text-sm">first_page</span>
+                    </button>
+                    <button
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        disabled={clampedPage === 1}
+                        className="size-6 flex items-center justify-center rounded hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        title="Sebelumnya"
+                    >
+                        <span className="material-symbols-outlined text-sm">chevron_left</span>
+                    </button>
+                    <button
+                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={clampedPage === totalPages}
+                        className="size-6 flex items-center justify-center rounded hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        title="Berikutnya"
+                    >
+                        <span className="material-symbols-outlined text-sm">chevron_right</span>
+                    </button>
+                    <button
+                        onClick={() => setPage(totalPages)}
+                        disabled={clampedPage === totalPages}
+                        className="size-6 flex items-center justify-center rounded hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        title="Halaman terakhir"
+                    >
+                        <span className="material-symbols-outlined text-sm">last_page</span>
+                    </button>
                 </div>
             </div>
         </div>

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Navbar from "../../../components/Navbar";
 import Sidebar from "../../../components/Sidebar";
 import StatusBar from "../../../components/StatusBar";
-import ItemTable, { ProductItem } from "../../../components/ItemTable";
+// ItemTable: belum diimplementasi
 import FormField from "../../../components/FormField";
 import FormInput from "../../../components/FormInput";
 import FormSelect from "../../../components/FormSelect";
@@ -103,9 +103,7 @@ export default function PurchaseReturnDetailPage() {
     const handleUpdateItem = (index: number, field: keyof ProductItem, value: any) => {
         const newItems = [...productItems];
         newItems[index] = { ...newItems[index], [field]: value };
-        if (field === "qty" || field === "unitPrice") {
-            newItems[index].subtotal = newItems[index].qty * newItems[index].unitPrice;
-        }
+      
         setProductItems(newItems);
     };
 
@@ -385,14 +383,11 @@ export default function PurchaseReturnDetailPage() {
 
                         {/* ── Tab Content: Return Details ── */}
                         {activeTab === "return-details" && (
-                            <div className="flex-1 flex flex-col overflow-hidden">
-                                <ItemTable
-                                    items={productItems}
-                                    onAddProduct={() => setIsProductModalOpen(true)}
-                                    onInsertQuickRow={() => {}}
-                                    onUpdateItem={handleUpdateItem}
-                                    onRemoveItem={handleRemoveItem}
-                                />
+                            <div className="flex-1 flex items-center justify-center">
+                                <div className="text-center">
+                                    <span className="material-symbols-outlined text-5xl text-slate-300">construction</span>
+                                    <p className="mt-2 text-sm font-semibold text-slate-400">Sedang dalam pengembangan</p>
+                                </div>
                             </div>
                         )}
 
