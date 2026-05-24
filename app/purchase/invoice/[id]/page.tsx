@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Navbar from "../../../components/Navbar";
 import Sidebar from "../../../components/Sidebar";
 import StatusBar from "../../../components/StatusBar";
-// ItemTable: belum diimplementasi
+import ItemTable, { ProductItem, ColumnDef } from "../../../components/ItemTable";
 import FormField from "../../../components/FormField";
 import FormInput from "../../../components/FormInput";
 import FormSelect from "../../../components/FormSelect";
@@ -56,14 +56,67 @@ function useItemCalc(form: ItemDetailForm) {
     return { setelah1, setelah2, setelah3, setelah4, ppnNominal, hargaFinal, jumlah };
 }
 
-// ── Mock Data ──────────────────────────────────────────────────────────────
-const defaultProductItems: ProductItem[] = [
+// ── Mock Data ────────────────────────────────────────────────────────
+const defaultProductItems: ProductItem[] = [];
+
+// ── Column definition for Purchase Invoice ──────────────────────────────────
+const _fmt = (v: number) =>
+    v.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const purchaseInvoiceColumns: ColumnDef<ProductItem>[] = [
+    { key: "barcode", label: "Barcode", width: "w-28", align: "left" },
     {
-        name: "MOUSE LOGITECH",
-        sku: "PCS",
-        qty: 1,
-        unitPrice: 41000,
-        subtotal: 41000,
+        key: "name",
+        label: "Nama Barang",
+        render: (v) => (
+            <p className="font-semibold text-slate-800 leading-tight">{String(v || "—")}</p>
+        ),
+    },
+    { key: "uom", label: "UOM", width: "w-20", align: "center" },
+    {
+        key: "qty",
+        label: "Qty",
+        width: "w-24",
+        align: "right",
+        editable: true,
+        editType: "number",
+        footer: "sum",
+    },
+    {
+        key: "hargaDasar",
+        label: "Harga Dasar",
+        width: "w-32",
+        align: "right",
+        render: (v) => _fmt(v as number),
+    },
+    {
+        key: "discount",
+        label: "Discount",
+        width: "w-28",
+        align: "right",
+        render: (v) => _fmt(v as number),
+    },
+    {
+        key: "ppn",
+        label: "PPN",
+        width: "w-28",
+        align: "right",
+        render: (v) => _fmt(v as number),
+    },
+    {
+        key: "hargaFinal",
+        label: "Harga Final",
+        width: "w-32",
+        align: "right",
+        render: (v) => <span className="font-medium">{_fmt(v as number)}</span>,
+    },
+    {
+        key: "jumlah",
+        label: "Jumlah",
+        width: "w-36",
+        align: "right",
+        render: (v) => <span className="font-bold">{_fmt(v as number)}</span>,
+        footer: "sum",
     },
 ];
 
@@ -87,8 +140,13 @@ export default function PurchaseInvoiceDetailPage() {
     const [activeTab, setActiveTab] = useState<TabKey>("header");
     const [productItems, setProductItems] = useState<ProductItem[]>(defaultProductItems);
     const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+    const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
-    // ── Item Detail Modal State ───────────────────────────────────────────
+    // ── Product Search ────────────────────────────────────────────────────────
+    const [productSearch, setProductSearch] = useState("");
+    const [showProductDropdown, setShowProductDropdown] = useState(false);
+
+    // ── Item Detail Modal State ───────────────────────────────────────────────
     const [itemForm, setItemForm] = useState<ItemDetailForm>(defaultItemForm);
     const calc = useItemCalc(itemForm);
 
@@ -101,8 +159,8 @@ export default function PurchaseInvoiceDetailPage() {
     const handleUpdateItem = (index: number, field: keyof ProductItem, value: any) => {
         const newItems = [...productItems];
         newItems[index] = { ...newItems[index], [field]: value };
-        if (field === "qty" || field === "unitPrice") {
-            newItems[index].subtotal = newItems[index].qty * newItems[index].unitPrice;
+        if (field === "qty") {
+            newItems[index].jumlah = newItems[index].qty * newItems[index].hargaFinal;
         }
         setProductItems(newItems);
     };
@@ -111,7 +169,20 @@ export default function PurchaseInvoiceDetailPage() {
         setProductItems(productItems.filter((_, i) => i !== index));
     };
 
-    const subTotal = productItems.reduce((acc, item) => acc + item.subtotal, 0);
+    const handleEditItem = (index: number) => {
+        const item = productItems[index];
+        setItemForm((f) => ({
+            ...f,
+            namaBarang: item.name,
+            uom: item.uom,
+            kuantitas: item.qty,
+            hargaDasar: item.hargaDasar,
+        }));
+        setEditingIndex(index);
+        setIsProductModalOpen(true);
+    };
+
+    const subTotal = productItems.reduce((acc, item) => acc + item.jumlah, 0);
     const discPct = 0;
     const discNominal = subTotal * (discPct / 100);
     const ppnPct = 0;
@@ -441,11 +512,51 @@ export default function PurchaseInvoiceDetailPage() {
 
                         {/* ── Tab Content: Invoice Details ── */}
                         {activeTab === "invoice-details" && (
-                            <div className="flex-1 flex items-center justify-center">
-                                <div className="text-center">
-                                    <span className="material-symbols-outlined text-5xl text-slate-300">construction</span>
-                                    <p className="mt-2 text-sm font-semibold text-slate-400">Sedang dalam pengembangan</p>
+                            <div className="flex-1 flex flex-col overflow-hidden gap-3">
+                                {/* ── Product Search Bar ─────────────────────── */}
+                                <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-4 py-3 shrink-0 flex items-center gap-3">
+                                    <div className="flex-1 relative">
+                                        <div className="flex items-center border border-slate-300 rounded-lg overflow-hidden focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/30 bg-white">
+                                            <input
+                                                type="text"
+                                                value={productSearch}
+                                                onChange={(e) => {
+                                                    setProductSearch(e.target.value);
+                                                    setShowProductDropdown(true);
+                                                }}
+                                                onFocus={() => setShowProductDropdown(true)}
+                                                onBlur={() =>
+                                                    setTimeout(() => setShowProductDropdown(false), 150)
+                                                }
+                                                placeholder="Cari/Pilih Barang & Jasa..."
+                                                className="flex-1 px-3 py-2 text-sm outline-none bg-transparent"
+                                            />
+                                            <span className="px-3 text-slate-400">
+                                                <span className="material-symbols-outlined text-lg">search</span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            setEditingIndex(null);
+                                            setIsProductModalOpen(true);
+                                        }}
+                                        className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex-shrink-0"
+                                    >
+                                        <span className="material-symbols-outlined text-sm">add_circle</span>
+                                        Tambah Item
+                                    </button>
                                 </div>
+
+                                {/* ── Item Table ────────────────────────────── */}
+                                <ItemTable
+                                    items={productItems}
+                                    columns={purchaseInvoiceColumns}
+                                    onUpdateItem={handleUpdateItem}
+                                    onRemoveItem={handleRemoveItem}
+                                    onEditItem={handleEditItem}
+                                    emptyMessage="Belum ada item. Tambah produk nota pembelian ini."
+                                />
                             </div>
                         )}
 
@@ -475,8 +586,9 @@ export default function PurchaseInvoiceDetailPage() {
                 onClose={() => {
                     setIsProductModalOpen(false);
                     setItemForm(defaultItemForm);
+                    setEditingIndex(null);
                 }}
-                title={`Input Detail Penerimaan Pembelian Barang PIV 2401-0002`}
+                title={editingIndex !== null ? "Edit Detil Item Invoice" : `Input Detail Penerimaan Pembelian Barang PIV 2401-0002`}
                 icon="receipt"
                 size="xl"
                 footer={
@@ -485,6 +597,7 @@ export default function PurchaseInvoiceDetailPage() {
                             onClick={() => {
                                 setIsProductModalOpen(false);
                                 setItemForm(defaultItemForm);
+                                setEditingIndex(null);
                             }}
                             className="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-2"
                         >
@@ -494,23 +607,34 @@ export default function PurchaseInvoiceDetailPage() {
                         <button
                             onClick={() => {
                                 if (!itemForm.namaBarang) return;
-                                setProductItems((prev) => [
-                                    ...prev,
-                                    {
-                                        name: itemForm.namaBarang,
-                                        sku: itemForm.uom,
-                                        qty: itemForm.kuantitas,
-                                        unitPrice: calc.hargaFinal,
-                                        subtotal: calc.jumlah,
-                                    },
-                                ]);
+                                const newItem: ProductItem = {
+                                    name: itemForm.namaBarang,
+                                    barcode: "",
+                                    uom: itemForm.uom,
+                                    qty: itemForm.kuantitas,
+                                    hargaDasar: itemForm.hargaDasar,
+                                    discount: itemForm.hargaDasar - calc.setelah4,
+                                    ppn: calc.ppnNominal,
+                                    hargaFinal: calc.hargaFinal,
+                                    jumlah: calc.jumlah,
+                                };
+                                if (editingIndex !== null) {
+                                    setProductItems((prev) =>
+                                        prev.map((item, i) => (i === editingIndex ? newItem : item))
+                                    );
+                                } else {
+                                    setProductItems((prev) => [...prev, newItem]);
+                                }
                                 setIsProductModalOpen(false);
                                 setItemForm(defaultItemForm);
+                                setEditingIndex(null);
                             }}
                             className="px-4 py-2 text-sm font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center gap-2"
                         >
-                            <span className="material-symbols-outlined text-sm">add_circle</span>
-                            Tambah Item
+                            <span className="material-symbols-outlined text-sm">
+                                {editingIndex !== null ? "save" : "add_circle"}
+                            </span>
+                            {editingIndex !== null ? "Simpan Perubahan" : "Tambah Item"}
                         </button>
                     </>
                 }

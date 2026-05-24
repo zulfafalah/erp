@@ -5,34 +5,73 @@ import { useRouter } from "next/navigation";
 import Navbar from "../../../components/Navbar";
 import Sidebar from "../../../components/Sidebar";
 import StatusBar from "../../../components/StatusBar";
-// ItemTable: belum diimplementasi
+import ItemTable, { ProductItem, ColumnDef } from "../../../components/ItemTable";
 import FormField from "../../../components/FormField";
 import FormInput from "../../../components/FormInput";
 import FormSelect from "../../../components/FormSelect";
 import FormTextarea from "../../../components/FormTextarea";
 import Modal from "../../../components/Modal";
 
-const defaultProductItems: ProductItem[] = [
+const defaultProductItems: ProductItem[] = [];
+
+// ── Column definition for Purchase Order ──────────────────────────────────
+const _fmt = (v: number) =>
+    v.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const purchaseOrderColumns: ColumnDef<ProductItem>[] = [
+    { key: "barcode", label: "Barcode", width: "w-28", align: "left" },
     {
-        name: "Intel Core i9-13900K",
-        sku: "CPU-INT-13900K",
-        qty: 10,
-        unitPrice: 589.0,
-        subtotal: 5890.0,
+        key: "name",
+        label: "Nama Barang",
+        render: (v) => (
+            <p className="font-semibold text-slate-800 leading-tight">{String(v || "—")}</p>
+        ),
+    },
+    { key: "uom", label: "UOM", width: "w-20", align: "center" },
+    {
+        key: "qty",
+        label: "Qty",
+        width: "w-24",
+        align: "right",
+        editable: true,
+        editType: "number",
+        footer: "sum",
     },
     {
-        name: "ASUS ROG Maximus Z790",
-        sku: "MB-ASUS-Z790",
-        qty: 5,
-        unitPrice: 629.0,
-        subtotal: 3145.0,
+        key: "hargaDasar",
+        label: "Harga Dasar",
+        width: "w-32",
+        align: "right",
+        render: (v) => _fmt(v as number),
     },
     {
-        name: "Corsair Dominator 64GB DDR5",
-        sku: "RAM-COR-64DDR5",
-        qty: 12,
-        unitPrice: 284.58,
-        subtotal: 3415.0,
+        key: "discount",
+        label: "Discount",
+        width: "w-28",
+        align: "right",
+        render: (v) => _fmt(v as number),
+    },
+    {
+        key: "ppn",
+        label: "PPN",
+        width: "w-28",
+        align: "right",
+        render: (v) => _fmt(v as number),
+    },
+    {
+        key: "hargaFinal",
+        label: "Harga Final",
+        width: "w-32",
+        align: "right",
+        render: (v) => <span className="font-medium">{_fmt(v as number)}</span>,
+    },
+    {
+        key: "jumlah",
+        label: "Jumlah",
+        width: "w-36",
+        align: "right",
+        render: (v) => <span className="font-bold">{_fmt(v as number)}</span>,
+        footer: "sum",
     },
 ];
 
@@ -48,6 +87,12 @@ export default function PurchaseOrderDetailPage() {
     const [activeTab, setActiveTab] = useState<TabKey>("header");
     const [productItems, setProductItems] = useState<ProductItem[]>(defaultProductItems);
     const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+    const [editingIndex, setEditingIndex] = useState<number | null>(null);
+
+    // ── Product Search ────────────────────────────────────────────────────────
+    const [productSearch, setProductSearch] = useState("");
+    const [showProductDropdown, setShowProductDropdown] = useState(false);
+
     const router = useRouter();
 
     const handleInsertQuickRow = () => {
@@ -55,10 +100,14 @@ export default function PurchaseOrderDetailPage() {
             ...productItems,
             {
                 name: "",
-                sku: "",
+                barcode: "",
+                uom: "PCS",
                 qty: 1,
-                unitPrice: 0,
-                subtotal: 0,
+                hargaDasar: 0,
+                discount: 0,
+                ppn: 0,
+                hargaFinal: 0,
+                jumlah: 0,
             },
         ]);
     };
@@ -67,8 +116,8 @@ export default function PurchaseOrderDetailPage() {
         const newItems = [...productItems];
         newItems[index] = { ...newItems[index], [field]: value };
 
-        if (field === 'qty' || field === 'unitPrice') {
-            newItems[index].subtotal = newItems[index].qty * newItems[index].unitPrice;
+        if (field === "qty") {
+            newItems[index].jumlah = newItems[index].qty * newItems[index].hargaFinal;
         }
 
         setProductItems(newItems);
@@ -77,6 +126,16 @@ export default function PurchaseOrderDetailPage() {
     const handleRemoveItem = (index: number) => {
         setProductItems(productItems.filter((_, i) => i !== index));
     };
+
+    const handleEditItem = (index: number) => {
+        setEditingIndex(index);
+        setActiveTab("order-details");
+        setIsProductModalOpen(true);
+    };
+
+    const subTotal = productItems.reduce((acc, item) => acc + item.jumlah, 0);
+    const formatRupiah = (value: number) =>
+        new Intl.NumberFormat("id-ID", { style: "decimal", minimumFractionDigits: 2 }).format(value);
 
     return (
         <div className="bg-background-light text-slate-900 font-sans min-h-screen flex flex-col overflow-hidden pb-8">
@@ -252,51 +311,84 @@ export default function PurchaseOrderDetailPage() {
                                                     <h3 className="font-bold text-slate-800">Ringkasan Biaya</h3>
                                                 </div>
                                             </div>
-                                            <div className="p-4 md:p-6 space-y-4">
+                                            <div className="p-4 md:p-6 space-y-3">
+                                                {/* Sub Total */}
                                                 <div className="flex justify-between items-center text-sm">
-                                                    <span className="text-slate-500">Sub Total</span>
-                                                    <span className="font-semibold">IDR 12.500.000,00</span>
+                                                    <span className="text-slate-500 w-28 shrink-0">Sub Total</span>
+                                                    <FormInput
+                                                        readOnly
+                                                        value={formatRupiah(subTotal)}
+                                                        className="!flex-1 text-right !py-1.5 !px-2 font-semibold text-slate-700"
+                                                    />
                                                 </div>
-                                                <div className="flex justify-between items-center text-sm">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-slate-500">Diskon</span>
-                                                        <input
-                                                            className="w-12 h-7 py-0 px-1 text-center bg-slate-50 border-slate-200 rounded text-xs"
+
+                                                {/* Disc % */}
+                                                <div className="flex justify-between items-center text-sm gap-2">
+                                                    <div className="flex items-center gap-1 w-28 shrink-0">
+                                                        <span className="text-slate-500">Disc</span>
+                                                        <FormInput
+                                                            className="!w-10 !h-7 !px-1 !py-0 text-center !rounded text-xs"
                                                             type="text"
                                                             defaultValue="0"
                                                         />
-                                                        <span className="text-slate-400">%</span>
+                                                        <span className="text-slate-400 text-xs">%</span>
                                                     </div>
-                                                    <span className="font-semibold text-red-500">0,00</span>
+                                                    <FormInput
+                                                        readOnly
+                                                        value="0.00"
+                                                        className="!flex-1 text-right !py-1.5 !px-2 font-semibold text-red-500"
+                                                    />
                                                 </div>
-                                                <div className="flex justify-between items-center text-sm">
-                                                    <div className="flex items-center gap-2">
+
+                                                {/* PPN % */}
+                                                <div className="flex justify-between items-center text-sm gap-2">
+                                                    <div className="flex items-center gap-1 w-28 shrink-0">
                                                         <span className="text-slate-500">PPN</span>
-                                                        <input
-                                                            className="w-12 h-7 py-0 px-1 text-center bg-slate-50 border-slate-200 rounded text-xs"
+                                                        <FormInput
+                                                            className="!w-10 !h-7 !px-1 !py-0 text-center !rounded text-xs"
                                                             type="text"
                                                             defaultValue="11"
                                                         />
-                                                        <span className="text-slate-400">%</span>
+                                                        <span className="text-slate-400 text-xs">%</span>
                                                     </div>
-                                                    <span className="font-semibold text-slate-700">1.375.000,00</span>
+                                                    <FormInput
+                                                        readOnly
+                                                        value={formatRupiah(subTotal * 0.11)}
+                                                        className="!flex-1 text-right !py-1.5 !px-2 font-semibold text-slate-700"
+                                                    />
                                                 </div>
-                                                <div className="pt-4 border-t border-slate-100">
-                                                    <div className="flex justify-between items-center mb-1">
-                                                        <span className="text-sm md:text-base font-bold text-slate-900">Grand Total</span>
-                                                        <span className="text-lg md:text-xl font-black text-primary">IDR 13.875.000,00</span>
-                                                    </div>
-                                                </div>
-                                                <div className="pt-4 space-y-3">
-                                                    <div className="space-y-1">
-                                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Uang Muka (DP)</label>
-                                                        <input
-                                                            className="w-full bg-slate-50 border-slate-200 rounded text-right font-bold text-sm text-slate-700 focus:ring-primary"
-                                                            type="text"
-                                                            defaultValue="0,00"
+
+                                                {/* Grand Total ~ Total Konversi */}
+                                                <div className="pt-3 border-t border-slate-100 space-y-1">
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                                        Grand Total ~ Total Konversi
+                                                    </p>
+                                                    <div className="flex gap-2">
+                                                        <FormInput
+                                                            readOnly
+                                                            value={formatRupiah(subTotal * 1.11)}
+                                                            className="!flex-1 text-right !bg-primary/5 !border-primary/20 !py-1.5 !px-2 font-black !text-primary !opacity-100"
+                                                        />
+                                                        <FormInput
+                                                            readOnly
+                                                            value={formatRupiah(subTotal * 1.11)}
+                                                            className="!flex-1 text-right !py-1.5 !px-2 font-semibold text-slate-700"
                                                         />
                                                     </div>
                                                 </div>
+
+                                                {/* Uang Muka */}
+                                                <div className="space-y-1">
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Uang Muka (DP)</p>
+                                                    <div className="flex gap-2">
+                                                        <FormInput
+                                                            type="text"
+                                                            defaultValue="0.00"
+                                                            className="!flex-1 text-right !bg-white !py-1.5 !px-2 font-semibold text-slate-700"
+                                                        />
+                                                    </div>
+                                                </div>
+
                                             </div>
                                             <div className="p-4 bg-slate-50 border-t border-slate-100 grid grid-cols-2 gap-2">
                                                 <button className="col-span-2 py-3 bg-primary text-white rounded font-bold hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20">
@@ -322,11 +414,51 @@ export default function PurchaseOrderDetailPage() {
                         )}
 
                         {activeTab === "order-details" && (
-                            <div className="flex-1 flex items-center justify-center">
-                                <div className="text-center">
-                                    <span className="material-symbols-outlined text-5xl text-slate-300">construction</span>
-                                    <p className="mt-2 text-sm font-semibold text-slate-400">Sedang dalam pengembangan</p>
+                            <div className="flex-1 flex flex-col overflow-hidden gap-3">
+                                {/* ── Product Search Bar ─────────────────────── */}
+                                <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-4 py-3 shrink-0 flex items-center gap-3">
+                                    <div className="flex-1 relative">
+                                        <div className="flex items-center border border-slate-300 rounded-lg overflow-hidden focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/30 bg-white">
+                                            <input
+                                                type="text"
+                                                value={productSearch}
+                                                onChange={(e) => {
+                                                    setProductSearch(e.target.value);
+                                                    setShowProductDropdown(true);
+                                                }}
+                                                onFocus={() => setShowProductDropdown(true)}
+                                                onBlur={() =>
+                                                    setTimeout(() => setShowProductDropdown(false), 150)
+                                                }
+                                                placeholder="Cari/Pilih Barang & Jasa..."
+                                                className="flex-1 px-3 py-2 text-sm outline-none bg-transparent"
+                                            />
+                                            <span className="px-3 text-slate-400">
+                                                <span className="material-symbols-outlined text-lg">search</span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            setEditingIndex(null);
+                                            setIsProductModalOpen(true);
+                                        }}
+                                        className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex-shrink-0"
+                                    >
+                                        <span className="material-symbols-outlined text-sm">add_circle</span>
+                                        Tambah Item
+                                    </button>
                                 </div>
+
+                                {/* ── Item Table ────────────────────────────── */}
+                                <ItemTable
+                                    items={productItems}
+                                    columns={purchaseOrderColumns}
+                                    onUpdateItem={handleUpdateItem}
+                                    onRemoveItem={handleRemoveItem}
+                                    onEditItem={handleEditItem}
+                                    emptyMessage="Belum ada item. Tambah produk untuk pesanan ini."
+                                />
                             </div>
                         )}
 

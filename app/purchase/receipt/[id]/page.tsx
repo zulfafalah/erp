@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Navbar from "../../../components/Navbar";
 import Sidebar from "../../../components/Sidebar";
 import StatusBar from "../../../components/StatusBar";
-// ItemTable: belum diimplementasi
+import ItemTable, { ProductItem, ColumnDef } from "../../../components/ItemTable";
 import FormField from "../../../components/FormField";
 import FormInput from "../../../components/FormInput";
 import FormSelect from "../../../components/FormSelect";
@@ -56,28 +56,67 @@ function useItemCalc(form: ItemDetailForm) {
     return { setelah1, setelah2, setelah3, setelah4, ppnNominal, hargaFinal, jumlah };
 }
 
-// ── Mock Data ──────────────────────────────────────────────────────────────
-const defaultProductItems: ProductItem[] = [
+// ── Mock Data ────────────────────────────────────────────────────────
+const defaultProductItems: ProductItem[] = [];
+
+// ── Column definition for Purchase Receipt ──────────────────────────────────
+const _fmt = (v: number) =>
+    v.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const purchaseReceiptColumns: ColumnDef<ProductItem>[] = [
+    { key: "barcode", label: "Barcode", width: "w-28", align: "left" },
     {
-        name: "PONDS FW LGHTNNG DAY CR SPF18 PA12X3X10G",
-        sku: "DUS",
-        qty: 10,
-        unitPrice: 108131.76,
-        subtotal: 1081317.6,
+        key: "name",
+        label: "Nama Barang",
+        render: (v) => (
+            <p className="font-semibold text-slate-800 leading-tight">{String(v || "—")}</p>
+        ),
+    },
+    { key: "uom", label: "UOM", width: "w-20", align: "center" },
+    {
+        key: "qty",
+        label: "Qty",
+        width: "w-24",
+        align: "right",
+        editable: true,
+        editType: "number",
+        footer: "sum",
     },
     {
-        name: "DOVE BODY WASH EXTRA FRESH 450ML",
-        sku: "DUS",
-        qty: 5,
-        unitPrice: 95000,
-        subtotal: 475000,
+        key: "hargaDasar",
+        label: "Harga Dasar",
+        width: "w-32",
+        align: "right",
+        render: (v) => _fmt(v as number),
     },
     {
-        name: "LIFEBUOY BODY WASH TOTAL 10 450ML",
-        sku: "PCS",
-        qty: 24,
-        unitPrice: 28500,
-        subtotal: 684000,
+        key: "discount",
+        label: "Discount",
+        width: "w-28",
+        align: "right",
+        render: (v) => _fmt(v as number),
+    },
+    {
+        key: "ppn",
+        label: "PPN",
+        width: "w-28",
+        align: "right",
+        render: (v) => _fmt(v as number),
+    },
+    {
+        key: "hargaFinal",
+        label: "Harga Final",
+        width: "w-32",
+        align: "right",
+        render: (v) => <span className="font-medium">{_fmt(v as number)}</span>,
+    },
+    {
+        key: "jumlah",
+        label: "Jumlah",
+        width: "w-36",
+        align: "right",
+        render: (v) => <span className="font-bold">{_fmt(v as number)}</span>,
+        footer: "sum",
     },
 ];
 
@@ -101,6 +140,11 @@ export default function PurchaseReceiptDetailPage() {
     const [activeTab, setActiveTab] = useState<TabKey>("header");
     const [productItems, setProductItems] = useState<ProductItem[]>(defaultProductItems);
     const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+    const [editingIndex, setEditingIndex] = useState<number | null>(null);
+
+    // ── Product Search ────────────────────────────────────────────────────────
+    const [productSearch, setProductSearch] = useState("");
+    const [showProductDropdown, setShowProductDropdown] = useState(false);
 
     // ── Item Detail Modal State ───────────────────────────────────────────
     const [itemForm, setItemForm] = useState<ItemDetailForm>(defaultItemForm);
@@ -115,8 +159,8 @@ export default function PurchaseReceiptDetailPage() {
     const handleUpdateItem = (index: number, field: keyof ProductItem, value: any) => {
         const newItems = [...productItems];
         newItems[index] = { ...newItems[index], [field]: value };
-        if (field === "qty" || field === "unitPrice") {
-            newItems[index].subtotal = newItems[index].qty * newItems[index].unitPrice;
+        if (field === "qty") {
+            newItems[index].jumlah = newItems[index].qty * newItems[index].hargaFinal;
         }
         setProductItems(newItems);
     };
@@ -125,7 +169,20 @@ export default function PurchaseReceiptDetailPage() {
         setProductItems(productItems.filter((_, i) => i !== index));
     };
 
-    const subTotal = productItems.reduce((acc, item) => acc + item.subtotal, 0);
+    const handleEditItem = (index: number) => {
+        const item = productItems[index];
+        setItemForm((f) => ({
+            ...f,
+            namaBarang: item.name,
+            uom: item.uom,
+            kuantitas: item.qty,
+            hargaDasar: item.hargaDasar,
+        }));
+        setEditingIndex(index);
+        setIsProductModalOpen(true);
+    };
+
+    const subTotal = productItems.reduce((acc, item) => acc + item.jumlah, 0);
     const discPct = 8;
     const discNominal = subTotal * (discPct / 100);
     const ppnPct = 11;
@@ -464,11 +521,51 @@ export default function PurchaseReceiptDetailPage() {
 
                         {/* ── Tab Content: Receipt Details ── */}
                         {activeTab === "receipt-details" && (
-                            <div className="flex-1 flex items-center justify-center">
-                                <div className="text-center">
-                                    <span className="material-symbols-outlined text-5xl text-slate-300">construction</span>
-                                    <p className="mt-2 text-sm font-semibold text-slate-400">Sedang dalam pengembangan</p>
+                            <div className="flex-1 flex flex-col overflow-hidden gap-3">
+                                {/* ── Product Search Bar ─────────────────────── */}
+                                <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-4 py-3 shrink-0 flex items-center gap-3">
+                                    <div className="flex-1 relative">
+                                        <div className="flex items-center border border-slate-300 rounded-lg overflow-hidden focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/30 bg-white">
+                                            <input
+                                                type="text"
+                                                value={productSearch}
+                                                onChange={(e) => {
+                                                    setProductSearch(e.target.value);
+                                                    setShowProductDropdown(true);
+                                                }}
+                                                onFocus={() => setShowProductDropdown(true)}
+                                                onBlur={() =>
+                                                    setTimeout(() => setShowProductDropdown(false), 150)
+                                                }
+                                                placeholder="Cari/Pilih Barang & Jasa..."
+                                                className="flex-1 px-3 py-2 text-sm outline-none bg-transparent"
+                                            />
+                                            <span className="px-3 text-slate-400">
+                                                <span className="material-symbols-outlined text-lg">search</span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            setEditingIndex(null);
+                                            setIsProductModalOpen(true);
+                                        }}
+                                        className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex-shrink-0"
+                                    >
+                                        <span className="material-symbols-outlined text-sm">add_circle</span>
+                                        Tambah Item
+                                    </button>
                                 </div>
+
+                                {/* ── Item Table ────────────────────────────── */}
+                                <ItemTable
+                                    items={productItems}
+                                    columns={purchaseReceiptColumns}
+                                    onUpdateItem={handleUpdateItem}
+                                    onRemoveItem={handleRemoveItem}
+                                    onEditItem={handleEditItem}
+                                    emptyMessage="Belum ada item. Tambah produk penerimaan barang."
+                                />
                             </div>
                         )}
 
@@ -498,8 +595,9 @@ export default function PurchaseReceiptDetailPage() {
                 onClose={() => {
                     setIsProductModalOpen(false);
                     setItemForm(defaultItemForm);
+                    setEditingIndex(null);
                 }}
-                title={`Input Detail Penerimaan Pembelian Barang BPB 2601-0001`}
+                title={editingIndex !== null ? "Edit Detil Item Penerimaan" : `Input Detail Penerimaan Pembelian Barang BPB 2601-0001`}
                 icon="inventory_2"
                 size="xl"
                 footer={
@@ -508,6 +606,7 @@ export default function PurchaseReceiptDetailPage() {
                             onClick={() => {
                                 setIsProductModalOpen(false);
                                 setItemForm(defaultItemForm);
+                                setEditingIndex(null);
                             }}
                             className="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-2"
                         >
@@ -517,23 +616,34 @@ export default function PurchaseReceiptDetailPage() {
                         <button
                             onClick={() => {
                                 if (!itemForm.namaBarang) return;
-                                setProductItems((prev) => [
-                                    ...prev,
-                                    {
-                                        name: itemForm.namaBarang,
-                                        sku: itemForm.uom,
-                                        qty: itemForm.kuantitas,
-                                        unitPrice: calc.hargaFinal,
-                                        subtotal: calc.jumlah,
-                                    },
-                                ]);
+                                const newItem: ProductItem = {
+                                    name: itemForm.namaBarang,
+                                    barcode: "",
+                                    uom: itemForm.uom,
+                                    qty: itemForm.kuantitas,
+                                    hargaDasar: itemForm.hargaDasar,
+                                    discount: itemForm.hargaDasar - calc.setelah4,
+                                    ppn: calc.ppnNominal,
+                                    hargaFinal: calc.hargaFinal,
+                                    jumlah: calc.jumlah,
+                                };
+                                if (editingIndex !== null) {
+                                    setProductItems((prev) =>
+                                        prev.map((item, i) => (i === editingIndex ? newItem : item))
+                                    );
+                                } else {
+                                    setProductItems((prev) => [...prev, newItem]);
+                                }
                                 setIsProductModalOpen(false);
                                 setItemForm(defaultItemForm);
+                                setEditingIndex(null);
                             }}
                             className="px-4 py-2 text-sm font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center gap-2"
                         >
-                            <span className="material-symbols-outlined text-sm">add_circle</span>
-                            Tambah Item
+                            <span className="material-symbols-outlined text-sm">
+                                {editingIndex !== null ? "save" : "add_circle"}
+                            </span>
+                            {editingIndex !== null ? "Simpan Perubahan" : "Tambah Item"}
                         </button>
                     </>
                 }
