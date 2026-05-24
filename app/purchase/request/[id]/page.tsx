@@ -363,7 +363,7 @@ export default function PurchaseRequestDetailPage() {
                                                 {/* Tempo Bayar */}
                                                 <FormField label="Tempo Bayar">
                                                     <div className="flex items-center gap-2">
-                                                        <FormInput type="number" defaultValue="0" />
+                                                        <FormInput type="number" defaultValue="0" readOnly />
                                                         <span className="text-sm text-slate-500 whitespace-nowrap">Hari</span>
                                                     </div>
                                                 </FormField>
@@ -371,12 +371,12 @@ export default function PurchaseRequestDetailPage() {
                                                 {/* Status */}
                                                 <FormField label="Status">
                                                     <div className="flex gap-2">
-                                                        <input
+                                                        <FormInput
                                                             readOnly
                                                             value="Draft"
                                                             className="flex-1 bg-amber-50 border border-amber-300 rounded-lg px-3 py-2 text-sm font-bold text-amber-700 cursor-not-allowed text-center tracking-wide"
                                                         />
-                                                        <input
+                                                        <FormInput
                                                             readOnly
                                                             value=""
                                                             className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-400 cursor-not-allowed"
@@ -391,7 +391,7 @@ export default function PurchaseRequestDetailPage() {
                                                         <span className="px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-sm font-semibold text-slate-600 whitespace-nowrap">
                                                             RP
                                                         </span>
-                                                        <FormInput type="number" defaultValue="1.00" />
+                                                        <FormInput readOnly type="number" defaultValue="1.00" />
                                                     </div>
                                                 </FormField>
                                             </div>
