@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "../../../components/Navbar";
 import Sidebar from "../../../components/Sidebar";
@@ -9,8 +9,21 @@ import ItemTable, { ProductItem } from "../../../components/ItemTable";
 import FormField from "../../../components/FormField";
 import FormInput from "../../../components/FormInput";
 import FormSelect from "../../../components/FormSelect";
-import FormTextarea from "../../../components/FormTextarea";
 import Modal from "../../../components/Modal";
+
+// ── Supplier Type ──────────────────────────────────────────────────────────────
+interface SupplierListItem {
+    supplierid: number;
+    suppcode: string;
+    companyname: string;
+}
+
+// ── Unit (Tipe Pengiriman) Type ────────────────────────────────────────────────
+interface UnitListItem {
+    unitid: number;
+    unit: string;
+    unitname: string;
+}
 
 // ── Item Detail Modal State ────────────────────────────────────────────────
 interface ItemDetailForm {
@@ -91,8 +104,8 @@ const tabs: { key: TabKey; label: string; icon: string; badge?: string }[] = [
 
 const statusBadgeStyles: Record<string, string> = {
     Approved: "bg-green-100 text-green-700 border-green-200",
-    Pending:  "bg-yellow-100 text-yellow-700 border-yellow-200",
-    Draft:    "bg-slate-100 text-slate-600 border-slate-200",
+    Pending: "bg-yellow-100 text-yellow-700 border-yellow-200",
+    Draft: "bg-slate-100 text-slate-600 border-slate-200",
     Rejected: "bg-red-100 text-red-700 border-red-200",
 };
 
@@ -100,6 +113,40 @@ export default function PurchaseRequestDetailPage() {
     const [activeTab, setActiveTab] = useState<TabKey>("header");
     const [productItems, setProductItems] = useState<ProductItem[]>(defaultProductItems);
     const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+
+    // ── Suppliers ─────────────────────────────────────────────────────────────
+    const [suppliers, setSuppliers] = useState<SupplierListItem[]>([]);
+    const [loadingSuppliers, setLoadingSuppliers] = useState(false);
+
+    useEffect(() => {
+        setLoadingSuppliers(true);
+        fetch("/api/master-data/suppliers?limit=200")
+            .then((res) => res.json())
+            .then((json) => {
+                if (json.ok && Array.isArray(json.data)) {
+                    setSuppliers(json.data);
+                }
+            })
+            .catch((err) => console.error("[suppliers fetch]", err))
+            .finally(() => setLoadingSuppliers(false));
+    }, []);
+
+    // ── Tipe Pengiriman (Units isplat=1) ───────────────────────────────────────
+    const [tipePengiriman, setTipePengiriman] = useState<UnitListItem[]>([]);
+    const [loadingTipePengiriman, setLoadingTipePengiriman] = useState(false);
+
+    useEffect(() => {
+        setLoadingTipePengiriman(true);
+        fetch("/api/master-data/units?isplat=1")
+            .then((res) => res.json())
+            .then((json) => {
+                if (json.ok && Array.isArray(json.data)) {
+                    setTipePengiriman(json.data);
+                }
+            })
+            .catch((err) => console.error("[tipePengiriman fetch]", err))
+            .finally(() => setLoadingTipePengiriman(false));
+    }, []);
 
     // ── Item Detail Modal State ───────────────────────────────────────────
     const [itemForm, setItemForm] = useState<ItemDetailForm>(defaultItemForm);
@@ -207,11 +254,10 @@ export default function PurchaseRequestDetailPage() {
                                 <button
                                     key={tab.key}
                                     onClick={() => setActiveTab(tab.key)}
-                                    className={`px-4 md:px-6 py-3 text-xs md:text-sm font-medium flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
-                                        activeTab === tab.key
-                                            ? "font-bold border-primary text-primary"
-                                            : "text-slate-500 hover:text-slate-700 border-transparent"
-                                    }`}
+                                    className={`px-4 md:px-6 py-3 text-xs md:text-sm font-medium flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${activeTab === tab.key
+                                        ? "font-bold border-primary text-primary"
+                                        : "text-slate-500 hover:text-slate-700 border-transparent"
+                                        }`}
                                 >
                                     <span className="material-symbols-outlined text-lg">
                                         {tab.icon}
@@ -243,7 +289,7 @@ export default function PurchaseRequestDetailPage() {
                                                 {/* No. + Lokal dropdown */}
                                                 <FormField label="No.">
                                                     <div className="flex gap-2">
-                                                        <FormInput defaultValue="PRF 2401-0005" />
+                                                        <FormInput defaultValue="PRF 2401-0005" readOnly />
                                                         <FormSelect>
                                                             <option>Lokal</option>
                                                             <option>Import</option>
@@ -283,21 +329,29 @@ export default function PurchaseRequestDetailPage() {
                                             <div className="p-4 md:p-6 grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
                                                 {/* Pemasok */}
                                                 <FormField label="Pemasok" className="sm:col-span-2">
-                                                    <FormSelect>
-                                                        <option value="">-- Pilih Pemasok --</option>
-                                                        <option>Carrefour Denpasar</option>
-                                                        <option>Bekasi Square</option>
-                                                        <option>Unilever Indonesia</option>
+                                                    <FormSelect disabled={loadingSuppliers}>
+                                                        <option value="">
+                                                            {loadingSuppliers ? "Memuat data pemasok..." : "-- Pilih Pemasok --"}
+                                                        </option>
+                                                        {suppliers.map((s) => (
+                                                            <option key={s.supplierid} value={s.supplierid}>
+                                                                {s.companyname}
+                                                            </option>
+                                                        ))}
                                                     </FormSelect>
                                                 </FormField>
 
                                                 {/* Tipe Pengiriman */}
                                                 <FormField label="Tipe Pengiriman" className="sm:col-span-2">
-                                                    <FormSelect>
-                                                        <option value="">:: Pilih Tipe Pengiriman ::</option>
-                                                        <option>Normal</option>
-                                                        <option>Express</option>
-                                                        <option>Cargo</option>
+                                                    <FormSelect disabled={loadingTipePengiriman}>
+                                                        <option value="">
+                                                            {loadingTipePengiriman ? "Memuat tipe pengiriman..." : ":: Pilih Tipe Pengiriman ::"}
+                                                        </option>
+                                                        {tipePengiriman.map((u) => (
+                                                            <option key={u.unitid} value={u.unitid}>
+                                                                {u.unitname || u.unit}
+                                                            </option>
+                                                        ))}
                                                     </FormSelect>
                                                 </FormField>
 
@@ -317,12 +371,11 @@ export default function PurchaseRequestDetailPage() {
                                                 {/* Status */}
                                                 <FormField label="Status">
                                                     <div className="flex gap-2">
-                                                        <FormSelect>
-                                                            <option>Draft</option>
-                                                            <option>Pending</option>
-                                                            <option>Approved</option>
-                                                            <option>Rejected</option>
-                                                        </FormSelect>
+                                                        <input
+                                                            readOnly
+                                                            value="Draft"
+                                                            className="flex-1 bg-amber-50 border border-amber-300 rounded-lg px-3 py-2 text-sm font-bold text-amber-700 cursor-not-allowed text-center tracking-wide"
+                                                        />
                                                         <input
                                                             readOnly
                                                             value=""

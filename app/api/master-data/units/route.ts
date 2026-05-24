@@ -24,8 +24,14 @@ interface DataWrapper {
 
 export async function GET(req: NextRequest) {
     try {
+        const { searchParams } = req.nextUrl;
+
+        // Forward semua query params ke backend (isplat, page, limit, dll.)
+        const qs = searchParams.toString();
+        const query = qs ? `?${qs}` : "";
+
         const raw = await apiFetch<PaginatedResults | DataWrapper | UnitListItem[]>(
-            `/api/v1/units/`,
+            `/api/v1/units/${query}`,
             { method: "GET" }
         );
 
