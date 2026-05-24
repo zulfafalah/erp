@@ -25,6 +25,14 @@ interface UnitListItem {
     unitname: string;
 }
 
+// ── Products Type ──────────────────────────────────────────────────────────────
+interface ProductListItem {
+    productid: number;
+    productcode: string;
+    productname: string;
+    produnit: string | null;
+}
+
 // ── Item Detail Modal State ────────────────────────────────────────────────
 interface ItemDetailForm {
     namaBarang: string;
@@ -70,29 +78,7 @@ function useItemCalc(form: ItemDetailForm) {
     return { setelah1, setelah2, setelah3, setelah4, ppnNominal, hargaFinal, jumlah };
 }
 
-const defaultProductItems: ProductItem[] = [
-    {
-        name: "Alat Tulis Kantor (ATK)",
-        sku: "ATK-001",
-        qty: 20,
-        unitPrice: 15000,
-        subtotal: 300000,
-    },
-    {
-        name: "Kertas HVS A4 80gsm",
-        sku: "KRT-HVS-A4",
-        qty: 10,
-        unitPrice: 55000,
-        subtotal: 550000,
-    },
-    {
-        name: "Tinta Printer Canon Black",
-        sku: "TNT-CAN-BLK",
-        qty: 5,
-        unitPrice: 120000,
-        subtotal: 600000,
-    },
-];
+const defaultProductItems: ProductItem[] = [];
 
 type TabKey = "header" | "request-details" | "attachments";
 
@@ -146,6 +132,23 @@ export default function PurchaseRequestDetailPage() {
             })
             .catch((err) => console.error("[tipePengiriman fetch]", err))
             .finally(() => setLoadingTipePengiriman(false));
+    }, []);
+
+    // ── Products ───────────────────────────────────────────────────────────────
+    const [products, setProducts] = useState<ProductListItem[]>([]);
+    const [loadingProducts, setLoadingProducts] = useState(false);
+
+    useEffect(() => {
+        setLoadingProducts(true);
+        fetch("/api/master-data/products?limit=200")
+            .then((res) => res.json())
+            .then((json) => {
+                if (json.ok && Array.isArray(json.data)) {
+                    setProducts(json.data);
+                }
+            })
+            .catch((err) => console.error("[products fetch]", err))
+            .finally(() => setLoadingProducts(false));
     }, []);
 
     // ── Item Detail Modal State ───────────────────────────────────────────
@@ -614,13 +617,28 @@ export default function PurchaseRequestDetailPage() {
                     <div className="grid grid-cols-[160px_1fr] items-center gap-3 px-4 py-2.5">
                         <span className="text-xs font-semibold text-slate-500 uppercase">Nama Barang</span>
                         <div className="relative">
-                            <input
-                                type="text"
+                            <select
                                 value={itemForm.namaBarang}
-                                onChange={(e) => setItemField("namaBarang", e.target.value)}
-                                placeholder="Ketik Nama Barang/Kode/Barcode/SKU"
-                                className="w-full border border-primary/40 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 bg-white"
-                            />
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    setItemField("namaBarang", val);
+                                    const prod = products.find(p => p.productname === val);
+                                    if (prod && prod.produnit) {
+                                        setItemField("uom", prod.produnit);
+                                    }
+                                }}
+                                disabled={loadingProducts}
+                                className="w-full border border-primary/40 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 bg-white disabled:bg-slate-100"
+                            >
+                                <option value="">
+                                    {loadingProducts ? "Memuat produk..." : "-- Pilih Produk --"}
+                                </option>
+                                {products.map((p) => (
+                                    <option key={p.productid} value={p.productname}>
+                                        {p.productcode} - {p.productname}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
                     </div>
 
