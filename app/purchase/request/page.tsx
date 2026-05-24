@@ -125,7 +125,7 @@ export default function PurchaseRequestListPage() {
             key: "noPRF",
             render: (prf) => (
                 <Link
-                    href={`/purchase-request/${prf.id}`}
+                    href={`/purchase/request/${prf.id}`}
                     className="font-semibold text-primary text-sm tracking-tight hover:underline"
                 >
                     {prf.noPRF}
@@ -175,7 +175,7 @@ export default function PurchaseRequestListPage() {
             render: (prf) => (
                 <div className="flex items-center justify-end gap-2">
                     <Link
-                        href={`/purchase-request/${prf.id}`}
+                        href={`/purchase/request/${prf.id}`}
                         className="p-1.5 text-slate-400 hover:text-primary transition-colors"
                         title="Edit"
                     >
@@ -197,7 +197,7 @@ export default function PurchaseRequestListPage() {
             <div className="flex justify-between items-start">
                 <div>
                     <Link
-                        href={`/purchase-request/${prf.id}`}
+                        href={`/purchase/request/${prf.id}`}
                         className="font-semibold text-primary text-sm hover:underline"
                     >
                         {prf.noPRF}
@@ -223,7 +223,7 @@ export default function PurchaseRequestListPage() {
                 </div>
                 <div className="flex items-center gap-1">
                     <Link
-                        href={`/purchase-request/${prf.id}`}
+                        href={`/purchase/request/${prf.id}`}
                         className="p-1.5 text-slate-400 hover:text-primary transition-colors"
                     >
                         <span className="material-symbols-outlined text-base">edit_square</span>
