@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import Navbar from "../../../components/Navbar";
 import Sidebar from "../../../components/Sidebar";
 import StatusBar from "../../../components/StatusBar";
@@ -156,6 +156,8 @@ export default function PurchaseRequestDetailPage() {
         setItemForm((f) => ({ ...f, [key]: val }));
 
     const router = useRouter();
+    const params = useParams();
+    const isNew = params?.id === "new";
 
     const currentStatus = "Draft";
 
@@ -233,16 +235,18 @@ export default function PurchaseRequestDetailPage() {
                             <button className="flex-1 md:flex-none justify-center px-3 md:px-4 py-2 text-xs md:text-sm font-semibold text-slate-700 hover:bg-slate-200/50 rounded-lg transition-all border border-slate-200 md:border-transparent">
                                 Save Draft
                             </button>
-                            <button className="flex-1 md:flex-none justify-center px-3 md:px-4 py-2 text-xs md:text-sm font-semibold bg-white text-primary border border-primary/20 hover:border-primary rounded-lg transition-all flex items-center gap-2">
+                            <button disabled={isNew} className="flex-1 md:flex-none justify-center px-3 md:px-4 py-2 text-xs md:text-sm font-semibold bg-white text-primary border border-primary/20 hover:border-primary rounded-lg transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-primary/20 disabled:hover:bg-white">
                                 <span className="material-symbols-outlined text-sm">print</span>
                                 Print
                             </button>
-                            <button className="w-full md:w-auto justify-center px-4 md:px-5 py-2 text-xs md:text-sm font-bold bg-primary text-white hover:bg-primary/90 rounded-lg shadow-lg shadow-primary/20 flex items-center gap-2">
-                                <span className="material-symbols-outlined text-sm">
-                                    check_circle
-                                </span>
-                                Approve Request
-                            </button>
+                            {!isNew && (
+                                <button className="w-full md:w-auto justify-center px-4 md:px-5 py-2 text-xs md:text-sm font-bold bg-primary text-white hover:bg-primary/90 rounded-lg shadow-lg shadow-primary/20 flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-sm">
+                                        check_circle
+                                    </span>
+                                    Approve Request
+                                </button>
+                            )}
                         </div>
                     </div>
 
@@ -499,15 +503,19 @@ export default function PurchaseRequestDetailPage() {
                                                 <button className="py-2 bg-white border border-slate-200 text-slate-600 rounded text-xs px-1 md:px-0 font-bold hover:bg-slate-100 transition-colors flex items-center justify-center gap-1">
                                                     <span className="material-symbols-outlined !text-sm">refresh</span> RESET
                                                 </button>
-                                                <button className="py-2 bg-white border border-slate-200 text-slate-600 rounded text-xs px-1 md:px-0 font-bold hover:bg-slate-100 transition-colors flex items-center justify-center gap-1">
+                                                <button disabled={isNew} className="py-2 bg-white border border-slate-200 text-slate-600 rounded text-xs px-1 md:px-0 font-bold hover:bg-slate-100 transition-colors flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white">
                                                     <span className="material-symbols-outlined !text-sm">print</span> PRINT
                                                 </button>
-                                                <button className="col-span-1 py-2 bg-emerald-500 text-white rounded text-[10px] md:text-xs font-bold hover:bg-emerald-600 transition-colors flex items-center justify-center gap-1">
-                                                    <span className="material-symbols-outlined !text-sm">verified</span> APPROVE
-                                                </button>
-                                                <button className="col-span-1 py-2 bg-amber-500 text-white rounded text-[10px] md:text-xs font-bold hover:bg-amber-600 transition-colors flex items-center justify-center gap-1 text-center leading-tight">
-                                                    <span className="material-symbols-outlined !text-sm">question_answer</span> ASK CONFIRM
-                                                </button>
+                                                {!isNew && (
+                                                    <>
+                                                        <button className="col-span-1 py-2 bg-emerald-500 text-white rounded text-[10px] md:text-xs font-bold hover:bg-emerald-600 transition-colors flex items-center justify-center gap-1">
+                                                            <span className="material-symbols-outlined !text-sm">verified</span> APPROVE
+                                                        </button>
+                                                        <button className="col-span-1 py-2 bg-amber-500 text-white rounded text-[10px] md:text-xs font-bold hover:bg-amber-600 transition-colors flex items-center justify-center gap-1 text-center leading-tight">
+                                                            <span className="material-symbols-outlined !text-sm">question_answer</span> ASK CONFIRM
+                                                        </button>
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
