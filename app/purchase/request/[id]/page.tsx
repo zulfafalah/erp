@@ -374,7 +374,7 @@ export default function PurchaseRequestDetailPage() {
                                                         <FormInput
                                                             readOnly
                                                             value="Draft"
-                                                            className="flex-1 bg-amber-50 border border-amber-300 rounded-lg px-3 py-2 text-sm font-bold text-amber-700 cursor-not-allowed text-center tracking-wide"
+                                                            className="flex-1 !bg-yellow-100 !opacity-100 !text-slate-800 font-bold text-center tracking-wide"
                                                         />
                                                         <FormInput
                                                             readOnly
