@@ -10,6 +10,7 @@ import FormField from "../../../components/FormField";
 import FormInput from "../../../components/FormInput";
 import FormSelect from "../../../components/FormSelect";
 import Modal from "../../../components/Modal";
+import ProductSearchBar, { ProductSearchResult } from "../../../components/ProductSearchBar";
 
 // ── Supplier Type ──────────────────────────────────────────────────────────────
 interface SupplierListItem {
@@ -25,13 +26,6 @@ interface UnitListItem {
     unitname: string;
 }
 
-// ── Products Type ──────────────────────────────────────────────────────────────
-interface ProductListItem {
-    productid: number;
-    productcode: string;
-    productname: string;
-    produnit: string | null;
-}
 
 // ── Item Detail Modal State ────────────────────────────────────────────────
 interface ItemDetailForm {
@@ -162,9 +156,8 @@ export default function PurchaseRequestDetailPage() {
     const [isProductModalOpen, setIsProductModalOpen] = useState(false);
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
-    // ── Product Search (inline autocomplete) ──────────────────────────────────
+    // ── Product Search (controlled value for ProductSearchBar) ────────────────
     const [productSearch, setProductSearch] = useState("");
-    const [showProductDropdown, setShowProductDropdown] = useState(false);
 
     // ── Modal Tab & Extra Fields ───────────────────────────────────────────────
     const [activeModalTab, setActiveModalTab] = useState<"rincian" | "info">("rincian");
@@ -207,22 +200,7 @@ export default function PurchaseRequestDetailPage() {
             .finally(() => setLoadingTipePengiriman(false));
     }, []);
 
-    // ── Products ───────────────────────────────────────────────────────────────
-    const [products, setProducts] = useState<ProductListItem[]>([]);
-    const [loadingProducts, setLoadingProducts] = useState(false);
-
-    useEffect(() => {
-        setLoadingProducts(true);
-        fetch("/api/master-data/products?limit=200")
-            .then((res) => res.json())
-            .then((json) => {
-                if (json.ok && Array.isArray(json.data)) {
-                    setProducts(json.data);
-                }
-            })
-            .catch((err) => console.error("[products fetch]", err))
-            .finally(() => setLoadingProducts(false));
-    }, []);
+    // ── Products — fetched on-demand via ProductSearchBar (no pre-fetch needed) ─
 
     // ── Item Detail Modal State ───────────────────────────────────────────
     const [itemForm, setItemForm] = useState<ItemDetailForm>(defaultItemForm);
@@ -231,14 +209,15 @@ export default function PurchaseRequestDetailPage() {
     const setItemField = <K extends keyof ItemDetailForm>(key: K, val: ItemDetailForm[K]) =>
         setItemForm((f) => ({ ...f, [key]: val }));
 
-    // ── Filtered Products for dropdown ────────────────────────────────────────
-    const filteredProducts = productSearch.trim()
-        ? products.filter(
-              (p) =>
-                  p.productname.toLowerCase().includes(productSearch.toLowerCase()) ||
-                  p.productcode.toLowerCase().includes(productSearch.toLowerCase())
-          ).slice(0, 8)
-        : products.slice(0, 8);
+    // ── Handle product selected from ProductSearchBar ───────────────────────────
+    const handleProductSelected = (p: ProductSearchResult) => {
+        setItemField("namaBarang", p.productname);
+        if (p.produnit) setItemField("uom", p.produnit);
+        setSelectedProductCode(p.productcode);
+        setProductSearch(p.productname);
+        setActiveModalTab("rincian");
+        setIsProductModalOpen(true);
+    };
 
     // ── Item discount / total computed ────────────────────────────────────────
     const itemDiskonRp = (itemForm.hargaDasar * itemDiskonPct) / 100;
@@ -648,57 +627,18 @@ export default function PurchaseRequestDetailPage() {
                             <div className="flex-1 flex flex-col overflow-hidden gap-3">
                                 {/* ── Product Search Bar ─────────────────────── */}
                                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-4 py-3 shrink-0 flex items-center gap-3">
-                                    <div className="flex-1 relative">
-                                        <div className="flex items-center border border-slate-300 rounded-lg overflow-hidden focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/30 bg-white">
-                                            <input
-                                                type="text"
-                                                value={productSearch}
-                                                onChange={(e) => {
-                                                    setProductSearch(e.target.value);
-                                                    setShowProductDropdown(true);
-                                                }}
-                                                onFocus={() => setShowProductDropdown(true)}
-                                                onBlur={() =>
-                                                    setTimeout(() => setShowProductDropdown(false), 150)
-                                                }
-                                                placeholder="Cari/Pilih Barang &amp; Jasa..."
-                                                className="flex-1 px-3 py-2 text-sm outline-none bg-transparent"
-                                            />
-                                            <span className="px-3 text-slate-400">
-                                                <span className="material-symbols-outlined text-lg">search</span>
-                                            </span>
-                                        </div>
-                                        {showProductDropdown && filteredProducts.length > 0 && (
-                                            <div className="absolute z-50 top-full left-0 right-0 bg-white border border-slate-200 rounded-lg shadow-xl mt-1 max-h-64 overflow-y-auto">
-                                                {filteredProducts.map((p) => (
-                                                    <button
-                                                        key={p.productid}
-                                                        type="button"
-                                                        className="w-full px-4 py-3 text-left hover:bg-primary/5 border-b border-slate-100 last:border-0 transition-colors"
-                                                        onMouseDown={(e) => e.preventDefault()}
-                                                        onClick={() => {
-                                                            setItemField("namaBarang", p.productname);
-                                                            if (p.produnit) setItemField("uom", p.produnit);
-                                                            setSelectedProductCode(p.productcode);
-                                                            setProductSearch(p.productname);
-                                                            setShowProductDropdown(false);
-                                                            setActiveModalTab("rincian");
-                                                            setIsProductModalOpen(true);
-                                                        }}
-                                                    >
-                                                        <div className="text-sm font-semibold text-slate-800">
-                                                            {p.productname}
-                                                        </div>
-                                                        <div className="text-xs text-slate-400 mt-0.5">
-                                                            {p.productcode}
-                                                        </div>
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
+                                    <ProductSearchBar
+                                        className="flex-1"
+                                        value={productSearch}
+                                        onChange={setProductSearch}
+                                        onSelect={handleProductSelected}
+                                        placeholder="Cari/Pilih Barang & Jasa..."
+                                        minChars={2}
+                                        debounceMs={350}
+                                        maxResults={8}
+                                    />
                                     <div className="flex items-center gap-1.5 flex-shrink-0">
-                                        <span className="material-symbols-outlined text-slate-400 text-lg">search</span>
+                                        <span className="material-symbols-outlined text-slate-400 text-lg">inventory_2</span>
                                         <span className="text-sm font-semibold text-slate-700">
                                             Rincian Barang{" "}
                                             <span className="text-red-500">*</span>
@@ -805,30 +745,19 @@ export default function PurchaseRequestDetailPage() {
                     {/* Nama Barang */}
                     <div className="grid grid-cols-[160px_1fr] items-center gap-3 px-4 py-2.5">
                         <span className="text-xs font-semibold text-slate-500 uppercase">Nama Barang</span>
-                        <div className="relative">
-                            <select
-                                value={itemForm.namaBarang}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    setItemField("namaBarang", val);
-                                    const prod = products.find(p => p.productname === val);
-                                    if (prod && prod.produnit) {
-                                        setItemField("uom", prod.produnit);
-                                    }
-                                }}
-                                disabled={loadingProducts}
-                                className="w-full border border-primary/40 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 bg-white disabled:bg-slate-100"
-                            >
-                                <option value="">
-                                    {loadingProducts ? "Memuat produk..." : "-- Pilih Produk --"}
-                                </option>
-                                {products.map((p) => (
-                                    <option key={p.productid} value={p.productname}>
-                                        {p.productcode} - {p.productname}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+                        <ProductSearchBar
+                            value={itemForm.namaBarang}
+                            onChange={(val) => setItemField("namaBarang", val)}
+                            onSelect={(p) => {
+                                setItemField("namaBarang", p.productname);
+                                setSelectedProductCode(p.productcode);
+                                if (p.produnit) setItemField("uom", p.produnit);
+                            }}
+                            placeholder="Cari produk..."
+                            minChars={2}
+                            debounceMs={350}
+                            maxResults={8}
+                        />
                     </div>
 
                     {/* Product Description */}
