@@ -139,7 +139,7 @@ type TabKey = "header" | "request-details" | "attachments";
 
 const tabs: { key: TabKey; label: string; icon: string; badge?: string }[] = [
     { key: "header", label: "Header Info", icon: "description" },
-    { key: "request-details", label: "Detail Permintaan", icon: "list_alt", badge: "3" },
+    { key: "request-details", label: "Detail Permintaan", icon: "list_alt"},
     { key: "attachments", label: "Lampiran", icon: "attachment" },
 ];
 
