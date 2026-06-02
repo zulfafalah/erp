@@ -27,11 +27,19 @@ interface UnitListItem {
 }
 
 
+// ── Extended ProductItem with backend IDs ─────────────────────────────────
+export interface ExtendedProductItem extends ProductItem {
+    productid?: number;
+    uomid?: number;
+}
+
 // ── Item Detail Modal State ────────────────────────────────────────────────
 interface ItemDetailForm {
     namaBarang: string;
     productDescription: string;
     uom: string;
+    uomid?: number;
+    productid?: number;
     kuantitas: number;
     hargaDasar: number;
     diskon1Pct: number;
@@ -40,12 +48,15 @@ interface ItemDetailForm {
     diskon4Pct: number;
     ppnPct: number;
     additionalNotes: string;
+    estpod: string;
 }
 
 const defaultItemForm: ItemDetailForm = {
     namaBarang: "",
     productDescription: "",
     uom: "PCS",
+    uomid: undefined,
+    productid: undefined,
     kuantitas: 0,
     hargaDasar: 0,
     diskon1Pct: 0,
@@ -54,6 +65,7 @@ const defaultItemForm: ItemDetailForm = {
     diskon4Pct: 0,
     ppnPct: 0,
     additionalNotes: "",
+    estpod: "",
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -72,7 +84,7 @@ function useItemCalc(form: ItemDetailForm) {
     return { setelah1, setelah2, setelah3, setelah4, ppnNominal, hargaFinal, jumlah };
 }
 
-const defaultProductItems: ProductItem[] = [];
+const defaultProductItems: ExtendedProductItem[] = [];
 
 // ── Column definition for this page ───────────────────────────────────────
 const _fmt = (v: number) =>
@@ -152,12 +164,31 @@ const statusBadgeStyles: Record<string, string> = {
 
 export default function PurchaseRequestDetailPage() {
     const [activeTab, setActiveTab] = useState<TabKey>("header");
-    const [productItems, setProductItems] = useState<ProductItem[]>(defaultProductItems);
+    const [productItems, setProductItems] = useState<ExtendedProductItem[]>(defaultProductItems);
     const [isProductModalOpen, setIsProductModalOpen] = useState(false);
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
     // ── Product Search (controlled value for ProductSearchBar) ────────────────
     const [productSearch, setProductSearch] = useState("");
+
+    // ── Header Form State ─────────────────────────────────────────────────────
+    const today = new Date().toISOString().split("T")[0];
+    const [podate, setPodate] = useState(today);
+    const [ispolokal, setIspolokal] = useState(0); // 0 = lokal, 1 = import
+    const [supplierIdForm, setSupplierIdForm] = useState<number | "">("");
+    const [tipePengirimanId, setTipePengirimanId] = useState<number | "">("");
+    const [poket1, setPoket1] = useState("");
+    const [potop, setPotop] = useState(0);
+    const [pocurr] = useState("IDR");
+    const [porate] = useState("1.00");
+    const [poInvNo, setPoInvNo] = useState("");
+    const [poSjNo, setPoSjNo] = useState("");
+    const [poFpajaktno, setPoFpajaktno] = useState("");
+    const [poFpajaktgl, setPoFpajaktgl] = useState("");
+
+    // ── Save state ────────────────────────────────────────────────────────────
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
 
     // ── Modal Tab & Extra Fields ───────────────────────────────────────────────
     const [activeModalTab, setActiveModalTab] = useState<"rincian" | "info">("rincian");
@@ -213,10 +244,80 @@ export default function PurchaseRequestDetailPage() {
     const handleProductSelected = (p: ProductSearchResult) => {
         setItemField("namaBarang", p.productname);
         if (p.produnit) setItemField("uom", p.produnit);
+        if (p.productid) setItemField("productid", p.productid);
         setSelectedProductCode(p.productcode);
         setProductSearch(p.productname);
         setActiveModalTab("rincian");
         setIsProductModalOpen(true);
+    };
+
+    // ── Build payload & call API ──────────────────────────────────────────────
+    const handleSave = async () => {
+        if (!supplierIdForm) {
+            setSaveError("Pilih pemasok terlebih dahulu.");
+            return;
+        }
+        if (productItems.length === 0) {
+            setSaveError("Tambahkan minimal satu item barang.");
+            return;
+        }
+        setSaveError(null);
+        setIsSaving(true);
+        try {
+            const payload = {
+                podate,
+                supplierid: supplierIdForm as number,
+                ispolokal,
+                pocurr,
+                porate,
+                potop,
+                tipebiaya: tipePengirimanId || 0,
+                poket1,
+                poket2: "",
+                pokontrakno: "",
+                po_inv_no_supplier: poInvNo,
+                po_sj_no_supplier: poSjNo,
+                po_fpajaknorcv: poFpajaktno,
+                po_fpajaktglrcv: poFpajaktgl || podate,
+                items: productItems.map((item) => ({
+                    productid: item.productid ?? 0,
+                    uomid: item.uomid ?? 0,
+                    qtypod: String(item.qty.toFixed(2)),
+                    pricepod: String(item.hargaDasar.toFixed(4)),
+                    ketbarang: item.name,
+                    kettambahan: "",
+                    discpctpod: String(item.discount > 0 ? ((item.discount / item.hargaDasar) * 100).toFixed(4) : "0.0000"),
+                    pod_disc_pct_2: "0.0000",
+                    pod_disc_pct_3: "0.0000",
+                    pod_disc_pct_4: "0.0000",
+                    pod_disc_pct_5: "0.0000",
+                    pod_disc_pct_6: "0.0000",
+                    pod_ppn_pct: String(item.ppn > 0 && item.hargaFinal > 0 ? ((item.ppn / (item.hargaFinal - item.ppn)) * 100).toFixed(4) : "0.0000"),
+                    estpod: podate,
+                })),
+            };
+
+            const res = await fetch("/api/purchase/orders", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+            const json = await res.json();
+
+            if (!res.ok || !json.ok) {
+                setSaveError(json.message ?? "Gagal menyimpan. Silakan coba lagi.");
+                return;
+            }
+
+            // Navigate to the new record
+            const newId = json.data?.poid ?? "new";
+            router.push(`/purchase/request/${newId}`);
+        } catch (err) {
+            console.error("[handleSave]", err);
+            setSaveError("Terjadi kesalahan jaringan. Silakan coba lagi.");
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     // ── Item discount / total computed ────────────────────────────────────────
@@ -258,7 +359,7 @@ export default function PurchaseRequestDetailPage() {
         ]);
     };
 
-    const handleUpdateItem = (index: number, field: keyof ProductItem, value: any) => {
+    const handleUpdateItem = (index: number, field: keyof ExtendedProductItem, value: unknown) => {
         const newItems = [...productItems];
         newItems[index] = { ...newItems[index], [field]: value };
 
@@ -331,8 +432,15 @@ export default function PurchaseRequestDetailPage() {
                             </div>
                         </div>
                         <div className="flex flex-wrap items-center gap-2 md:gap-3 w-full md:w-auto">
-                            <button className="flex-1 md:flex-none justify-center px-3 md:px-4 py-2 text-xs md:text-sm font-semibold text-slate-700 hover:bg-slate-200/50 rounded-lg transition-all border border-slate-200 md:border-transparent">
-                                Save Draft
+                            {saveError && (
+                                <span className="text-xs text-red-500 font-medium">{saveError}</span>
+                            )}
+                            <button
+                                onClick={handleSave}
+                                disabled={isSaving}
+                                className="flex-1 md:flex-none justify-center px-3 md:px-4 py-2 text-xs md:text-sm font-semibold text-slate-700 hover:bg-slate-200/50 rounded-lg transition-all border border-slate-200 md:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isSaving ? "Menyimpan..." : "Save Draft"}
                             </button>
                             <button disabled={isNew} className="flex-1 md:flex-none justify-center px-3 md:px-4 py-2 text-xs md:text-sm font-semibold bg-white text-primary border border-primary/20 hover:border-primary rounded-lg transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-primary/20 disabled:hover:bg-white">
                                 <span className="material-symbols-outlined text-sm">print</span>
@@ -393,31 +501,54 @@ export default function PurchaseRequestDetailPage() {
                                                 <FormField label="No.">
                                                     <div className="flex gap-2">
                                                         <FormInput defaultValue="Generate" readOnly />
-                                                        <FormSelect>
-                                                            <option>Lokal</option>
-                                                            <option>Import</option>
+                                                        <FormSelect
+                                                            value={ispolokal}
+                                                            onChange={(e) => setIspolokal(Number(e.target.value))}
+                                                        >
+                                                            <option value={0}>Lokal</option>
+                                                            <option value={1}>Import</option>
                                                         </FormSelect>
                                                     </div>
                                                 </FormField>
 
                                                 {/* Tanggal */}
                                                 <FormField label="Tanggal">
-                                                    <FormInput type="date" defaultValue="2026-04-01" />
+                                                    <FormInput
+                                                        type="date"
+                                                        value={podate}
+                                                        onChange={(e) => setPodate(e.target.value)}
+                                                    />
                                                 </FormField>
 
                                                 {/* No.Invoice ~ No. Shipment Supplier */}
                                                 <FormField label="No.Invoice ~ No. Shipment Supplier" className="sm:col-span-2">
                                                     <div className="flex gap-2">
-                                                        <FormInput placeholder="No. Invoice..." />
-                                                        <FormInput placeholder="No. Shipment Supplier..." />
+                                                        <FormInput
+                                                            placeholder="No. Invoice..."
+                                                            value={poInvNo}
+                                                            onChange={(e) => setPoInvNo(e.target.value)}
+                                                        />
+                                                        <FormInput
+                                                            placeholder="No. Shipment Supplier..."
+                                                            value={poSjNo}
+                                                            onChange={(e) => setPoSjNo(e.target.value)}
+                                                        />
                                                     </div>
                                                 </FormField>
 
                                                 {/* Faktur. Pajak No. ~ Tgl Faktur */}
                                                 <FormField label="Faktur. Pajak No. ~ Tgl Faktur" className="sm:col-span-2">
                                                     <div className="flex gap-2">
-                                                        <FormInput placeholder="No. Faktur Pajak..." />
-                                                        <FormInput type="date" defaultValue="2026-04-01" />
+                                                        <FormInput
+                                                            placeholder="No. Faktur Pajak..."
+                                                            value={poFpajaktno}
+                                                            onChange={(e) => setPoFpajaktno(e.target.value)}
+                                                        />
+                                                        <FormInput
+                                                            type="date"
+                                                            value={poFpajaktgl}
+                                                            onChange={(e) => setPoFpajaktgl(e.target.value)}
+                                                        />
                                                     </div>
                                                 </FormField>
                                             </div>
@@ -432,7 +563,11 @@ export default function PurchaseRequestDetailPage() {
                                             <div className="p-4 md:p-6 grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
                                                 {/* Pemasok */}
                                                 <FormField label="Pemasok" className="sm:col-span-2">
-                                                    <FormSelect disabled={loadingSuppliers}>
+                                                    <FormSelect
+                                                        disabled={loadingSuppliers}
+                                                        value={supplierIdForm}
+                                                        onChange={(e) => setSupplierIdForm(e.target.value ? Number(e.target.value) : "")}
+                                                    >
                                                         <option value="">
                                                             {loadingSuppliers ? "Memuat data pemasok..." : "-- Pilih Pemasok --"}
                                                         </option>
@@ -446,7 +581,11 @@ export default function PurchaseRequestDetailPage() {
 
                                                 {/* Tipe Pengiriman */}
                                                 <FormField label="Tipe Pengiriman" className="sm:col-span-2">
-                                                    <FormSelect disabled={loadingTipePengiriman}>
+                                                    <FormSelect
+                                                        disabled={loadingTipePengiriman}
+                                                        value={tipePengirimanId}
+                                                        onChange={(e) => setTipePengirimanId(e.target.value ? Number(e.target.value) : "")}
+                                                    >
                                                         <option value="">
                                                             {loadingTipePengiriman ? "Memuat tipe pengiriman..." : ":: Pilih Tipe Pengiriman ::"}
                                                         </option>
@@ -460,13 +599,21 @@ export default function PurchaseRequestDetailPage() {
 
                                                 {/* Keterangan */}
                                                 <FormField label="Keterangan" className="sm:col-span-2">
-                                                    <FormInput placeholder="Keterangan..." />
+                                                    <FormInput
+                                                        placeholder="Keterangan..."
+                                                        value={poket1}
+                                                        onChange={(e) => setPoket1(e.target.value)}
+                                                    />
                                                 </FormField>
 
                                                 {/* Tempo Bayar */}
                                                 <FormField label="Tempo Bayar">
                                                     <div className="flex items-center gap-2">
-                                                        <FormInput type="number" defaultValue="0" readOnly />
+                                                        <FormInput
+                                                            type="number"
+                                                            value={potop}
+                                                            onChange={(e) => setPotop(Number(e.target.value) || 0)}
+                                                        />
                                                         <span className="text-sm text-slate-500 whitespace-nowrap">Hari</span>
                                                     </div>
                                                 </FormField>
@@ -596,8 +743,16 @@ export default function PurchaseRequestDetailPage() {
 
                                             {/* Action Buttons */}
                                             <div className="p-4 bg-slate-50 border-t border-slate-100 grid grid-cols-2 gap-2">
-                                                <button className="col-span-2 py-3 bg-primary text-white rounded font-bold hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20">
-                                                    <span className="material-symbols-outlined">save</span> SIMPAN PERMINTAAN
+                                                {saveError && (
+                                                    <p className="col-span-2 text-xs text-red-500 font-medium text-center -mt-1 mb-1">{saveError}</p>
+                                                )}
+                                                <button
+                                                    onClick={handleSave}
+                                                    disabled={isSaving}
+                                                    className="col-span-2 py-3 bg-primary text-white rounded font-bold hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20 disabled:opacity-60 disabled:cursor-not-allowed"
+                                                >
+                                                    <span className="material-symbols-outlined">{isSaving ? "hourglass_empty" : "save"}</span>
+                                                    {isSaving ? "MENYIMPAN..." : "SIMPAN PERMINTAAN"}
                                                 </button>
                                                 <button className="py-2 bg-white border border-slate-200 text-slate-600 rounded text-xs px-1 md:px-0 font-bold hover:bg-slate-100 transition-colors flex items-center justify-center gap-1">
                                                     <span className="material-symbols-outlined !text-sm">refresh</span> RESET
@@ -708,7 +863,7 @@ export default function PurchaseRequestDetailPage() {
                         <button
                             onClick={() => {
                                 if (!itemForm.namaBarang) return;
-                                const newItem: ProductItem = {
+                                const newItem: ExtendedProductItem = {
                                     name: itemForm.namaBarang,
                                     barcode: selectedProductCode,
                                     uom: itemForm.uom,
@@ -718,6 +873,8 @@ export default function PurchaseRequestDetailPage() {
                                     ppn: calc.ppnNominal,
                                     hargaFinal: calc.hargaFinal,
                                     jumlah: calc.jumlah,
+                                    productid: itemForm.productid,
+                                    uomid: itemForm.uomid,
                                 };
                                 if (editingIndex !== null) {
                                     setProductItems((prev) =>
