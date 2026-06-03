@@ -966,7 +966,7 @@ export default function PurchaseRequestDetailPage() {
                     <div className="grid grid-cols-[160px_1fr] items-center gap-3 px-4 py-2.5">
                         <span className="text-xs font-semibold text-slate-500 uppercase">UOM</span>
                         <div className="flex items-center gap-2">
-                            <select
+                            <FormSelect
                                 value={itemForm.uomid ?? ""}
                                 onChange={(e) => {
                                     const selected = units.find(
@@ -978,7 +978,7 @@ export default function PurchaseRequestDetailPage() {
                                     }
                                 }}
                                 disabled={loadingUnits}
-                                className="border border-slate-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-primary bg-white disabled:bg-slate-50 disabled:text-slate-400"
+                                className="w-auto"
                             >
                                 <option value="">
                                     {loadingUnits ? "Memuat satuan..." : "-- Pilih UOM --"}
@@ -988,7 +988,7 @@ export default function PurchaseRequestDetailPage() {
                                         {u.unit || u.unitname}
                                     </option>
                                 ))}
-                            </select>
+                            </FormSelect>
                             <span className="text-xs text-slate-400">
                                 {`${itemForm.qtyOuter ? parseFloat(itemForm.qtyOuter).toLocaleString("id-ID") : "0"} ${itemForm.uom || "—"} @ ${itemForm.qtyInner ? parseFloat(itemForm.qtyInner).toLocaleString("id-ID") : "0"} ${itemForm.uomInnerName || "PCS"}`}
                             </span>
