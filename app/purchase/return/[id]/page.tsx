@@ -27,6 +27,14 @@ interface ItemDetailForm {
     tglKadaluarsa: string;
 }
 
+interface ProductItem {
+    name: string;
+    sku: string;
+    qty: number;
+    unitPrice: number;
+    subtotal: number;
+}
+
 const defaultItemForm: ItemDetailForm = {
     namaBarang: "",
     keterangan: "",
@@ -78,10 +86,10 @@ const tabs: { key: TabKey; label: string; icon: string; badge?: string }[] = [
 ];
 
 const statusBadgeStyles: Record<string, string> = {
-    Closed:   "bg-emerald-100 text-emerald-700 border-emerald-200",
+    Closed: "bg-emerald-100 text-emerald-700 border-emerald-200",
     Approved: "bg-green-100 text-green-700 border-green-200",
-    Pending:  "bg-yellow-100 text-yellow-700 border-yellow-200",
-    Draft:    "bg-slate-100 text-slate-600 border-slate-200",
+    Pending: "bg-yellow-100 text-yellow-700 border-yellow-200",
+    Draft: "bg-slate-100 text-slate-600 border-slate-200",
     Rejected: "bg-red-100 text-red-700 border-red-200",
 };
 
@@ -103,7 +111,7 @@ export default function PurchaseReturnDetailPage() {
     const handleUpdateItem = (index: number, field: keyof ProductItem, value: any) => {
         const newItems = [...productItems];
         newItems[index] = { ...newItems[index], [field]: value };
-      
+
         setProductItems(newItems);
     };
 
@@ -187,11 +195,10 @@ export default function PurchaseReturnDetailPage() {
                                 <button
                                     key={tab.key}
                                     onClick={() => setActiveTab(tab.key)}
-                                    className={`px-4 md:px-6 py-3 text-xs md:text-sm font-medium flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
-                                        activeTab === tab.key
+                                    className={`px-4 md:px-6 py-3 text-xs md:text-sm font-medium flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${activeTab === tab.key
                                             ? "font-bold border-primary text-primary"
                                             : "text-slate-500 hover:text-slate-700 border-transparent"
-                                    }`}
+                                        }`}
                                 >
                                     <span className="material-symbols-outlined text-lg">{tab.icon}</span>
                                     {tab.label}

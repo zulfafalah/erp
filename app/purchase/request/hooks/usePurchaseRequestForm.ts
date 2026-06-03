@@ -1,0 +1,164 @@
+import { useState, useEffect } from "react";
+import { SupplierListItem, UnitListItem, ExtendedProductItem } from "../types";
+
+interface UsePurchaseRequestFormProps {
+    productItems: ExtendedProductItem[];
+    router: any; // using any to avoid import incompatibilities, will work with next/navigation useRouter
+}
+
+export function usePurchaseRequestForm({ productItems, router }: UsePurchaseRequestFormProps) {
+    const today = new Date().toISOString().split("T")[0];
+    
+    // ── Header Form State ─────────────────────────────────────────────────────
+    const [podate, setPodate] = useState(today);
+    const [ispolokal, setIspolokal] = useState(0); // 0 = lokal, 1 = import
+    const [supplierIdForm, setSupplierIdForm] = useState<number | "">("");
+    const [tipePengirimanId, setTipePengirimanId] = useState<number | "">("");
+    const [poket1, setPoket1] = useState("");
+    const [potop, setPotop] = useState(0);
+    const [pocurr] = useState("IDR");
+    const [porate] = useState("1.00");
+    const [poInvNo, setPoInvNo] = useState("");
+    const [poSjNo, setPoSjNo] = useState("");
+    const [poFpajaktno, setPoFpajaktno] = useState("");
+    const [poFpajaktgl, setPoFpajaktgl] = useState("");
+
+    // ── Save state ────────────────────────────────────────────────────────────
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
+
+    // ── Suppliers ─────────────────────────────────────────────────────────────
+    const [suppliers, setSuppliers] = useState<SupplierListItem[]>([]);
+    const [loadingSuppliers, setLoadingSuppliers] = useState(false);
+
+    useEffect(() => {
+        setLoadingSuppliers(true);
+        fetch("/api/master-data/suppliers?limit=200")
+            .then((res) => res.json())
+            .then((json) => {
+                if (json.ok && Array.isArray(json.data)) {
+                    setSuppliers(json.data);
+                }
+            })
+            .catch((err) => console.error("[suppliers fetch]", err))
+            .finally(() => setLoadingSuppliers(false));
+    }, []);
+
+    // ── Tipe Pengiriman (Units isplat=1) ───────────────────────────────────────
+    const [tipePengiriman, setTipePengiriman] = useState<UnitListItem[]>([]);
+    const [loadingTipePengiriman, setLoadingTipePengiriman] = useState(false);
+
+    useEffect(() => {
+        setLoadingTipePengiriman(true);
+        fetch("/api/master-data/units?isplat=1")
+            .then((res) => res.json())
+            .then((json) => {
+                if (json.ok && Array.isArray(json.data)) {
+                    setTipePengiriman(json.data);
+                }
+            })
+            .catch((err) => console.error("[tipePengiriman fetch]", err))
+            .finally(() => setLoadingTipePengiriman(false));
+    }, []);
+
+    const handleSave = async () => {
+        if (!supplierIdForm) {
+            setSaveError("Pilih pemasok terlebih dahulu.");
+            return;
+        }
+        if (productItems.length === 0) {
+            setSaveError("Tambahkan minimal satu item barang.");
+            return;
+        }
+        setSaveError(null);
+        setIsSaving(true);
+        try {
+            const payload = {
+                podate,
+                supplierid: supplierIdForm as number,
+                ispolokal,
+                pocurr,
+                porate,
+                potop,
+                tipebiaya: tipePengirimanId || 0,
+                poket1,
+                poket2: "",
+                pokontrakno: "",
+                po_inv_no_supplier: poInvNo,
+                po_sj_no_supplier: poSjNo,
+                po_fpajaknorcv: poFpajaktno,
+                po_fpajaktglrcv: poFpajaktgl || podate,
+                items: productItems.map((item) => ({
+                    productid: item.productid ?? 0,
+                    uomid: item.uomid ?? 0,
+                    qtypod: String(item.qty.toFixed(2)),
+                    pricepod: String(item.hargaDasar.toFixed(4)),
+                    ketbarang: item.name,
+                    kettambahan: "",
+                    discpctpod: String(item.discount > 0 ? ((item.discount / item.hargaDasar) * 100).toFixed(4) : "0.0000"),
+                    pod_disc_pct_2: "0.0000",
+                    pod_disc_pct_3: "0.0000",
+                    pod_disc_pct_4: "0.0000",
+                    pod_disc_pct_5: "0.0000",
+                    pod_disc_pct_6: "0.0000",
+                    pod_ppn_pct: String(item.ppn > 0 && item.hargaFinal > 0 ? ((item.ppn / (item.hargaFinal - item.ppn)) * 100).toFixed(4) : "0.0000"),
+                    estpod: podate,
+                })),
+            };
+
+            const res = await fetch("/api/purchase/orders", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+            const json = await res.json();
+
+            if (!res.ok || !json.ok) {
+                setSaveError(json.message ?? "Gagal menyimpan. Silakan coba lagi.");
+                return;
+            }
+
+            // Navigate to the new record
+            const newId = json.data?.poid ?? "new";
+            router.push(`/purchase/request/${newId}`);
+        } catch (err) {
+            console.error("[handleSave]", err);
+            setSaveError("Terjadi kesalahan jaringan. Silakan coba lagi.");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return {
+        podate,
+        setPodate,
+        ispolokal,
+        setIspolokal,
+        supplierIdForm,
+        setSupplierIdForm,
+        tipePengirimanId,
+        setTipePengirimanId,
+        poket1,
+        setPoket1,
+        potop,
+        setPotop,
+        pocurr,
+        porate,
+        poInvNo,
+        setPoInvNo,
+        poSjNo,
+        setPoSjNo,
+        poFpajaktno,
+        setPoFpajaktno,
+        poFpajaktgl,
+        setPoFpajaktgl,
+        isSaving,
+        saveError,
+        setSaveError,
+        suppliers,
+        loadingSuppliers,
+        tipePengiriman,
+        loadingTipePengiriman,
+        handleSave,
+    };
+}

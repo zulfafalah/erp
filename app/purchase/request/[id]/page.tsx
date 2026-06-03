@@ -1,394 +1,47 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Navbar from "../../../components/Navbar";
 import Sidebar from "../../../components/Sidebar";
 import StatusBar from "../../../components/StatusBar";
-import ItemTable, { ProductItem, ColumnDef } from "../../../components/ItemTable";
+import ItemTable, { ProductItem } from "../../../components/ItemTable";
 import FormField from "../../../components/FormField";
 import FormInput from "@/app/components/FormInput";
 import ModalFormInput from "@/app/components/ModalFormInput";
 import FormSelect from "../../../components/FormSelect";
 import Modal from "../../../components/Modal";
 import ProductSearchBar, { ProductSearchResult } from "../../../components/ProductSearchBar";
+import Button from "@/app/components/Button";
+import PercentNominalInput from "@/app/components/PercentNominalInput";
 
-// ── Supplier Type ──────────────────────────────────────────────────────────────
-interface SupplierListItem {
-    supplierid: number;
-    suppcode: string;
-    companyname: string;
-}
-
-// ── Unit (Tipe Pengiriman) Type ────────────────────────────────────────────────
-interface UnitListItem {
-    unitid: number;
-    unit: string;
-    unitname: string;
-}
-
-
-// ── Extended ProductItem with backend IDs ─────────────────────────────────
-export interface ExtendedProductItem extends ProductItem {
-    productid?: number;
-    uomid?: number;
-}
-
-// ── Item Detail Modal State ────────────────────────────────────────────────
-interface ItemDetailForm {
-    namaBarang: string;
-    productDescription: string;
-    uom: string;
-    uomid?: number;
-    productid?: number;
-    qtyOuter: string;
-    qtyInner: string;
-    uomInnerName: string;
-    kuantitas: number;
-    hargaDasar: number;
-    diskon1Pct: number;
-    diskon2Pct: number;
-    diskon3Pct: number;
-    diskon4Pct: number;
-    ppnPct: number;
-    additionalNotes: string;
-    estpod: string;
-}
-
-const defaultItemForm: ItemDetailForm = {
-    namaBarang: "",
-    productDescription: "",
-    uom: "",
-    uomid: undefined,
-    productid: undefined,
-    qtyOuter: "0",
-    qtyInner: "0",
-    uomInnerName: "",
-    kuantitas: 0,
-    hargaDasar: 0,
-    diskon1Pct: 0,
-    diskon2Pct: 0,
-    diskon3Pct: 0,
-    diskon4Pct: 0,
-    ppnPct: 0,
-    additionalNotes: "",
-    estpod: "",
-};
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-function applyDiscount(price: number, pct: number) {
-    return price - (price * pct) / 100;
-}
-
-function useItemCalc(form: ItemDetailForm) {
-    const setelah1 = applyDiscount(form.hargaDasar, form.diskon1Pct);
-    const setelah2 = applyDiscount(setelah1, form.diskon2Pct);
-    const setelah3 = applyDiscount(setelah2, form.diskon3Pct);
-    const setelah4 = applyDiscount(setelah3, form.diskon4Pct);
-    const ppnNominal = (setelah4 * form.ppnPct) / 100;
-    const hargaFinal = setelah4 + ppnNominal;
-    const jumlah = hargaFinal * form.kuantitas;
-    return { setelah1, setelah2, setelah3, setelah4, ppnNominal, hargaFinal, jumlah };
-}
-
-const defaultProductItems: ExtendedProductItem[] = [];
-
-// ── Column definition for this page ───────────────────────────────────────
-const _fmt = (v: number) =>
-    v.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-const purchaseRequestColumns: ColumnDef<ProductItem>[] = [
-    { key: "barcode", label: "Barcode", width: "w-28", align: "left" },
-    {
-        key: "name",
-        label: "Nama Barang",
-        render: (v) => (
-            <p className="font-semibold text-slate-800 leading-tight">{String(v || "—")}</p>
-        ),
-    },
-    { key: "uom", label: "UOM", width: "w-20", align: "center" },
-    {
-        key: "qty",
-        label: "Qty",
-        width: "w-24",
-        align: "right",
-        editable: true,
-        editType: "number",
-        footer: "sum",
-    },
-    {
-        key: "hargaDasar",
-        label: "Harga Dasar",
-        width: "w-32",
-        align: "right",
-        render: (v) => _fmt(v as number),
-    },
-    {
-        key: "discount",
-        label: "Discount",
-        width: "w-28",
-        align: "right",
-        render: (v) => _fmt(v as number),
-    },
-    {
-        key: "ppn",
-        label: "PPN",
-        width: "w-28",
-        align: "right",
-        render: (v) => _fmt(v as number),
-    },
-    {
-        key: "hargaFinal",
-        label: "Harga Final",
-        width: "w-32",
-        align: "right",
-        render: (v) => <span className="font-medium">{_fmt(v as number)}</span>,
-    },
-    {
-        key: "jumlah",
-        label: "Jumlah",
-        width: "w-36",
-        align: "right",
-        render: (v) => <span className="font-bold">{_fmt(v as number)}</span>,
-        footer: "sum",
-    },
-];
-
-type TabKey = "header" | "request-details" | "attachments";
-
-const tabs: { key: TabKey; label: string; icon: string; badge?: string }[] = [
-    { key: "header", label: "Header Info", icon: "description" },
-    { key: "request-details", label: "Detail Permintaan", icon: "list_alt" },
-    { key: "attachments", label: "Lampiran", icon: "attachment" },
-];
-
-const statusBadgeStyles: Record<string, string> = {
-    Approved: "bg-green-100 text-green-700 border-green-200",
-    Pending: "bg-yellow-100 text-yellow-700 border-yellow-200",
-    Draft: "bg-slate-100 text-slate-600 border-slate-200",
-    Rejected: "bg-red-100 text-red-700 border-red-200",
-};
+import { TabKey, ExtendedProductItem, ItemDetailForm } from "../types";
+import { tabs, statusBadgeStyles, purchaseRequestColumns } from "../constants";
+import { usePurchaseRequestForm } from "../hooks/usePurchaseRequestForm";
+import { useItemModal } from "../hooks/useItemModal";
 
 export default function PurchaseRequestDetailPage() {
-    const [activeTab, setActiveTab] = useState<TabKey>("header");
-    const [productItems, setProductItems] = useState<ExtendedProductItem[]>(defaultProductItems);
-    const [isProductModalOpen, setIsProductModalOpen] = useState(false);
-    const [editingIndex, setEditingIndex] = useState<number | null>(null);
-
-    // ── Product Search (controlled value for ProductSearchBar) ────────────────
-    const [productSearch, setProductSearch] = useState("");
-
-    // ── Header Form State ─────────────────────────────────────────────────────
-    const today = new Date().toISOString().split("T")[0];
-    const [podate, setPodate] = useState(today);
-    const [ispolokal, setIspolokal] = useState(0); // 0 = lokal, 1 = import
-    const [supplierIdForm, setSupplierIdForm] = useState<number | "">("");
-    const [tipePengirimanId, setTipePengirimanId] = useState<number | "">("");
-    const [poket1, setPoket1] = useState("");
-    const [potop, setPotop] = useState(0);
-    const [pocurr] = useState("IDR");
-    const [porate] = useState("1.00");
-    const [poInvNo, setPoInvNo] = useState("");
-    const [poSjNo, setPoSjNo] = useState("");
-    const [poFpajaktno, setPoFpajaktno] = useState("");
-    const [poFpajaktgl, setPoFpajaktgl] = useState("");
-
-    // ── Save state ────────────────────────────────────────────────────────────
-    const [isSaving, setIsSaving] = useState(false);
-    const [saveError, setSaveError] = useState<string | null>(null);
-
-    // ── Modal Tab & Extra Fields ───────────────────────────────────────────────
-    const [activeModalTab, setActiveModalTab] = useState<"rincian" | "info">("rincian");
-    const [selectedProductCode, setSelectedProductCode] = useState("");
-    const [itemPpnChecked, setItemPpnChecked] = useState(true);
-    const [itemDiskonPct, setItemDiskonPct] = useState(0);
-    const [itemGudang, setItemGudang] = useState("");
-
-    // ── Suppliers ─────────────────────────────────────────────────────────────
-    const [suppliers, setSuppliers] = useState<SupplierListItem[]>([]);
-    const [loadingSuppliers, setLoadingSuppliers] = useState(false);
-
-    useEffect(() => {
-        setLoadingSuppliers(true);
-        fetch("/api/master-data/suppliers?limit=200")
-            .then((res) => res.json())
-            .then((json) => {
-                if (json.ok && Array.isArray(json.data)) {
-                    setSuppliers(json.data);
-                }
-            })
-            .catch((err) => console.error("[suppliers fetch]", err))
-            .finally(() => setLoadingSuppliers(false));
-    }, []);
-
-    // ── Tipe Pengiriman (Units isplat=1) ───────────────────────────────────────
-    const [tipePengiriman, setTipePengiriman] = useState<UnitListItem[]>([]);
-    const [loadingTipePengiriman, setLoadingTipePengiriman] = useState(false);
-
-    useEffect(() => {
-        setLoadingTipePengiriman(true);
-        fetch("/api/master-data/units?isplat=1")
-            .then((res) => res.json())
-            .then((json) => {
-                if (json.ok && Array.isArray(json.data)) {
-                    setTipePengiriman(json.data);
-                }
-            })
-            .catch((err) => console.error("[tipePengiriman fetch]", err))
-            .finally(() => setLoadingTipePengiriman(false));
-    }, []);
-
-    // ── Units (UOM) for modal ─────────────────────────────────────────────────
-    const [units, setUnits] = useState<UnitListItem[]>([]);
-    const [loadingUnits, setLoadingUnits] = useState(false);
-
-    useEffect(() => {
-        setLoadingUnits(true);
-        fetch("/api/master-data/units?limit=200")
-            .then((res) => res.json())
-            .then((json) => {
-                if (json.ok && Array.isArray(json.data)) {
-                    setUnits(json.data);
-                }
-            })
-            .catch((err) => console.error("[units fetch]", err))
-            .finally(() => setLoadingUnits(false));
-    }, []);
-
-    // ── Products — fetched on-demand via ProductSearchBar (no pre-fetch needed) ─
-
-    // ── Item Detail Modal State ───────────────────────────────────────────
-    const [itemForm, setItemForm] = useState<ItemDetailForm>(defaultItemForm);
-    const calc = useItemCalc(itemForm);
-
-    const setItemField = <K extends keyof ItemDetailForm>(key: K, val: ItemDetailForm[K]) =>
-        setItemForm((f) => ({ ...f, [key]: val }));
-
-    // ── Handle product selected from ProductSearchBar ───────────────────────────
-    const handleProductSelected = (p: ProductSearchResult) => {
-        setItemField("namaBarang", p.productname);
-        setItemField("productDescription", p.productname2 ?? "");
-        if (p.uom_id_prod) setItemField("uomid", p.uom_id_prod);
-        if (p.produnit) setItemField("uom", p.produnit);
-        if (p.productid) setItemField("productid", p.productid);
-        setItemField("qtyOuter", p.qty_outer ?? "0");
-        setItemField("qtyInner", p.qty_inner ?? "0");
-        setItemField("uomInnerName", p.uom_inner_outer_name ?? "");
-        setSelectedProductCode(p.productcode);
-        setProductSearch(p.productname);
-        setActiveModalTab("rincian");
-        setIsProductModalOpen(true);
-    };
-
-    // ── Build payload & call API ──────────────────────────────────────────────
-    const handleSave = async () => {
-        if (!supplierIdForm) {
-            setSaveError("Pilih pemasok terlebih dahulu.");
-            return;
-        }
-        if (productItems.length === 0) {
-            setSaveError("Tambahkan minimal satu item barang.");
-            return;
-        }
-        setSaveError(null);
-        setIsSaving(true);
-        try {
-            const payload = {
-                podate,
-                supplierid: supplierIdForm as number,
-                ispolokal,
-                pocurr,
-                porate,
-                potop,
-                tipebiaya: tipePengirimanId || 0,
-                poket1,
-                poket2: "",
-                pokontrakno: "",
-                po_inv_no_supplier: poInvNo,
-                po_sj_no_supplier: poSjNo,
-                po_fpajaknorcv: poFpajaktno,
-                po_fpajaktglrcv: poFpajaktgl || podate,
-                items: productItems.map((item) => ({
-                    productid: item.productid ?? 0,
-                    uomid: item.uomid ?? 0,
-                    qtypod: String(item.qty.toFixed(2)),
-                    pricepod: String(item.hargaDasar.toFixed(4)),
-                    ketbarang: item.name,
-                    kettambahan: "",
-                    discpctpod: String(item.discount > 0 ? ((item.discount / item.hargaDasar) * 100).toFixed(4) : "0.0000"),
-                    pod_disc_pct_2: "0.0000",
-                    pod_disc_pct_3: "0.0000",
-                    pod_disc_pct_4: "0.0000",
-                    pod_disc_pct_5: "0.0000",
-                    pod_disc_pct_6: "0.0000",
-                    pod_ppn_pct: String(item.ppn > 0 && item.hargaFinal > 0 ? ((item.ppn / (item.hargaFinal - item.ppn)) * 100).toFixed(4) : "0.0000"),
-                    estpod: podate,
-                })),
-            };
-
-            const res = await fetch("/api/purchase/orders", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
-            });
-            const json = await res.json();
-
-            if (!res.ok || !json.ok) {
-                setSaveError(json.message ?? "Gagal menyimpan. Silakan coba lagi.");
-                return;
-            }
-
-            // Navigate to the new record
-            const newId = json.data?.poid ?? "new";
-            router.push(`/purchase/request/${newId}`);
-        } catch (err) {
-            console.error("[handleSave]", err);
-            setSaveError("Terjadi kesalahan jaringan. Silakan coba lagi.");
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    // ── Item discount / total computed ────────────────────────────────────────
-    const itemDiskonRp = (itemForm.hargaDasar * itemDiskonPct) / 100;
-    const itemTotalHarga =
-        (itemForm.hargaDasar - itemDiskonRp) * itemForm.kuantitas * (1 + (itemPpnChecked ? 0.11 : 0));
-
-    const resetModalState = () => {
-        setItemForm(defaultItemForm);
-        setSelectedProductCode("");
-        setActiveModalTab("rincian");
-        setItemDiskonPct(0);
-        setItemGudang("");
-        setItemPpnChecked(true);
-        setProductSearch("");
-        setEditingIndex(null);
-    };
-
     const router = useRouter();
     const params = useParams();
     const isNew = params?.id === "new";
-
     const currentStatus = "Draft";
 
-    const handleInsertQuickRow = () => {
-        setProductItems([
-            ...productItems,
-            {
-                name: "",
-                barcode: "",
-                uom: "PCS",
-                qty: 1,
-                hargaDasar: 0,
-                discount: 0,
-                ppn: 0,
-                hargaFinal: 0,
-                jumlah: 0,
-            },
-        ]);
+    const [activeTab, setActiveTab] = useState<TabKey>("header");
+    const [productItems, setProductItems] = useState<ExtendedProductItem[]>([]);
+    const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+    const [editingIndex, setEditingIndex] = useState<number | null>(null);
+    const [productSearch, setProductSearch] = useState("");
+
+    const form = usePurchaseRequestForm({ productItems, router });
+    const modal = useItemModal();
+
+    const handleProductSelected = (p: ProductSearchResult) => {
+        modal.handleProductSelected(p);
+        setProductSearch(p.productname);
+        setIsProductModalOpen(true);
     };
 
-    const handleUpdateItem = (index: number, field: keyof ExtendedProductItem, value: unknown) => {
+    const handleUpdateItem = (index: number, field: keyof ExtendedProductItem, value: any) => {
         const newItems = [...productItems];
         newItems[index] = { ...newItems[index], [field]: value };
 
@@ -405,16 +58,16 @@ export default function PurchaseRequestDetailPage() {
 
     const handleEditItem = (index: number) => {
         const item = productItems[index];
-        setItemForm((f) => ({
+        modal.setItemForm((f) => ({
             ...f,
             namaBarang: item.name,
             uom: item.uom,
             kuantitas: item.qty,
             hargaDasar: item.hargaDasar,
         }));
-        setActiveModalTab("rincian");
+        modal.setActiveModalTab("rincian");
+        modal.setSelectedProductCode(item.barcode);
         setIsProductModalOpen(true);
-        // mark which index is being edited
         setEditingIndex(index);
     };
 
@@ -436,21 +89,22 @@ export default function PurchaseRequestDetailPage() {
                     {/* Action Header */}
                     <div className="px-4 md:px-6 py-3 md:py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-primary/5 bg-white/50 backdrop-blur-sm shrink-0">
                         <div className="flex items-start md:items-center gap-3 md:gap-4 w-full md:w-auto">
-                            <button
+                            <Button
+                                variant="secondary-border"
+                                size="icon-sm"
                                 onClick={() => router.push("/purchase/request")}
-                                className="size-8 flex-shrink-0 flex items-center justify-center rounded-lg border border-slate-200 hover:bg-white mt-1 md:mt-0"
-                            >
-                                <span className="material-symbols-outlined text-lg">
-                                    arrow_back
-                                </span>
-                            </button>
+                                className="mt-1 md:mt-0"
+                                icon="arrow_back"
+                            />
                             <div>
                                 <div className="flex flex-wrap items-center gap-2">
                                     <h1 className="text-lg md:text-xl font-bold text-slate-900 leading-tight">
                                         Permintaan Pembelian Barang
                                     </h1>
                                     <span
-                                        className={`px-2 md:px-3 py-0.5 md:py-1 text-[10px] md:text-xs font-bold rounded-full uppercase tracking-widest border ${statusBadgeStyles[currentStatus]}`}
+                                        className={`px-2 md:px-3 py-0.5 md:py-1 text-[10px] md:text-xs font-bold rounded-full uppercase tracking-widest border ${
+                                            statusBadgeStyles[currentStatus] || statusBadgeStyles.Draft
+                                        }`}
                                     >
                                         {currentStatus}
                                     </span>
@@ -461,27 +115,34 @@ export default function PurchaseRequestDetailPage() {
                             </div>
                         </div>
                         <div className="flex flex-wrap items-center gap-2 md:gap-3 w-full md:w-auto">
-                            {saveError && (
-                                <span className="text-xs text-red-500 font-medium">{saveError}</span>
+                            {form.saveError && (
+                                <span className="text-xs text-red-500 font-medium">{form.saveError}</span>
                             )}
-                            <button
-                                onClick={handleSave}
-                                disabled={isSaving}
-                                className="flex-1 md:flex-none justify-center px-3 md:px-4 py-2 text-xs md:text-sm font-semibold text-slate-700 hover:bg-slate-200/50 rounded-lg transition-all border border-slate-200 md:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                            <Button
+                                variant="ghost"
+                                onClick={form.handleSave}
+                                loading={form.isSaving}
+                                loadingText="Menyimpan..."
+                                className="flex-1 md:flex-none px-3 md:px-4 py-2 text-xs md:text-sm border border-slate-200 md:border-transparent"
                             >
-                                {isSaving ? "Menyimpan..." : "Save Draft"}
-                            </button>
-                            <button disabled={isNew} className="flex-1 md:flex-none justify-center px-3 md:px-4 py-2 text-xs md:text-sm font-semibold bg-white text-primary border border-primary/20 hover:border-primary rounded-lg transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-primary/20 disabled:hover:bg-white">
-                                <span className="material-symbols-outlined text-sm">print</span>
+                                Save Draft
+                            </Button>
+                            <Button
+                                variant="outline"
+                                disabled={isNew}
+                                icon="print"
+                                className="flex-1 md:flex-none px-3 md:px-4 py-2 text-xs md:text-sm"
+                            >
                                 Print
-                            </button>
+                            </Button>
                             {!isNew && (
-                                <button className="w-full md:w-auto justify-center px-4 md:px-5 py-2 text-xs md:text-sm font-bold bg-primary text-white hover:bg-primary/90 rounded-lg shadow-lg shadow-primary/20 flex items-center gap-2">
-                                    <span className="material-symbols-outlined text-sm">
-                                        check_circle
-                                    </span>
+                                <Button
+                                    variant="primary"
+                                    icon="check_circle"
+                                    className="w-full md:w-auto px-4 md:px-5 py-2 text-xs md:text-sm"
+                                >
                                     Approve Request
-                                </button>
+                                </Button>
                             )}
                         </div>
                     </div>
@@ -494,10 +155,11 @@ export default function PurchaseRequestDetailPage() {
                                 <button
                                     key={tab.key}
                                     onClick={() => setActiveTab(tab.key)}
-                                    className={`px-4 md:px-6 py-3 text-xs md:text-sm font-medium flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${activeTab === tab.key
-                                        ? "font-bold border-primary text-primary"
-                                        : "text-slate-500 hover:text-slate-700 border-transparent"
-                                        }`}
+                                    className={`px-4 md:px-6 py-3 text-xs md:text-sm font-medium flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
+                                        activeTab === tab.key
+                                            ? "font-bold border-primary text-primary"
+                                            : "text-slate-500 hover:text-slate-700 border-transparent"
+                                    }`}
                                 >
                                     <span className="material-symbols-outlined text-lg">
                                         {tab.icon}
@@ -531,8 +193,8 @@ export default function PurchaseRequestDetailPage() {
                                                     <div className="flex gap-2">
                                                         <FormInput defaultValue="Generate" readOnly />
                                                         <FormSelect
-                                                            value={ispolokal}
-                                                            onChange={(e) => setIspolokal(Number(e.target.value))}
+                                                            value={form.ispolokal}
+                                                            onChange={(e) => form.setIspolokal(Number(e.target.value))}
                                                         >
                                                             <option value={0}>Lokal</option>
                                                             <option value={1}>Import</option>
@@ -544,8 +206,8 @@ export default function PurchaseRequestDetailPage() {
                                                 <FormField label="Tanggal">
                                                     <FormInput
                                                         type="date"
-                                                        value={podate}
-                                                        onChange={(e) => setPodate(e.target.value)}
+                                                        value={form.podate}
+                                                        onChange={(e) => form.setPodate(e.target.value)}
                                                     />
                                                 </FormField>
 
@@ -554,13 +216,13 @@ export default function PurchaseRequestDetailPage() {
                                                     <div className="flex gap-2">
                                                         <FormInput
                                                             placeholder="No. Invoice..."
-                                                            value={poInvNo}
-                                                            onChange={(e) => setPoInvNo(e.target.value)}
+                                                            value={form.poInvNo}
+                                                            onChange={(e) => form.setPoInvNo(e.target.value)}
                                                         />
                                                         <FormInput
                                                             placeholder="No. Shipment Supplier..."
-                                                            value={poSjNo}
-                                                            onChange={(e) => setPoSjNo(e.target.value)}
+                                                            value={form.poSjNo}
+                                                            onChange={(e) => form.setPoSjNo(e.target.value)}
                                                         />
                                                     </div>
                                                 </FormField>
@@ -570,13 +232,13 @@ export default function PurchaseRequestDetailPage() {
                                                     <div className="flex gap-2">
                                                         <FormInput
                                                             placeholder="No. Faktur Pajak..."
-                                                            value={poFpajaktno}
-                                                            onChange={(e) => setPoFpajaktno(e.target.value)}
+                                                            value={form.poFpajaktno}
+                                                            onChange={(e) => form.setPoFpajaktno(e.target.value)}
                                                         />
                                                         <FormInput
                                                             type="date"
-                                                            value={poFpajaktgl}
-                                                            onChange={(e) => setPoFpajaktgl(e.target.value)}
+                                                            value={form.poFpajaktgl}
+                                                            onChange={(e) => form.setPoFpajaktgl(e.target.value)}
                                                         />
                                                     </div>
                                                 </FormField>
@@ -593,14 +255,14 @@ export default function PurchaseRequestDetailPage() {
                                                 {/* Pemasok */}
                                                 <FormField label="Pemasok" className="sm:col-span-2">
                                                     <FormSelect
-                                                        disabled={loadingSuppliers}
-                                                        value={supplierIdForm}
-                                                        onChange={(e) => setSupplierIdForm(e.target.value ? Number(e.target.value) : "")}
+                                                        disabled={form.loadingSuppliers}
+                                                        value={form.supplierIdForm}
+                                                        onChange={(e) => form.setSupplierIdForm(e.target.value ? Number(e.target.value) : "")}
                                                     >
                                                         <option value="">
-                                                            {loadingSuppliers ? "Memuat data pemasok..." : "-- Pilih Pemasok --"}
+                                                            {form.loadingSuppliers ? "Memuat data pemasok..." : "-- Pilih Pemasok --"}
                                                         </option>
-                                                        {suppliers.map((s) => (
+                                                        {form.suppliers.map((s) => (
                                                             <option key={s.supplierid} value={s.supplierid}>
                                                                 {s.companyname}
                                                             </option>
@@ -611,14 +273,14 @@ export default function PurchaseRequestDetailPage() {
                                                 {/* Tipe Pengiriman */}
                                                 <FormField label="Tipe Pengiriman" className="sm:col-span-2">
                                                     <FormSelect
-                                                        disabled={loadingTipePengiriman}
-                                                        value={tipePengirimanId}
-                                                        onChange={(e) => setTipePengirimanId(e.target.value ? Number(e.target.value) : "")}
+                                                        disabled={form.loadingTipePengiriman}
+                                                        value={form.tipePengirimanId}
+                                                        onChange={(e) => form.setTipePengirimanId(e.target.value ? Number(e.target.value) : "")}
                                                     >
                                                         <option value="">
-                                                            {loadingTipePengiriman ? "Memuat tipe pengiriman..." : ":: Pilih Tipe Pengiriman ::"}
+                                                            {form.loadingTipePengiriman ? "Memuat tipe pengiriman..." : ":: Pilih Tipe Pengiriman ::"}
                                                         </option>
-                                                        {tipePengiriman.map((u) => (
+                                                        {form.tipePengiriman.map((u) => (
                                                             <option key={u.unitid} value={u.unitid}>
                                                                 {u.unitname || u.unit}
                                                             </option>
@@ -630,8 +292,8 @@ export default function PurchaseRequestDetailPage() {
                                                 <FormField label="Keterangan" className="sm:col-span-2">
                                                     <FormInput
                                                         placeholder="Keterangan..."
-                                                        value={poket1}
-                                                        onChange={(e) => setPoket1(e.target.value)}
+                                                        value={form.poket1}
+                                                        onChange={(e) => form.setPoket1(e.target.value)}
                                                     />
                                                 </FormField>
 
@@ -640,8 +302,8 @@ export default function PurchaseRequestDetailPage() {
                                                     <div className="flex items-center gap-2">
                                                         <FormInput
                                                             type="number"
-                                                            value={potop}
-                                                            onChange={(e) => setPotop(Number(e.target.value) || 0)}
+                                                            value={form.potop}
+                                                            onChange={(e) => form.setPotop(Number(e.target.value) || 0)}
                                                         />
                                                         <span className="text-sm text-slate-500 whitespace-nowrap">Hari</span>
                                                     </div>
@@ -772,33 +434,36 @@ export default function PurchaseRequestDetailPage() {
 
                                             {/* Action Buttons */}
                                             <div className="p-4 bg-slate-50 border-t border-slate-100 grid grid-cols-2 gap-2">
-                                                {saveError && (
-                                                    <p className="col-span-2 text-xs text-red-500 font-medium text-center -mt-1 mb-1">{saveError}</p>
+                                                {form.saveError && (
+                                                    <p className="col-span-2 text-xs text-red-500 font-medium text-center -mt-1 mb-1">{form.saveError}</p>
                                                 )}
-                                                <button
-                                                    onClick={handleSave}
-                                                    disabled={isSaving}
-                                                    className="col-span-2 py-3 bg-primary text-white rounded font-bold hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20 disabled:opacity-60 disabled:cursor-not-allowed"
+                                                <Button
+                                                    variant="primary"
+                                                    onClick={form.handleSave}
+                                                    loading={form.isSaving}
+                                                    loadingText="MENYIMPAN..."
+                                                    icon="save"
+                                                    className="col-span-2 py-3 rounded font-bold"
                                                 >
-                                                    <span className="material-symbols-outlined">{isSaving ? "hourglass_empty" : "save"}</span>
-                                                    {isSaving ? "MENYIMPAN..." : "SIMPAN PERMINTAAN"}
-                                                </button>
-                                                <button className="py-2 bg-white border border-slate-200 text-slate-600 rounded text-xs px-1 md:px-0 font-bold hover:bg-slate-100 transition-colors flex items-center justify-center gap-1">
-                                                    <span className="material-symbols-outlined !text-sm">refresh</span> RESET
-                                                </button>
-                                                <button disabled={isNew} className="py-2 bg-white border border-slate-200 text-slate-600 rounded text-xs px-1 md:px-0 font-bold hover:bg-slate-100 transition-colors flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white">
-                                                    <span className="material-symbols-outlined !text-sm">print</span> PRINT
-                                                </button>
-                                                {!isNew && (
-                                                    <>
-                                                        <button className="col-span-1 py-2 bg-emerald-500 text-white rounded text-[10px] md:text-xs font-bold hover:bg-emerald-600 transition-colors flex items-center justify-center gap-1">
-                                                            <span className="material-symbols-outlined !text-sm">verified</span> APPROVE
-                                                        </button>
-                                                        <button className="col-span-1 py-2 bg-amber-500 text-white rounded text-[10px] md:text-xs font-bold hover:bg-amber-600 transition-colors flex items-center justify-center gap-1 text-center leading-tight">
-                                                            <span className="material-symbols-outlined !text-sm">question_answer</span> ASK CONFIRM
-                                                        </button>
-                                                    </>
-                                                )}
+                                                    SIMPAN PERMINTAAN
+                                                </Button>
+                                                <Button
+                                                    variant="secondary-border"
+                                                    size="custom"
+                                                    icon="refresh"
+                                                    className="py-2 text-xs px-1 md:px-0 font-bold rounded-lg justify-center"
+                                                >
+                                                    RESET
+                                                </Button>
+                                                <Button
+                                                    variant="secondary-border"
+                                                    size="custom"
+                                                    disabled={isNew}
+                                                    icon="delete"
+                                                    className="py-2 text-xs px-1 md:px-0 font-bold rounded-lg justify-center"
+                                                >
+                                                    HAPUS
+                                                </Button>
                                             </div>
                                         </div>
                                     </div>
@@ -824,8 +489,7 @@ export default function PurchaseRequestDetailPage() {
                                     <div className="flex items-center gap-1.5 flex-shrink-0">
                                         <span className="material-symbols-outlined text-slate-400 text-lg">inventory_2</span>
                                         <span className="text-sm font-semibold text-slate-700">
-                                            Rincian Barang{" "}
-                                            <span className="text-red-500">*</span>
+                                            Rincian Barang <span className="text-red-500">*</span>
                                         </span>
                                     </div>
                                 </div>
@@ -852,12 +516,13 @@ export default function PurchaseRequestDetailPage() {
                                     <p className="mt-2 text-sm text-slate-500">
                                         Belum ada lampiran
                                     </p>
-                                    <button className="mt-4 px-4 py-2 text-sm font-semibold bg-primary text-white rounded-lg hover:bg-primary/90 transition-all flex items-center gap-2 mx-auto">
-                                        <span className="material-symbols-outlined text-sm">
-                                            upload_file
-                                        </span>
+                                    <Button
+                                        variant="primary"
+                                        icon="upload_file"
+                                        className="mt-4 mx-auto"
+                                    >
                                         Upload File
-                                    </button>
+                                    </Button>
                                 </div>
                             </div>
                         )}
@@ -873,37 +538,41 @@ export default function PurchaseRequestDetailPage() {
                 isOpen={isProductModalOpen}
                 onClose={() => {
                     setIsProductModalOpen(false);
-                    resetModalState();
+                    modal.resetModalState();
+                    setEditingIndex(null);
                 }}
                 title={editingIndex !== null ? "Edit Detil Item Pembelian" : "Input Detil Pemesanan Pembelian Barang"}
                 icon="inventory_2"
                 size="xl"
                 footer={
                     <>
-                        <button
+                        <Button
+                            variant="secondary"
                             onClick={() => {
                                 setIsProductModalOpen(false);
-                                resetModalState();
+                                modal.resetModalState();
+                                setEditingIndex(null);
                             }}
-                            className="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
                         >
                             Batal
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                            variant="primary"
+                            icon={editingIndex !== null ? "save" : "add_circle"}
                             onClick={() => {
-                                if (!itemForm.namaBarang) return;
+                                if (!modal.itemForm.namaBarang) return;
                                 const newItem: ExtendedProductItem = {
-                                    name: itemForm.namaBarang,
-                                    barcode: selectedProductCode,
-                                    uom: itemForm.uom,
-                                    qty: itemForm.kuantitas,
-                                    hargaDasar: itemForm.hargaDasar,
-                                    discount: itemForm.hargaDasar - calc.setelah4,
-                                    ppn: calc.ppnNominal,
-                                    hargaFinal: calc.hargaFinal,
-                                    jumlah: calc.jumlah,
-                                    productid: itemForm.productid,
-                                    uomid: itemForm.uomid,
+                                    name: modal.itemForm.namaBarang,
+                                    barcode: modal.selectedProductCode,
+                                    uom: modal.itemForm.uom,
+                                    qty: modal.itemForm.kuantitas,
+                                    hargaDasar: modal.itemForm.hargaDasar,
+                                    discount: modal.itemForm.hargaDasar - modal.calc.setelah4,
+                                    ppn: modal.calc.ppnNominal,
+                                    hargaFinal: modal.calc.hargaFinal,
+                                    jumlah: modal.calc.jumlah,
+                                    productid: modal.itemForm.productid,
+                                    uomid: modal.itemForm.uomid,
                                 };
                                 if (editingIndex !== null) {
                                     setProductItems((prev) =>
@@ -913,36 +582,32 @@ export default function PurchaseRequestDetailPage() {
                                     setProductItems((prev) => [...prev, newItem]);
                                 }
                                 setIsProductModalOpen(false);
-                                resetModalState();
+                                modal.resetModalState();
+                                setEditingIndex(null);
                             }}
-                            className="px-4 py-2 text-sm font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center gap-2"
                         >
-                            <span className="material-symbols-outlined text-sm">
-                                {editingIndex !== null ? "save" : "add_circle"}
-                            </span>
                             {editingIndex !== null ? "Simpan Perubahan" : "Tambah Item"}
-                        </button>
+                        </Button>
                     </>
                 }
             >
                 {/* ── Layout: 2-col table-like form ─────────────────────── */}
                 <div className="divide-y divide-slate-100 -mx-5 -mt-4 px-1">
-
                     {/* Nama Barang */}
                     <div className="grid grid-cols-[160px_1fr] items-center gap-3 px-4 py-2.5">
                         <span className="text-xs font-semibold text-slate-500 uppercase">Nama Barang</span>
                         <ProductSearchBar
-                            value={itemForm.namaBarang}
-                            onChange={(val) => setItemField("namaBarang", val)}
+                            value={modal.itemForm.namaBarang}
+                            onChange={(val) => modal.setItemField("namaBarang", val)}
                             onSelect={(p) => {
-                                setItemField("namaBarang", p.productname);
-                                setItemField("productDescription", p.productname2 ?? "");
-                                if (p.uom_id_prod) setItemField("uomid", p.uom_id_prod);
-                                if (p.produnit) setItemField("uom", p.produnit);
-                                setItemField("qtyOuter", p.qty_outer ?? "0");
-                                setItemField("qtyInner", p.qty_inner ?? "0");
-                                setItemField("uomInnerName", p.uom_inner_outer_name ?? "");
-                                setSelectedProductCode(p.productcode);
+                                modal.setItemField("namaBarang", p.productname);
+                                modal.setItemField("productDescription", p.productname2 ?? "");
+                                if (p.uom_id_prod) modal.setItemField("uomid", p.uom_id_prod);
+                                if (p.produnit) modal.setItemField("uom", p.produnit);
+                                modal.setItemField("qtyOuter", p.qty_outer ?? "0");
+                                modal.setItemField("qtyInner", p.qty_inner ?? "0");
+                                modal.setItemField("uomInnerName", p.uom_inner_outer_name ?? "");
+                                modal.setSelectedProductCode(p.productcode);
                             }}
                             placeholder="Cari produk..."
                             minChars={2}
@@ -956,8 +621,8 @@ export default function PurchaseRequestDetailPage() {
                         <span className="text-xs font-semibold text-slate-500 uppercase">Product Description</span>
                         <ModalFormInput
                             type="text"
-                            value={itemForm.productDescription}
-                            onChange={(e) => setItemField("productDescription", e.target.value)}
+                            value={modal.itemForm.productDescription}
+                            onChange={(e) => modal.setItemField("productDescription", e.target.value)}
                             className="bg-slate-50"
                         />
                     </div>
@@ -967,30 +632,30 @@ export default function PurchaseRequestDetailPage() {
                         <span className="text-xs font-semibold text-slate-500 uppercase">UOM</span>
                         <div className="flex items-center gap-2">
                             <FormSelect
-                                value={itemForm.uomid ?? ""}
+                                value={modal.itemForm.uomid ?? ""}
                                 onChange={(e) => {
-                                    const selected = units.find(
+                                    const selected = modal.units.find(
                                         (u) => u.unitid === Number(e.target.value)
                                     );
                                     if (selected) {
-                                        setItemField("uomid", selected.unitid);
-                                        setItemField("uom", selected.unit || selected.unitname);
+                                        modal.setItemField("uomid", selected.unitid);
+                                        modal.setItemField("uom", selected.unit || selected.unitname);
                                     }
                                 }}
-                                disabled={loadingUnits}
+                                disabled={modal.loadingUnits}
                                 className="w-auto"
                             >
                                 <option value="">
-                                    {loadingUnits ? "Memuat satuan..." : "-- Pilih UOM --"}
+                                    {modal.loadingUnits ? "Memuat satuan..." : "-- Pilih UOM --"}
                                 </option>
-                                {units.map((u) => (
+                                {modal.units.map((u) => (
                                     <option key={u.unitid} value={u.unitid}>
                                         {u.unit || u.unitname}
                                     </option>
                                 ))}
                             </FormSelect>
                             <span className="text-xs text-slate-400">
-                                {`${itemForm.qtyOuter ? parseFloat(itemForm.qtyOuter).toLocaleString("id-ID") : "0"} ${itemForm.uom || "—"} @ ${itemForm.qtyInner ? parseFloat(itemForm.qtyInner).toLocaleString("id-ID") : "0"} ${itemForm.uomInnerName || "PCS"}`}
+                                {`${modal.itemForm.qtyOuter ? parseFloat(modal.itemForm.qtyOuter).toLocaleString("id-ID") : "0"} ${modal.itemForm.uom || "—"} @ ${modal.itemForm.qtyInner ? parseFloat(modal.itemForm.qtyInner).toLocaleString("id-ID") : "0"} ${modal.itemForm.uomInnerName || "PCS"}`}
                             </span>
                         </div>
                     </div>
@@ -1000,8 +665,8 @@ export default function PurchaseRequestDetailPage() {
                         <span className="text-xs font-semibold text-slate-500 uppercase">Kuantitas</span>
                         <ModalFormInput
                             type="number"
-                            value={itemForm.kuantitas}
-                            onChange={(e) => setItemField("kuantitas", parseFloat(e.target.value) || 0)}
+                            value={modal.itemForm.kuantitas}
+                            onChange={(e) => modal.setItemField("kuantitas", parseFloat(e.target.value) || 0)}
                             textRight
                             selectOnFocus
                         />
@@ -1013,27 +678,32 @@ export default function PurchaseRequestDetailPage() {
                         <div className="flex items-center gap-2">
                             <input
                                 type="number"
-                                value={itemForm.hargaDasar}
-                                onChange={(e) => setItemField("hargaDasar", parseFloat(e.target.value) || 0)}
+                                value={modal.itemForm.hargaDasar}
+                                onChange={(e) => modal.setItemField("hargaDasar", parseFloat(e.target.value) || 0)}
                                 onFocus={(e) => e.target.select()}
                                 className="flex-1 border border-slate-200 rounded px-3 py-1.5 text-sm text-right focus:outline-none focus:border-primary bg-white"
                             />
-                            <button className="size-8 flex items-center justify-center rounded border border-slate-200 hover:bg-primary/5 text-slate-400 hover:text-primary transition-colors">
-                                <span className="material-symbols-outlined text-base">search</span>
-                            </button>
-                            <button className="size-8 flex items-center justify-center rounded bg-amber-500 text-white hover:bg-amber-600 transition-colors">
-                                <span className="material-symbols-outlined text-base">calculate</span>
-                            </button>
+                            <Button
+                                variant="plain"
+                                size="icon-sm"
+                                icon="search"
+                                className="border border-slate-200 text-slate-400 hover:text-primary hover:bg-primary/5"
+                            />
+                            <Button
+                                variant="amber"
+                                size="icon-sm"
+                                icon="calculate"
+                            />
                         </div>
                     </div>
 
                     {/* ── Cascade Discounts ────────────────────────── */}
                     {([1, 2, 3, 4] as const).map((n) => {
                         const pctKey = `diskon${n}Pct` as keyof ItemDetailForm;
-                        const pct = itemForm[pctKey] as number;
-                        const setPct = (v: number) => setItemField(pctKey, v);
-                        const beforeArr = [itemForm.hargaDasar, calc.setelah1, calc.setelah2, calc.setelah3];
-                        const setelahArr = [calc.setelah1, calc.setelah2, calc.setelah3, calc.setelah4];
+                        const pct = modal.itemForm[pctKey] as number;
+                        const setPct = (v: number) => modal.setItemField(pctKey, v);
+                        const beforeArr = [modal.itemForm.hargaDasar, modal.calc.setelah1, modal.calc.setelah2, modal.calc.setelah3];
+                        const setelahArr = [modal.calc.setelah1, modal.calc.setelah2, modal.calc.setelah3, modal.calc.setelah4];
                         const before = beforeArr[n - 1];
                         const after = setelahArr[n - 1];
                         const diskonNominal = before - after;
@@ -1047,20 +717,12 @@ export default function PurchaseRequestDetailPage() {
                                     <span className="text-xs font-semibold text-slate-500 uppercase">
                                         Potongan ke-{n}
                                     </span>
-                                    <div className="flex items-center gap-2">
-                                        <input
-                                            type="number"
-                                            value={pct}
-                                            onChange={(e) => setPct(parseFloat(e.target.value) || 0)}
-                                            onFocus={(e) => e.target.select()}
-                                            className="w-16 border border-slate-200 rounded px-2 py-1.5 text-sm text-right focus:outline-none focus:border-primary bg-white"
-                                        />
-                                        <input
-                                            readOnly
-                                            value={fmt(diskonNominal)}
-                                            className="flex-1 border border-slate-100 rounded px-3 py-1.5 text-sm text-right bg-slate-50 text-red-500 cursor-not-allowed"
-                                        />
-                                    </div>
+                                    <PercentNominalInput
+                                        pctValue={pct}
+                                        onChangePct={setPct}
+                                        nominalValue={fmt(diskonNominal)}
+                                        nominalClassName="text-red-500"
+                                    />
                                 </div>
                                 {/* After-discount readonly row */}
                                 <div className="grid grid-cols-[160px_1fr] items-center gap-3 px-4 py-1.5 bg-slate-50/60">
@@ -1080,20 +742,12 @@ export default function PurchaseRequestDetailPage() {
                     {/* PPN */}
                     <div className="grid grid-cols-[160px_1fr] items-center gap-3 px-4 py-2.5">
                         <span className="text-xs font-semibold text-slate-500 uppercase">PPN</span>
-                        <div className="flex items-center gap-2">
-                            <input
-                                type="number"
-                                value={itemForm.ppnPct}
-                                onChange={(e) => setItemField("ppnPct", parseFloat(e.target.value) || 0)}
-                                onFocus={(e) => e.target.select()}
-                                className="w-16 border border-slate-200 rounded px-2 py-1.5 text-sm text-right focus:outline-none focus:border-primary bg-white"
-                            />
-                            <input
-                                readOnly
-                                value={calc.ppnNominal.toLocaleString("id-ID", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
-                                className="flex-1 border border-slate-100 rounded px-3 py-1.5 text-sm text-right bg-slate-50 text-slate-500 cursor-not-allowed"
-                            />
-                        </div>
+                        <PercentNominalInput
+                            pctValue={modal.itemForm.ppnPct}
+                            onChangePct={(v) => modal.setItemField("ppnPct", v)}
+                            nominalValue={modal.calc.ppnNominal.toLocaleString("id-ID", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
+                            nominalClassName="text-slate-500"
+                        />
                     </div>
 
                     {/* Harga Final */}
@@ -1101,7 +755,7 @@ export default function PurchaseRequestDetailPage() {
                         <span className="text-xs font-bold text-slate-600 uppercase">Harga Final</span>
                         <input
                             readOnly
-                            value={calc.hargaFinal.toLocaleString("id-ID", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
+                            value={modal.calc.hargaFinal.toLocaleString("id-ID", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
                             className="w-full border border-primary/20 rounded px-3 py-1.5 text-sm text-right bg-primary/5 text-primary font-bold cursor-not-allowed"
                         />
                     </div>
@@ -1111,7 +765,7 @@ export default function PurchaseRequestDetailPage() {
                         <span className="text-xs font-bold text-slate-600 uppercase">Jumlah</span>
                         <input
                             readOnly
-                            value={calc.jumlah.toLocaleString("id-ID", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
+                            value={modal.calc.jumlah.toLocaleString("id-ID", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
                             className="w-full border border-primary/20 rounded px-3 py-1.5 text-sm text-right bg-primary/10 text-primary font-black cursor-not-allowed"
                         />
                     </div>
@@ -1121,8 +775,8 @@ export default function PurchaseRequestDetailPage() {
                         <span className="text-xs font-semibold text-slate-500 uppercase pt-2">Additional Notes</span>
                         <input
                             type="text"
-                            value={itemForm.additionalNotes}
-                            onChange={(e) => setItemField("additionalNotes", e.target.value)}
+                            value={modal.itemForm.additionalNotes}
+                            onChange={(e) => modal.setItemField("additionalNotes", e.target.value)}
                             className="w-full border border-slate-200 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-primary bg-white"
                         />
                     </div>
