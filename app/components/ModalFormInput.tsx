@@ -5,6 +5,12 @@ export interface ModalFormInputProps extends InputHTMLAttributes<HTMLInputElemen
     textRight?: boolean;
     /** Jika true, teks dalam input akan otomatis dipilih semua saat focus */
     selectOnFocus?: boolean;
+    /** Teks label */
+    label?: string;
+    /** Class CSS kustom untuk elemen label span */
+    labelClassName?: string;
+    /** Class CSS kustom untuk wrapper div */
+    wrapperClassName?: string;
 }
 
 export default function ModalFormInput({
@@ -18,6 +24,9 @@ export default function ModalFormInput({
     onBlur,
     onChange,
     value,
+    label,
+    labelClassName = "",
+    wrapperClassName = "",
     ...props
 }: ModalFormInputProps) {
     const isNumber = type === "number";
@@ -46,7 +55,7 @@ export default function ModalFormInput({
         onBlur?.(e);
     };
 
-    return (
+    const inputElement = (
         <input
             ref={inputRef}
             className={`w-full border border-slate-200 rounded px-3 py-1.5 text-sm focus:outline-none bg-white
@@ -68,5 +77,24 @@ export default function ModalFormInput({
             {...props}
         />
     );
+
+    if (label) {
+        const hasPaddingY = wrapperClassName.includes("py-") || wrapperClassName.includes("p-");
+        const hasItemsAlign = wrapperClassName.includes("items-");
+
+        const defaultPy = hasPaddingY ? "" : "py-2.5";
+        const defaultItems = hasItemsAlign ? "" : "items-center";
+
+        return (
+            <div className={`grid grid-cols-[160px_1fr] gap-3 px-4 ${defaultPy} ${defaultItems} ${wrapperClassName}`}>
+                <span className={`text-xs font-semibold text-slate-500 uppercase ${labelClassName}`}>
+                    {label}
+                </span>
+                {inputElement}
+            </div>
+        );
+    }
+
+    return inputElement;
 }
 

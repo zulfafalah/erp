@@ -617,15 +617,13 @@ export default function PurchaseRequestDetailPage() {
                     </div>
 
                     {/* Product Description */}
-                    <div className="grid grid-cols-[160px_1fr] items-center gap-3 px-4 py-2.5">
-                        <span className="text-xs font-semibold text-slate-500 uppercase">Product Description</span>
-                        <ModalFormInput
-                            type="text"
-                            value={modal.itemForm.productDescription}
-                            onChange={(e) => modal.setItemField("productDescription", e.target.value)}
-                            className="bg-slate-50"
-                        />
-                    </div>
+                    <ModalFormInput
+                        label="Product Description"
+                        type="text"
+                        value={modal.itemForm.productDescription}
+                        onChange={(e) => modal.setItemField("productDescription", e.target.value)}
+                        className="bg-slate-50"
+                    />
 
                     {/* UOM */}
                     <div className="grid grid-cols-[160px_1fr] items-center gap-3 px-4 py-2.5">
@@ -661,27 +659,26 @@ export default function PurchaseRequestDetailPage() {
                     </div>
 
                     {/* Kuantitas */}
-                    <div className="grid grid-cols-[160px_1fr] items-center gap-3 px-4 py-2.5">
-                        <span className="text-xs font-semibold text-slate-500 uppercase">Kuantitas</span>
-                        <ModalFormInput
-                            type="number"
-                            value={modal.itemForm.kuantitas}
-                            onChange={(e) => modal.setItemField("kuantitas", parseFloat(e.target.value) || 0)}
-                            textRight
-                            selectOnFocus
-                        />
-                    </div>
+                    <ModalFormInput
+                        label="Kuantitas"
+                        type="number"
+                        value={modal.itemForm.kuantitas}
+                        onChange={(e) => modal.setItemField("kuantitas", parseFloat(e.target.value) || 0)}
+                        textRight
+                        selectOnFocus
+                    />
 
                     {/* Harga Dasar */}
                     <div className="grid grid-cols-[160px_1fr] items-center gap-3 px-4 py-2.5">
                         <span className="text-xs font-semibold text-slate-500 uppercase">Harga Dasar</span>
                         <div className="flex items-center gap-2">
-                            <input
+                            <ModalFormInput
                                 type="number"
                                 value={modal.itemForm.hargaDasar}
                                 onChange={(e) => modal.setItemField("hargaDasar", parseFloat(e.target.value) || 0)}
-                                onFocus={(e) => e.target.select()}
-                                className="flex-1 border border-slate-200 rounded px-3 py-1.5 text-sm text-right focus:outline-none focus:border-primary bg-white"
+                                textRight
+                                selectOnFocus
+                                className="flex-1"
                             />
                             <Button
                                 variant="plain"
@@ -725,16 +722,15 @@ export default function PurchaseRequestDetailPage() {
                                     />
                                 </div>
                                 {/* After-discount readonly row */}
-                                <div className="grid grid-cols-[160px_1fr] items-center gap-3 px-4 py-1.5 bg-slate-50/60">
-                                    <span className="text-[10px] font-semibold text-slate-400 uppercase pl-2">
-                                        Harga Setelah Potongan ke-{n}
-                                    </span>
-                                    <input
-                                        readOnly
-                                        value={fmt(after)}
-                                        className="w-full border border-slate-100 rounded px-3 py-1.5 text-sm text-right bg-slate-100 text-slate-600 cursor-not-allowed font-medium"
-                                    />
-                                </div>
+                                <ModalFormInput
+                                    label={`Harga Setelah Potongan ke-${n}`}
+                                    labelClassName="text-[10px] font-semibold text-slate-400 uppercase pl-2"
+                                    wrapperClassName="py-1.5 bg-slate-50/60"
+                                    readOnly
+                                    value={fmt(after)}
+                                    textRight
+                                    className="!bg-slate-100 !text-slate-600 !border-slate-100 font-medium"
+                                />
                             </div>
                         );
                     })}
@@ -751,35 +747,36 @@ export default function PurchaseRequestDetailPage() {
                     </div>
 
                     {/* Harga Final */}
-                    <div className="grid grid-cols-[160px_1fr] items-center gap-3 px-4 py-2.5 bg-primary/5">
-                        <span className="text-xs font-bold text-slate-600 uppercase">Harga Final</span>
-                        <input
-                            readOnly
-                            value={modal.calc.hargaFinal.toLocaleString("id-ID", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
-                            className="w-full border border-primary/20 rounded px-3 py-1.5 text-sm text-right bg-primary/5 text-primary font-bold cursor-not-allowed"
-                        />
-                    </div>
+                    <ModalFormInput
+                        label="Harga Final"
+                        labelClassName="text-xs font-bold text-slate-600"
+                        wrapperClassName="bg-primary/5"
+                        readOnly
+                        value={modal.calc.hargaFinal.toLocaleString("id-ID", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
+                        textRight
+                        className="!bg-primary/5 !text-primary !border-primary/20 font-bold"
+                    />
 
                     {/* Jumlah */}
-                    <div className="grid grid-cols-[160px_1fr] items-center gap-3 px-4 py-2.5 bg-primary/5">
-                        <span className="text-xs font-bold text-slate-600 uppercase">Jumlah</span>
-                        <input
-                            readOnly
-                            value={modal.calc.jumlah.toLocaleString("id-ID", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
-                            className="w-full border border-primary/20 rounded px-3 py-1.5 text-sm text-right bg-primary/10 text-primary font-black cursor-not-allowed"
-                        />
-                    </div>
+                    <ModalFormInput
+                        label="Jumlah"
+                        labelClassName="text-xs font-bold text-slate-600"
+                        wrapperClassName="bg-primary/5"
+                        readOnly
+                        value={modal.calc.jumlah.toLocaleString("id-ID", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
+                        textRight
+                        className="!bg-primary/10 !text-primary !border-primary/20 font-black"
+                    />
 
                     {/* Additional Notes */}
-                    <div className="grid grid-cols-[160px_1fr] items-start gap-3 px-4 py-2.5">
-                        <span className="text-xs font-semibold text-slate-500 uppercase pt-2">Additional Notes</span>
-                        <input
-                            type="text"
-                            value={modal.itemForm.additionalNotes}
-                            onChange={(e) => modal.setItemField("additionalNotes", e.target.value)}
-                            className="w-full border border-slate-200 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-primary bg-white"
-                        />
-                    </div>
+                    <ModalFormInput
+                        label="Additional Notes"
+                        wrapperClassName="items-start"
+                        labelClassName="pt-2"
+                        type="text"
+                        value={modal.itemForm.additionalNotes}
+                        onChange={(e) => modal.setItemField("additionalNotes", e.target.value)}
+                    />
                 </div>
             </Modal>
         </div>
