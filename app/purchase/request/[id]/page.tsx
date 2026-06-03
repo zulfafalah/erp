@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Navbar from "../../../components/Navbar";
 import Sidebar from "../../../components/Sidebar";
@@ -34,6 +34,13 @@ export default function PurchaseRequestDetailPage() {
 
     const form = usePurchaseRequestForm({ productItems, router });
     const modal = useItemModal();
+
+    // Auto-switch to request-details tab when item errors arrive from API
+    useEffect(() => {
+        if (form.itemDetailErrors.length > 0 || form.itemsError) {
+            setActiveTab("request-details");
+        }
+    }, [form.itemDetailErrors, form.itemsError]);
 
     const handleProductSelected = (p: ProductSearchResult) => {
         modal.handleProductSelected(p);
@@ -102,9 +109,8 @@ export default function PurchaseRequestDetailPage() {
                                         Permintaan Pembelian Barang
                                     </h1>
                                     <span
-                                        className={`px-2 md:px-3 py-0.5 md:py-1 text-[10px] md:text-xs font-bold rounded-full uppercase tracking-widest border ${
-                                            statusBadgeStyles[currentStatus] || statusBadgeStyles.Draft
-                                        }`}
+                                        className={`px-2 md:px-3 py-0.5 md:py-1 text-[10px] md:text-xs font-bold rounded-full uppercase tracking-widest border ${statusBadgeStyles[currentStatus] || statusBadgeStyles.Draft
+                                            }`}
                                     >
                                         {currentStatus}
                                     </span>
@@ -115,17 +121,21 @@ export default function PurchaseRequestDetailPage() {
                             </div>
                         </div>
                         <div className="flex flex-wrap items-center gap-2 md:gap-3 w-full md:w-auto">
-                            {form.saveError && (
-                                <span className="text-xs text-red-500 font-medium">{form.saveError}</span>
+                            {form.apiError && (
+                                <span className="text-xs text-red-500 font-medium bg-red-50 border border-red-200 rounded-lg px-3 py-1.5 flex items-center gap-1.5">
+                                    <span className="material-symbols-outlined text-sm">error</span>
+                                    {form.apiError}
+                                </span>
                             )}
                             <Button
-                                variant="ghost"
+                                variant="primary"
+                                icon="save"
                                 onClick={form.handleSave}
                                 loading={form.isSaving}
                                 loadingText="Menyimpan..."
-                                className="flex-1 md:flex-none px-3 md:px-4 py-2 text-xs md:text-sm border border-slate-200 md:border-transparent"
+                                className="flex-1 md:flex-none px-4 md:px-5 py-2 text-xs md:text-sm font-bold shadow-lg shadow-primary/25"
                             >
-                                Save Draft
+                                Simpan
                             </Button>
                             <Button
                                 variant="outline"
@@ -155,11 +165,10 @@ export default function PurchaseRequestDetailPage() {
                                 <button
                                     key={tab.key}
                                     onClick={() => setActiveTab(tab.key)}
-                                    className={`px-4 md:px-6 py-3 text-xs md:text-sm font-medium flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
-                                        activeTab === tab.key
+                                    className={`px-4 md:px-6 py-3 text-xs md:text-sm font-medium flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${activeTab === tab.key
                                             ? "font-bold border-primary text-primary"
                                             : "text-slate-500 hover:text-slate-700 border-transparent"
-                                    }`}
+                                        }`}
                                 >
                                     <span className="material-symbols-outlined text-lg">
                                         {tab.icon}
@@ -257,7 +266,11 @@ export default function PurchaseRequestDetailPage() {
                                                     <FormSelect
                                                         disabled={form.loadingSuppliers}
                                                         value={form.supplierIdForm}
-                                                        onChange={(e) => form.setSupplierIdForm(e.target.value ? Number(e.target.value) : "")}
+                                                        onChange={(e) => {
+                                                            form.setSupplierIdForm(e.target.value ? Number(e.target.value) : "");
+                                                            if (e.target.value) form.clearSupplierError();
+                                                        }}
+                                                        className={form.supplierError ? "!border-red-400 !ring-1 !ring-red-400" : ""}
                                                     >
                                                         <option value="">
                                                             {form.loadingSuppliers ? "Memuat data pemasok..." : "-- Pilih Pemasok --"}
@@ -268,6 +281,12 @@ export default function PurchaseRequestDetailPage() {
                                                             </option>
                                                         ))}
                                                     </FormSelect>
+                                                    {form.supplierError && (
+                                                        <p className="mt-1.5 text-xs text-red-500 font-medium flex items-center gap-1">
+                                                            <span className="material-symbols-outlined text-sm">error</span>
+                                                            {form.supplierError}
+                                                        </p>
+                                                    )}
                                                 </FormField>
 
                                                 {/* Tipe Pengiriman */}
@@ -275,7 +294,11 @@ export default function PurchaseRequestDetailPage() {
                                                     <FormSelect
                                                         disabled={form.loadingTipePengiriman}
                                                         value={form.tipePengirimanId}
-                                                        onChange={(e) => form.setTipePengirimanId(e.target.value ? Number(e.target.value) : "")}
+                                                        onChange={(e) => {
+                                                            form.setTipePengirimanId(e.target.value ? Number(e.target.value) : "");
+                                                            if (e.target.value) form.clearTipePengirimanError();
+                                                        }}
+                                                        className={form.tipePengirimanError ? "!border-red-400 !ring-1 !ring-red-400" : ""}
                                                     >
                                                         <option value="">
                                                             {form.loadingTipePengiriman ? "Memuat tipe pengiriman..." : ":: Pilih Tipe Pengiriman ::"}
@@ -286,6 +309,12 @@ export default function PurchaseRequestDetailPage() {
                                                             </option>
                                                         ))}
                                                     </FormSelect>
+                                                    {form.tipePengirimanError && (
+                                                        <p className="mt-1.5 text-xs text-red-500 font-medium flex items-center gap-1">
+                                                            <span className="material-symbols-outlined text-sm">error</span>
+                                                            {form.tipePengirimanError}
+                                                        </p>
+                                                    )}
                                                 </FormField>
 
                                                 {/* Keterangan */}
@@ -432,39 +461,6 @@ export default function PurchaseRequestDetailPage() {
                                                 </div>
                                             </div>
 
-                                            {/* Action Buttons */}
-                                            <div className="p-4 bg-slate-50 border-t border-slate-100 grid grid-cols-2 gap-2">
-                                                {form.saveError && (
-                                                    <p className="col-span-2 text-xs text-red-500 font-medium text-center -mt-1 mb-1">{form.saveError}</p>
-                                                )}
-                                                <Button
-                                                    variant="primary"
-                                                    onClick={form.handleSave}
-                                                    loading={form.isSaving}
-                                                    loadingText="MENYIMPAN..."
-                                                    icon="save"
-                                                    className="col-span-2 py-3 rounded font-bold"
-                                                >
-                                                    SIMPAN PERMINTAAN
-                                                </Button>
-                                                <Button
-                                                    variant="secondary-border"
-                                                    size="custom"
-                                                    icon="refresh"
-                                                    className="py-2 text-xs px-1 md:px-0 font-bold rounded-lg justify-center"
-                                                >
-                                                    RESET
-                                                </Button>
-                                                <Button
-                                                    variant="secondary-border"
-                                                    size="custom"
-                                                    disabled={isNew}
-                                                    icon="delete"
-                                                    className="py-2 text-xs px-1 md:px-0 font-bold rounded-lg justify-center"
-                                                >
-                                                    HAPUS
-                                                </Button>
-                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -474,6 +470,24 @@ export default function PurchaseRequestDetailPage() {
                         {/* Tab Content: Request Details */}
                         {activeTab === "request-details" && (
                             <div className="flex-1 flex flex-col overflow-hidden gap-3">
+                                {/* ── Items Error Banner ───────────────────── */}
+                                {(form.itemsError || form.itemDetailErrors.length > 0) && (
+                                    <div className="shrink-0 bg-red-50 border border-red-300 text-red-700 rounded-xl px-4 py-3 space-y-1.5">
+                                        {form.itemsError && (
+                                            <div className="flex items-center gap-2 text-sm font-semibold">
+                                                <span className="material-symbols-outlined text-lg text-red-500">error</span>
+                                                {form.itemsError}
+                                            </div>
+                                        )}
+                                        {form.itemDetailErrors.map((msg, i) => (
+                                            <div key={i} className="flex items-start gap-2 text-xs font-medium">
+                                                <span className="material-symbols-outlined text-sm text-red-400 mt-0.5">arrow_right</span>
+                                                {msg}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
                                 {/* ── Product Search Bar ─────────────────────── */}
                                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-4 py-3 shrink-0 flex items-center gap-3">
                                     <ProductSearchBar

@@ -25,7 +25,11 @@ export function usePurchaseRequestForm({ productItems, router }: UsePurchaseRequ
 
     // ── Save state ────────────────────────────────────────────────────────────
     const [isSaving, setIsSaving] = useState(false);
-    const [saveError, setSaveError] = useState<string | null>(null);
+    const [supplierError, setSupplierError] = useState<string | null>(null);
+    const [tipePengirimanError, setTipePengirimanError] = useState<string | null>(null);
+    const [itemsError, setItemsError] = useState<string | null>(null);
+    const [itemDetailErrors, setItemDetailErrors] = useState<string[]>([]);
+    const [apiError, setApiError] = useState<string | null>(null);
 
     // ── Suppliers ─────────────────────────────────────────────────────────────
     const [suppliers, setSuppliers] = useState<SupplierListItem[]>([]);
@@ -62,15 +66,21 @@ export function usePurchaseRequestForm({ productItems, router }: UsePurchaseRequ
     }, []);
 
     const handleSave = async () => {
+        // Clear all errors first
+        setSupplierError(null);
+        setTipePengirimanError(null);
+        setItemsError(null);
+        setItemDetailErrors([]);
+        setApiError(null);
+
         if (!supplierIdForm) {
-            setSaveError("Pilih pemasok terlebih dahulu.");
+            setSupplierError("Pilih pemasok terlebih dahulu.");
             return;
         }
         if (productItems.length === 0) {
-            setSaveError("Tambahkan minimal satu item barang.");
+            setItemsError("Tambahkan minimal satu item barang.");
             return;
         }
-        setSaveError(null);
         setIsSaving(true);
         try {
             const payload = {
@@ -114,7 +124,37 @@ export function usePurchaseRequestForm({ productItems, router }: UsePurchaseRequ
             const json = await res.json();
 
             if (!res.ok || !json.ok) {
-                setSaveError(json.message ?? "Gagal menyimpan. Silakan coba lagi.");
+                // Parse structured field errors from `detail`
+                const detail = json.detail as Record<string, unknown> | undefined;
+                if (detail) {
+                    // Field: tipebiaya
+                    const tipebiayaErrors = detail["tipebiaya"] as string[] | undefined;
+                    if (Array.isArray(tipebiayaErrors) && tipebiayaErrors.length > 0) {
+                        setTipePengirimanError(tipebiayaErrors[0]);
+                    }
+                    // Field: items (array of per-item error objects)
+                    const itemsDetailArr = detail["items"] as Record<string, string[]>[] | undefined;
+                    if (Array.isArray(itemsDetailArr)) {
+                        const msgs: string[] = [];
+                        itemsDetailArr.forEach((itemErr, idx) => {
+                            Object.entries(itemErr).forEach(([field, errs]) => {
+                                (errs as string[]).forEach((msg) => {
+                                    msgs.push(`Item ${idx + 1} — ${field}: ${msg}`);
+                                });
+                            });
+                        });
+                        if (msgs.length > 0) setItemDetailErrors(msgs);
+                    }
+                    // If any field errors were found, don't show the generic apiError
+                    const hasFieldErrors =
+                        (Array.isArray(tipebiayaErrors) && tipebiayaErrors.length > 0) ||
+                        (Array.isArray(itemsDetailArr) && itemsDetailArr.some((e) => Object.keys(e).length > 0));
+                    if (!hasFieldErrors) {
+                        setApiError(json.message ?? "Gagal menyimpan. Silakan coba lagi.");
+                    }
+                } else {
+                    setApiError(json.message ?? "Gagal menyimpan. Silakan coba lagi.");
+                }
                 return;
             }
 
@@ -123,7 +163,7 @@ export function usePurchaseRequestForm({ productItems, router }: UsePurchaseRequ
             router.push(`/purchase/request/${newId}`);
         } catch (err) {
             console.error("[handleSave]", err);
-            setSaveError("Terjadi kesalahan jaringan. Silakan coba lagi.");
+            setApiError("Terjadi kesalahan jaringan. Silakan coba lagi.");
         } finally {
             setIsSaving(false);
         }
@@ -153,8 +193,13 @@ export function usePurchaseRequestForm({ productItems, router }: UsePurchaseRequ
         poFpajaktgl,
         setPoFpajaktgl,
         isSaving,
-        saveError,
-        setSaveError,
+        supplierError,
+        tipePengirimanError,
+        itemsError,
+        itemDetailErrors,
+        apiError,
+        clearSupplierError: () => setSupplierError(null),
+        clearTipePengirimanError: () => setTipePengirimanError(null),
         suppliers,
         loadingSuppliers,
         tipePengiriman,
