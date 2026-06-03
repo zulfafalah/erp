@@ -7,7 +7,12 @@ export interface ProductSearchResult {
     productid: number;
     productcode: string;
     productname: string;
+    productname2: string | null;
     produnit: string | null;
+    uom_id_prod: number | null;
+    qty_outer: string | null;
+    qty_inner: string | null;
+    uom_inner_outer_name: string | null;
 }
 
 export interface ProductSearchBarProps {

@@ -7,7 +7,8 @@ import Sidebar from "../../../components/Sidebar";
 import StatusBar from "../../../components/StatusBar";
 import ItemTable, { ProductItem, ColumnDef } from "../../../components/ItemTable";
 import FormField from "../../../components/FormField";
-import FormInput from "../../../components/FormInput";
+import FormInput from "@/app/components/FormInput";
+import ModalFormInput from "@/app/components/ModalFormInput";
 import FormSelect from "../../../components/FormSelect";
 import Modal from "../../../components/Modal";
 import ProductSearchBar, { ProductSearchResult } from "../../../components/ProductSearchBar";
@@ -40,6 +41,9 @@ interface ItemDetailForm {
     uom: string;
     uomid?: number;
     productid?: number;
+    qtyOuter: string;
+    qtyInner: string;
+    uomInnerName: string;
     kuantitas: number;
     hargaDasar: number;
     diskon1Pct: number;
@@ -54,9 +58,12 @@ interface ItemDetailForm {
 const defaultItemForm: ItemDetailForm = {
     namaBarang: "",
     productDescription: "",
-    uom: "PCS",
+    uom: "",
     uomid: undefined,
     productid: undefined,
+    qtyOuter: "0",
+    qtyInner: "0",
+    uomInnerName: "",
     kuantitas: 0,
     hargaDasar: 0,
     diskon1Pct: 0,
@@ -151,7 +158,7 @@ type TabKey = "header" | "request-details" | "attachments";
 
 const tabs: { key: TabKey; label: string; icon: string; badge?: string }[] = [
     { key: "header", label: "Header Info", icon: "description" },
-    { key: "request-details", label: "Detail Permintaan", icon: "list_alt"},
+    { key: "request-details", label: "Detail Permintaan", icon: "list_alt" },
     { key: "attachments", label: "Lampiran", icon: "attachment" },
 ];
 
@@ -231,6 +238,23 @@ export default function PurchaseRequestDetailPage() {
             .finally(() => setLoadingTipePengiriman(false));
     }, []);
 
+    // ── Units (UOM) for modal ─────────────────────────────────────────────────
+    const [units, setUnits] = useState<UnitListItem[]>([]);
+    const [loadingUnits, setLoadingUnits] = useState(false);
+
+    useEffect(() => {
+        setLoadingUnits(true);
+        fetch("/api/master-data/units?limit=200")
+            .then((res) => res.json())
+            .then((json) => {
+                if (json.ok && Array.isArray(json.data)) {
+                    setUnits(json.data);
+                }
+            })
+            .catch((err) => console.error("[units fetch]", err))
+            .finally(() => setLoadingUnits(false));
+    }, []);
+
     // ── Products — fetched on-demand via ProductSearchBar (no pre-fetch needed) ─
 
     // ── Item Detail Modal State ───────────────────────────────────────────
@@ -243,8 +267,13 @@ export default function PurchaseRequestDetailPage() {
     // ── Handle product selected from ProductSearchBar ───────────────────────────
     const handleProductSelected = (p: ProductSearchResult) => {
         setItemField("namaBarang", p.productname);
+        setItemField("productDescription", p.productname2 ?? "");
+        if (p.uom_id_prod) setItemField("uomid", p.uom_id_prod);
         if (p.produnit) setItemField("uom", p.produnit);
         if (p.productid) setItemField("productid", p.productid);
+        setItemField("qtyOuter", p.qty_outer ?? "0");
+        setItemField("qtyInner", p.qty_inner ?? "0");
+        setItemField("uomInnerName", p.uom_inner_outer_name ?? "");
         setSelectedProductCode(p.productcode);
         setProductSearch(p.productname);
         setActiveModalTab("rincian");
@@ -907,8 +936,13 @@ export default function PurchaseRequestDetailPage() {
                             onChange={(val) => setItemField("namaBarang", val)}
                             onSelect={(p) => {
                                 setItemField("namaBarang", p.productname);
-                                setSelectedProductCode(p.productcode);
+                                setItemField("productDescription", p.productname2 ?? "");
+                                if (p.uom_id_prod) setItemField("uomid", p.uom_id_prod);
                                 if (p.produnit) setItemField("uom", p.produnit);
+                                setItemField("qtyOuter", p.qty_outer ?? "0");
+                                setItemField("qtyInner", p.qty_inner ?? "0");
+                                setItemField("uomInnerName", p.uom_inner_outer_name ?? "");
+                                setSelectedProductCode(p.productcode);
                             }}
                             placeholder="Cari produk..."
                             minChars={2}
@@ -920,11 +954,11 @@ export default function PurchaseRequestDetailPage() {
                     {/* Product Description */}
                     <div className="grid grid-cols-[160px_1fr] items-center gap-3 px-4 py-2.5">
                         <span className="text-xs font-semibold text-slate-500 uppercase">Product Description</span>
-                        <input
+                        <ModalFormInput
                             type="text"
                             value={itemForm.productDescription}
                             onChange={(e) => setItemField("productDescription", e.target.value)}
-                            className="w-full border border-slate-200 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-primary bg-slate-50"
+                            className="bg-slate-50"
                         />
                     </div>
 
@@ -933,26 +967,43 @@ export default function PurchaseRequestDetailPage() {
                         <span className="text-xs font-semibold text-slate-500 uppercase">UOM</span>
                         <div className="flex items-center gap-2">
                             <select
-                                value={itemForm.uom}
-                                onChange={(e) => setItemField("uom", e.target.value)}
-                                className="border border-slate-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-primary bg-white"
+                                value={itemForm.uomid ?? ""}
+                                onChange={(e) => {
+                                    const selected = units.find(
+                                        (u) => u.unitid === Number(e.target.value)
+                                    );
+                                    if (selected) {
+                                        setItemField("uomid", selected.unitid);
+                                        setItemField("uom", selected.unit || selected.unitname);
+                                    }
+                                }}
+                                disabled={loadingUnits}
+                                className="border border-slate-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-primary bg-white disabled:bg-slate-50 disabled:text-slate-400"
                             >
-                                {["PCS", "DUS", "BOX", "KG", "LITER", "RIM", "UNIT", "SET"].map((u) => (
-                                    <option key={u}>{u}</option>
+                                <option value="">
+                                    {loadingUnits ? "Memuat satuan..." : "-- Pilih UOM --"}
+                                </option>
+                                {units.map((u) => (
+                                    <option key={u.unitid} value={u.unitid}>
+                                        {u.unit || u.unitname}
+                                    </option>
                                 ))}
                             </select>
-                            <span className="text-xs text-slate-400">0 {itemForm.uom} @ 0 PCS</span>
+                            <span className="text-xs text-slate-400">
+                                {`${itemForm.qtyOuter ? parseFloat(itemForm.qtyOuter).toLocaleString("id-ID") : "0"} ${itemForm.uom || "—"} @ ${itemForm.qtyInner ? parseFloat(itemForm.qtyInner).toLocaleString("id-ID") : "0"} ${itemForm.uomInnerName || "PCS"}`}
+                            </span>
                         </div>
                     </div>
 
                     {/* Kuantitas */}
                     <div className="grid grid-cols-[160px_1fr] items-center gap-3 px-4 py-2.5">
                         <span className="text-xs font-semibold text-slate-500 uppercase">Kuantitas</span>
-                        <input
+                        <ModalFormInput
                             type="number"
                             value={itemForm.kuantitas}
                             onChange={(e) => setItemField("kuantitas", parseFloat(e.target.value) || 0)}
-                            className="w-full border border-slate-200 rounded px-3 py-1.5 text-sm text-right focus:outline-none focus:border-primary bg-white"
+                            textRight
+                            selectOnFocus
                         />
                     </div>
 
@@ -964,6 +1015,7 @@ export default function PurchaseRequestDetailPage() {
                                 type="number"
                                 value={itemForm.hargaDasar}
                                 onChange={(e) => setItemField("hargaDasar", parseFloat(e.target.value) || 0)}
+                                onFocus={(e) => e.target.select()}
                                 className="flex-1 border border-slate-200 rounded px-3 py-1.5 text-sm text-right focus:outline-none focus:border-primary bg-white"
                             />
                             <button className="size-8 flex items-center justify-center rounded border border-slate-200 hover:bg-primary/5 text-slate-400 hover:text-primary transition-colors">
@@ -1000,6 +1052,7 @@ export default function PurchaseRequestDetailPage() {
                                             type="number"
                                             value={pct}
                                             onChange={(e) => setPct(parseFloat(e.target.value) || 0)}
+                                            onFocus={(e) => e.target.select()}
                                             className="w-16 border border-slate-200 rounded px-2 py-1.5 text-sm text-right focus:outline-none focus:border-primary bg-white"
                                         />
                                         <input
@@ -1032,6 +1085,7 @@ export default function PurchaseRequestDetailPage() {
                                 type="number"
                                 value={itemForm.ppnPct}
                                 onChange={(e) => setItemField("ppnPct", parseFloat(e.target.value) || 0)}
+                                onFocus={(e) => e.target.select()}
                                 className="w-16 border border-slate-200 rounded px-2 py-1.5 text-sm text-right focus:outline-none focus:border-primary bg-white"
                             />
                             <input
