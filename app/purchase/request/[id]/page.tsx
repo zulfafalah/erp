@@ -473,19 +473,31 @@ export default function PurchaseRequestDetailPage() {
                             <div className="flex-1 flex flex-col overflow-hidden gap-3">
                                 {/* ── Items Error Banner ───────────────────── */}
                                 {(form.itemsError || form.itemDetailErrors.length > 0) && (
-                                    <div className="shrink-0 bg-red-50 border border-red-300 text-red-700 rounded-xl px-4 py-3 space-y-1.5">
-                                        {form.itemsError && (
-                                            <div className="flex items-center gap-2 text-sm font-semibold">
-                                                <span className="material-symbols-outlined text-lg text-red-500">error</span>
-                                                {form.itemsError}
-                                            </div>
-                                        )}
-                                        {form.itemDetailErrors.map((msg, i) => (
-                                            <div key={i} className="flex items-start gap-2 text-xs font-medium">
-                                                <span className="material-symbols-outlined text-sm text-red-400 mt-0.5">arrow_right</span>
-                                                {msg}
-                                            </div>
-                                        ))}
+                                    <div className="shrink-0 bg-red-50 border border-red-200 rounded-xl overflow-hidden">
+                                        {/* Banner header */}
+                                        <div className="flex items-center gap-2 bg-red-100 border-b border-red-200 px-4 py-2.5">
+                                            <span className="material-symbols-outlined text-base text-red-600">error</span>
+                                            <p className="text-xs font-bold text-red-700 uppercase tracking-wider">
+                                                {form.itemsError
+                                                    ? "Periksa data barang"
+                                                    : `${form.itemDetailErrors.length} kesalahan ditemukan — periksa data barang`}
+                                            </p>
+                                        </div>
+                                        {/* Error list */}
+                                        <ul className="px-4 py-3 space-y-1.5">
+                                            {form.itemsError && (
+                                                <li className="flex items-center gap-2 text-sm text-red-700 font-medium">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+                                                    {form.itemsError}
+                                                </li>
+                                            )}
+                                            {form.itemDetailErrors.map((msg, i) => (
+                                                <li key={i} className="flex items-start gap-2 text-xs text-red-600">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0 mt-1.5" />
+                                                    {msg}
+                                                </li>
+                                            ))}
+                                        </ul>
                                     </div>
                                 )}
 

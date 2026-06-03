@@ -135,11 +135,22 @@ export function usePurchaseRequestForm({ productItems, router }: UsePurchaseRequ
                     // Field: items (array of per-item error objects)
                     const itemsDetailArr = detail["items"] as Record<string, string[]>[] | undefined;
                     if (Array.isArray(itemsDetailArr)) {
+                        const fieldLabels: Record<string, string> = {
+                            qtypod: "Kuantitas",
+                            pricepod: "Harga",
+                            productid: "Produk",
+                            uomid: "Satuan",
+                            ketbarang: "Nama Barang",
+                            discpctpod: "Diskon",
+                            pod_ppn_pct: "PPN",
+                            estpod: "Tanggal Estimasi",
+                        };
                         const msgs: string[] = [];
                         itemsDetailArr.forEach((itemErr, idx) => {
                             Object.entries(itemErr).forEach(([field, errs]) => {
+                                const label = fieldLabels[field] ?? field;
                                 (errs as string[]).forEach((msg) => {
-                                    msgs.push(`Item ${idx + 1} — ${field}: ${msg}`);
+                                    msgs.push(`Item ${idx + 1} — ${label}: ${msg}`);
                                 });
                             });
                         });
