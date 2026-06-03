@@ -121,12 +121,6 @@ export default function PurchaseRequestDetailPage() {
                             </div>
                         </div>
                         <div className="flex flex-wrap items-center gap-2 md:gap-3 w-full md:w-auto">
-                            {form.apiError && (
-                                <span className="text-xs text-red-500 font-medium bg-red-50 border border-red-200 rounded-lg px-3 py-1.5 flex items-center gap-1.5">
-                                    <span className="material-symbols-outlined text-sm">error</span>
-                                    {form.apiError}
-                                </span>
-                            )}
                             <Button
                                 variant="primary"
                                 icon="save"
@@ -186,6 +180,13 @@ export default function PurchaseRequestDetailPage() {
                         {/* Tab Content: Header */}
                         {activeTab === "header" && (
                             <div className="flex-1 overflow-y-auto no-scrollbar pb-6">
+                                {/* API Error Banner */}
+                                {form.apiError && (
+                                    <div className="mb-4 flex items-start gap-2.5 bg-red-50 border border-red-300 text-red-700 rounded-xl px-4 py-3 text-sm font-medium">
+                                        <span className="material-symbols-outlined text-lg text-red-500 mt-0.5">error</span>
+                                        <span>{form.apiError}</span>
+                                    </div>
+                                )}
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
                                     {/* Left: Form Cards */}
                                     <div className="lg:col-span-2 space-y-6">
