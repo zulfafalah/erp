@@ -40,7 +40,6 @@ export const modules: ModuleConfig[] = [
             {
                 title: "Transaksi Pembelian",
                 items: [
-                    { label: "Permintaan", icon: "assignment", href: "/purchase/request" },
                     { label: "Pesanan Pembelian", icon: "shopping_cart", href: "/purchase/order" },
                     { label: "Penerimaan", icon: "inventory_2", href: "/purchase/receipt" },
                     { label: "Faktur Pembelian", icon: "receipt_long", href: "/purchase/invoice" },
