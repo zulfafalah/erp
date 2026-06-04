@@ -24,7 +24,31 @@ export async function GET(req: NextRequest) {
 
         // Forward allowed query params to the backend
         const params = new URLSearchParams();
-        const allowed = ["search", "page", "page_size", "ispolokal", "ordering"];
+        const allowed = [
+            // Pagination & ordering
+            "page", "page_size", "ordering",
+            // Global search
+            "search",
+            // Integer filters
+            "ispolokal", "statuspo", "statuspo__gte", "statuspo__lte",
+            "supplierid", "poid", "potop", "tipebiaya", "bunitid",
+            "iscancel", "isclosed",
+            // Text filters (string fields)
+            "pono", "pono__exact", "pono__icontains", "pono__istartswith", "pono__iendswith",
+            "pocurr", "pocurr__exact",
+            "poket1", "poket2",
+            "pokontrakno",
+            "po_inv_no_supplier", "po_sj_no_supplier", "po_fpajaknorcv",
+            "createdby", "approvedby",
+            // Numeric range filters
+            "gtotalpo", "gtotalpo__gte", "gtotalpo__lte",
+            "subtotalpo__gte", "subtotalpo__lte",
+            "porate",
+            // Date filters
+            "podate", "podate__gte", "podate__lte",
+            "pokontrakdate", "pokontrakdate__gte", "pokontrakdate__lte",
+            "deliverydate", "deliverydate__gte", "deliverydate__lte",
+        ];
         for (const key of allowed) {
             const val = searchParams.get(key);
             if (val !== null && val !== "") params.set(key, val);

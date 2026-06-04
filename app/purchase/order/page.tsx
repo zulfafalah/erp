@@ -1,74 +1,33 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, useCallback, useRef } from "react";
+import Button from "../../components/Button";
+import { useState, useEffect, useCallback } from "react";
 import Navbar from "../../components/Navbar";
 import Sidebar from "../../components/Sidebar";
 import StatusBar from "../../components/StatusBar";
-import MultiFilter, { FilterField, FilterRule } from "../../components/MultiFilter";
+import MultiFilter, { FilterRule } from "../../components/MultiFilter";
+import DataTable from "../../components/DataTable";
 import { PurchaseOrderListItem } from "../../api/purchase/orders/route";
+import {
+    FILTER_FIELDS,
+    buildColumns,
+    PurchaseOrderMobileCard,
+} from "./constants";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 
-type StatusKey = "Approved" | "Pending" | "Draft" | "Rejected" | "Closed";
-
-const STATUS_MAP: Record<number, StatusKey> = {
-    1: "Draft",
-    2: "Pending",
-    3: "Approved",
-    4: "Rejected",
-    5: "Closed",
-};
-
-const statusStyles: Record<string, string> = {
-    Approved: "bg-green-100 text-green-800",
-    Pending:  "bg-yellow-100 text-yellow-800",
-    Draft:    "bg-slate-100 text-slate-800",
-    Rejected: "bg-red-100 text-red-800",
-    Closed:   "bg-emerald-100 text-emerald-800",
-};
-
-// ─── Filter Fields ────────────────────────────────────────────────────────────
-
-const FILTER_FIELDS: FilterField[] = [
-    { key: "pono",          label: "No. PO",   type: "text" },
-    { key: "supplier_name", label: "Pemasok",  type: "text" },
-    { key: "pocurr",        label: "Mata Uang", type: "text" },
-    {
-        key: "ispolokal", label: "Tipe PO", type: "select", options: [
-            { label: "Lokal",   value: "0" },
-            { label: "Import",  value: "1" },
-        ],
-    },
-    {
-        key: "statuspo_display", label: "Status", type: "select", options: [
-            { label: "Draft",    value: "Draft" },
-            { label: "Pending",  value: "Pending" },
-            { label: "Approved", value: "Approved" },
-            { label: "Rejected", value: "Rejected" },
-        ],
-    },
-];
-
-// ─── Formatting helpers ───────────────────────────────────────────────────────
-
-const fmtDate = (d: string | null) =>
-    d ? new Date(d).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" }) : "—";
-
-const fmtCurrency = (amount: string | null, curr: string | null) => {
-    if (!amount || !curr) return "—";
-    const n = parseFloat(amount);
-    return `${curr} ${n.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-};
-
-// ─── Page Component ───────────────────────────────────────────────────────────
+// ─── Page Constants ───────────────────────────────────────────────────────────
 
 const PAGE_SIZE = 20;
 
+// ─── Page Component ───────────────────────────────────────────────────────────
+
 export default function PurchaseOrderListPage() {
-    const [allData,       setAllData]       = useState<PurchaseOrderListItem[]>([]);
-    const [filteredData,  setFilteredData]  = useState<PurchaseOrderListItem[]>([]);
-    const [activeRules,   setActiveRules]   = useState<FilterRule[]>([]);
+    const [data,        setData]        = useState<PurchaseOrderListItem[]>([]);
+    const [activeRules, setActiveRules] = useState<FilterRule[]>([]);
+
+    // Server-side filter — key/value pairs sent directly as query params to the API
+    const [filterParams, setFilterParams] = useState<Record<string, string>>({});
 
     // Pagination
     const [page,    setPage]    = useState(1);
@@ -80,12 +39,12 @@ export default function PurchaseOrderListPage() {
     const [deletingId, setDeletingId] = useState<number | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
-    // Debounce ref for search
-    const searchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
     // ── Fetch list from API ─────────────────────────────────────────────────
 
-    const fetchData = useCallback(async (currentPage: number) => {
+    const fetchData = useCallback(async (
+        currentPage: number,
+        filters: Record<string, string>,
+    ) => {
         setLoading(true);
         setError(null);
         try {
@@ -94,6 +53,11 @@ export default function PurchaseOrderListPage() {
                 page_size: String(PAGE_SIZE),
                 ordering:  "-pono",
             });
+            // Forward all active filter params to the backend
+            for (const [k, v] of Object.entries(filters)) {
+                if (v !== "") params.set(k, v);
+            }
+
             const res  = await fetch(`/api/purchase/orders?${params.toString()}`);
             const json = await res.json();
 
@@ -103,8 +67,7 @@ export default function PurchaseOrderListPage() {
             }
 
             const paginated = json.data as { count: number; results: PurchaseOrderListItem[] };
-            setAllData(paginated.results);
-            setFilteredData(paginated.results);
+            setData(paginated.results);
             setTotal(paginated.count);
         } catch {
             setError("Terjadi kesalahan jaringan.");
@@ -113,42 +76,67 @@ export default function PurchaseOrderListPage() {
         }
     }, []);
 
-    useEffect(() => { fetchData(page); }, [fetchData, page]);
+    useEffect(() => { fetchData(page, filterParams); }, [fetchData, page, filterParams]);
 
-    // ── Client-side filter (runs over already-loaded page) ──────────────────
+    // ── Server-side filter ──────────────────────────────────────────────────
+    //
+    // Translates MultiFilter rules → backend query params:
+    //
+    //   Text field operators:
+    //     contains    → field__icontains
+    //     equals      → field__exact
+    //     not_equals  → (no direct backend support, skipped)
+    //     starts_with → field__istartswith
+    //     ends_with   → field__iendswith
+    //     (default)   → field (icontains by default on backend)
+    //
+    //   select / number field:
+    //     key is already the final param name (e.g. statuspo, ispolokal,
+    //     gtotalpo__gte) — sent as-is with the rule value.
+    //
+    //   supplier_name → goes through global `search` param (API only).
+
+    // Fields whose key already IS the final query param (no operator suffix needed)
+    const DIRECT_PARAM_FIELDS = new Set([
+        "ispolokal", "statuspo",
+        "gtotalpo__gte", "gtotalpo__lte",
+        "podate__gte",  "podate__lte",
+    ]);
 
     const handleApplyFilter = (rules: FilterRule[]) => {
         setActiveRules(rules);
-        if (rules.length === 0) {
-            setFilteredData(allData);
-            return;
-        }
-        const result = allData.filter((item) =>
-            rules.every((rule) => {
-                const { field, operator, value } = rule;
-                const itemValue = item[field as keyof PurchaseOrderListItem];
-                if (itemValue === undefined || itemValue === null) return false;
-                const itemStr = String(itemValue).toLowerCase();
-                const valStr  = value.toLowerCase();
-                switch (operator) {
-                    case "contains":    return itemStr.includes(valStr);
-                    case "equals":      return itemStr === valStr;
-                    case "not_equals":  return itemStr !== valStr;
-                    case "starts_with": return itemStr.startsWith(valStr);
-                    case "ends_with":   return itemStr.endsWith(valStr);
-                    default:            return true;
-                }
-            })
-        );
-        setFilteredData(result);
-    };
 
-    // Re-apply active rules whenever raw data refreshes
-    useEffect(() => {
-        if (activeRules.length > 0) handleApplyFilter(activeRules);
-        else setFilteredData(allData);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [allData]);
+        const next: Record<string, string> = {};
+
+        for (const { field, operator, value } of rules) {
+            if (!value) continue;
+
+            // ── supplier_name: no dedicated param, use global search ──
+            if (field === "supplier_name") {
+                next["search"] = value;
+                continue;
+            }
+
+            // ── Direct params: key is already the final query param name ──
+            if (DIRECT_PARAM_FIELDS.has(field)) {
+                next[field] = value;
+                continue;
+            }
+
+            // ── Text fields: translate operator to Django ORM suffix ──
+            switch (operator) {
+                case "equals":      next[`${field}__exact`]       = value; break;
+                case "starts_with": next[`${field}__istartswith`] = value; break;
+                case "ends_with":   next[`${field}__iendswith`]   = value; break;
+                case "contains":
+                default:            next[field] = value; // backend default = icontains
+            }
+            // note: "not_equals" has no backend equivalent — omitted intentionally
+        }
+
+        setFilterParams(next);
+        setPage(1); // Reset to first page on new filter
+    };
 
     // ── Delete ──────────────────────────────────────────────────────────────
 
@@ -158,7 +146,7 @@ export default function PurchaseOrderListPage() {
             const res = await fetch(`/api/purchase/orders/${poid}`, { method: "DELETE" });
             if (res.ok) {
                 setDeletingId(null);
-                fetchData(page);
+                fetchData(page, filterParams);
             }
         } finally {
             setIsDeleting(false);
@@ -184,6 +172,48 @@ export default function PurchaseOrderListPage() {
         }
         return pages;
     };
+
+    // ── Derived ─────────────────────────────────────────────────────────────
+
+    const columns = buildColumns(setDeletingId);
+
+    const paginationFooter = !loading && total > 0 ? (
+        <div className="px-4 md:px-6 py-4 bg-slate-50 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0">
+            <p className="text-sm text-slate-500 text-center md:text-left">
+                Menampilkan {from}–{to} dari {total.toLocaleString("id-ID")} data
+            </p>
+            <div className="flex flex-wrap justify-center items-center gap-1">
+                <Button
+                    variant="secondary-border"
+                    size="icon-sm"
+                    icon="chevron_left"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                />
+                {pageNumbers().map((p, i) =>
+                    p === "..." ? (
+                        <span key={`ellipsis-${i}`} className="px-2 text-slate-400">...</span>
+                    ) : (
+                        <Button
+                            key={p}
+                            variant={page === p ? "primary" : "ghost"}
+                            size="sm"
+                            onClick={() => setPage(p as number)}
+                        >
+                            {p}
+                        </Button>
+                    )
+                )}
+                <Button
+                    variant="secondary-border"
+                    size="icon-sm"
+                    icon="chevron_right"
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                />
+            </div>
+        </div>
+    ) : undefined;
 
     // ─── Render ───────────────────────────────────────────────────────────────
 
@@ -229,7 +259,7 @@ export default function PurchaseOrderListPage() {
                                 <span className="material-symbols-outlined text-lg">error</span>
                                 {error}
                                 <button
-                                    onClick={() => fetchData(page)}
+                                    onClick={() => fetchData(page, filterParams)}
                                     className="ml-auto text-xs underline hover:no-underline"
                                 >
                                     Coba lagi
@@ -237,205 +267,19 @@ export default function PurchaseOrderListPage() {
                             </div>
                         )}
 
-                        {/* Table Container */}
-                        <div className="bg-white rounded-xl border border-primary/10 shadow-sm overflow-hidden">
-
-                            {/* Loading skeleton */}
-                            {loading && (
-                                <div className="divide-y divide-slate-100">
-                                    {Array.from({ length: 8 }).map((_, i) => (
-                                        <div key={i} className="px-6 py-4 flex gap-4 animate-pulse">
-                                            <div className="h-4 w-28 bg-slate-200 rounded" />
-                                            <div className="h-4 w-24 bg-slate-100 rounded" />
-                                            <div className="h-4 flex-1 bg-slate-100 rounded" />
-                                            <div className="h-4 w-20 bg-slate-100 rounded" />
-                                            <div className="h-4 w-24 bg-slate-100 rounded" />
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-
-                            {/* Empty state */}
-                            {!loading && filteredData.length === 0 && !error && (
-                                <div className="flex flex-col items-center justify-center py-20 text-center">
-                                    <span className="material-symbols-outlined text-5xl text-slate-300">inbox</span>
-                                    <p className="mt-3 text-sm font-semibold text-slate-500">Tidak ada data</p>
-                                    <p className="text-xs text-slate-400 mt-1">Coba ubah filter atau tambah pesanan baru.</p>
-                                </div>
-                            )}
-
-                            {/* Mobile Card View */}
-                            {!loading && filteredData.length > 0 && (
-                                <div className="block md:hidden divide-y divide-primary/5">
-                                    {filteredData.map((po) => {
-                                        const statusLabel = po.statuspo_display || STATUS_MAP[po.statuspo ?? 0] || "Draft";
-                                        return (
-                                            <div key={po.poid} className="p-4 space-y-3">
-                                                <div className="flex justify-between items-start">
-                                                    <div>
-                                                        <Link
-                                                            href={`/purchase/order/${po.poid}`}
-                                                            className="font-semibold text-primary text-sm hover:underline"
-                                                        >
-                                                            {po.pono ?? `#${po.poid}`}
-                                                        </Link>
-                                                        <p className="text-xs text-slate-500 mt-0.5">{fmtDate(po.podate)}</p>
-                                                    </div>
-                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusStyles[statusLabel] ?? statusStyles.Draft}`}>
-                                                        {statusLabel}
-                                                    </span>
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm font-medium text-slate-900">{po.supplier_name || "—"}</p>
-                                                    <p className="text-xs text-slate-500 truncate">{po.poket1 || "—"}</p>
-                                                </div>
-                                                <div className="flex justify-between items-center pt-2 border-t border-slate-100">
-                                                    <div>
-                                                        <p className="text-xs text-slate-400">Grand Total</p>
-                                                        <span className="text-sm font-bold text-slate-900">
-                                                            {fmtCurrency(po.gtotalpo, po.pocurr)}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1">
-                                                        <Link
-                                                            href={`/purchase/order/${po.poid}`}
-                                                            className="p-1.5 text-slate-400 hover:text-primary transition-colors"
-                                                        >
-                                                            <span className="material-symbols-outlined text-base">edit_square</span>
-                                                        </Link>
-                                                        <button
-                                                            onClick={() => setDeletingId(po.poid)}
-                                                            className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"
-                                                        >
-                                                            <span className="material-symbols-outlined text-base">delete</span>
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-
-                            {/* Desktop Table View */}
-                            {!loading && filteredData.length > 0 && (
-                                <div className="hidden md:block overflow-x-auto">
-                                    <table className="w-full text-left border-collapse">
-                                        <thead>
-                                            <tr className="bg-slate-50 border-b border-primary/10">
-                                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">No. PO</th>
-                                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Tanggal</th>
-                                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Pemasok</th>
-                                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Tipe</th>
-                                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Keterangan</th>
-                                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 text-right">Grand Total</th>
-                                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Status</th>
-                                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 text-right">Aksi</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-primary/5">
-                                            {filteredData.map((po) => {
-                                                const statusLabel = po.statuspo_display || STATUS_MAP[po.statuspo ?? 0] || "Draft";
-                                                return (
-                                                    <tr key={po.poid} className="hover:bg-primary/5 transition-colors cursor-pointer">
-                                                        <td className="px-6 py-4">
-                                                            <Link
-                                                                href={`/purchase/order/${po.poid}`}
-                                                                className="font-semibold text-primary text-sm tracking-tight hover:underline"
-                                                            >
-                                                                {po.pono ?? `#${po.poid}`}
-                                                            </Link>
-                                                        </td>
-                                                        <td className="px-6 py-4 text-sm text-slate-600">{fmtDate(po.podate)}</td>
-                                                        <td className="px-6 py-4 text-sm font-medium">{po.supplier_name || "—"}</td>
-                                                        <td className="px-6 py-4 text-sm text-slate-500">
-                                                            {po.ispolokal === 1 ? "Import" : "Lokal"}
-                                                        </td>
-                                                        <td className="px-6 py-4 text-sm text-slate-500 max-w-[200px]">
-                                                            <span className="block truncate">{po.poket1 || "—"}</span>
-                                                        </td>
-                                                        <td className="px-6 py-4 text-sm font-bold text-right">
-                                                            {fmtCurrency(po.gtotalpo, po.pocurr)}
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusStyles[statusLabel] ?? statusStyles.Draft}`}>
-                                                                {statusLabel}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <div className="flex items-center justify-end gap-2">
-                                                                <Link
-                                                                    href={`/purchase/order/${po.poid}`}
-                                                                    className="p-1.5 text-slate-400 hover:text-primary transition-colors"
-                                                                    title="Edit"
-                                                                >
-                                                                    <span className="material-symbols-outlined text-lg">edit_square</span>
-                                                                </Link>
-                                                                <button
-                                                                    className="p-1.5 text-slate-400 hover:text-primary transition-colors"
-                                                                    title="Print"
-                                                                >
-                                                                    <span className="material-symbols-outlined text-lg">print</span>
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => setDeletingId(po.poid)}
-                                                                    className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"
-                                                                    title="Delete"
-                                                                >
-                                                                    <span className="material-symbols-outlined text-lg">delete</span>
-                                                                </button>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
-
-                            {/* Pagination */}
-                            {!loading && total > 0 && (
-                                <div className="px-4 md:px-6 py-4 bg-slate-50 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0">
-                                    <p className="text-sm text-slate-500 text-center md:text-left">
-                                        Menampilkan {from}–{to} dari {total.toLocaleString("id-ID")} data
-                                    </p>
-                                    <div className="flex flex-wrap justify-center items-center gap-1">
-                                        <button
-                                            onClick={() => setPage((p) => Math.max(1, p - 1))}
-                                            disabled={page === 1}
-                                            className="p-2 border border-primary/10 rounded hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                                        >
-                                            <span className="material-symbols-outlined text-lg">chevron_left</span>
-                                        </button>
-                                        {pageNumbers().map((p, i) =>
-                                            p === "..." ? (
-                                                <span key={`ellipsis-${i}`} className="px-2 text-slate-400">...</span>
-                                            ) : (
-                                                <button
-                                                    key={p}
-                                                    onClick={() => setPage(p as number)}
-                                                    className={`px-3 py-1 rounded text-sm font-bold transition-colors ${
-                                                        page === p
-                                                            ? "bg-primary text-white"
-                                                            : "hover:bg-white text-slate-600"
-                                                    }`}
-                                                >
-                                                    {p}
-                                                </button>
-                                            )
-                                        )}
-                                        <button
-                                            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                                            disabled={page === totalPages}
-                                            className="p-2 border border-primary/10 rounded hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                                        >
-                                            <span className="material-symbols-outlined text-lg">chevron_right</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                        {/* Data Table (Desktop + Mobile) */}
+                        <DataTable
+                            data={data}
+                            columns={columns}
+                            keyField="poid"
+                            isLoading={loading}
+                            emptyIcon="inbox"
+                            emptyText="Tidak ada data. Coba ubah filter atau tambah pesanan baru."
+                            renderMobileCard={(po) =>
+                                PurchaseOrderMobileCard(po, setDeletingId)
+                            }
+                            footer={paginationFooter}
+                        />
                     </div>
                 </section>
             </main>
