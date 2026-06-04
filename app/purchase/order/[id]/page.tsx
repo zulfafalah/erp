@@ -23,8 +23,7 @@ import { useItemModal } from "../hooks/useItemModal";
 export default function PurchaseOrderDetailPage() {
     const router = useRouter();
     const params = useParams();
-    const isNew = params?.id === "new";
-    const currentStatus = "Draft";
+    // isNew is derived from the form hook (based on id param)
 
     const [activeTab, setActiveTab] = useState<TabKey>("header");
     const [productItems, setProductItems] = useState<ExtendedProductItem[]>([]);
@@ -32,8 +31,9 @@ export default function PurchaseOrderDetailPage() {
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
     const [productSearch, setProductSearch] = useState("");
 
-    const form = usePurchaseOrderForm({ productItems, router });
+    const form = usePurchaseOrderForm({ productItems, setProductItems, router, id: String(params?.id ?? "new") });
     const modal = useItemModal();
+    const isNew = form.isNew;
 
     // Auto-switch to order-details tab when item errors arrive from API
     useEffect(() => {
@@ -82,6 +82,49 @@ export default function PurchaseOrderDetailPage() {
     const formatRupiah = (value: number) =>
         new Intl.NumberFormat("id-ID", { style: "decimal", minimumFractionDigits: 2 }).format(value);
 
+    const currentStatus = form.poDetail?.statuspo_display ?? "Draft";
+    const currentPono = form.poDetail?.pono ?? (isNew ? "Baru" : String(params?.id));
+
+    // ── Loading skeleton ─────────────────────────────────────────────────────
+    if (form.isLoadingDetail) {
+        return (
+            <div className="bg-background-light text-slate-900 font-sans min-h-screen flex flex-col overflow-hidden pb-8">
+                <Navbar />
+                <main className="flex-1 flex overflow-hidden">
+                    <Sidebar />
+                    <section className="flex-1 flex flex-col items-center justify-center gap-4">
+                        <span className="material-symbols-outlined text-5xl text-primary animate-spin">progress_activity</span>
+                        <p className="text-sm text-slate-500 font-medium">Memuat data purchase order…</p>
+                    </section>
+                </main>
+                <StatusBar />
+            </div>
+        );
+    }
+
+    // ── Detail load error ────────────────────────────────────────────────
+    if (form.detailLoadError) {
+        return (
+            <div className="bg-background-light text-slate-900 font-sans min-h-screen flex flex-col overflow-hidden pb-8">
+                <Navbar />
+                <main className="flex-1 flex overflow-hidden">
+                    <Sidebar />
+                    <section className="flex-1 flex flex-col items-center justify-center gap-4">
+                        <span className="material-symbols-outlined text-5xl text-red-400">error</span>
+                        <p className="text-sm font-semibold text-red-600">{form.detailLoadError}</p>
+                        <button
+                            onClick={() => router.push("/purchase/order")}
+                            className="mt-2 px-4 py-2 text-sm font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                        >
+                            Kembali ke Daftar
+                        </button>
+                    </section>
+                </main>
+                <StatusBar />
+            </div>
+        );
+    }
+
     return (
         <div className="bg-background-light text-slate-900 font-sans min-h-screen flex flex-col overflow-hidden pb-8">
             {/* Top Navigation Bar */}
@@ -106,7 +149,7 @@ export default function PurchaseOrderDetailPage() {
                             <div>
                                 <div className="flex flex-wrap items-center gap-2">
                                     <h1 className="text-lg md:text-xl font-bold text-slate-900 leading-tight">
-                                        Pesanan Pembelian Barang
+                                        {isNew ? "Pesanan Pembelian Barang" : `PO: ${currentPono}`}
                                     </h1>
                                     <span
                                         className={`px-2 md:px-3 py-0.5 md:py-1 text-[10px] md:text-xs font-bold rounded-full uppercase tracking-widest border ${statusBadgeStyles[currentStatus] || statusBadgeStyles.Draft

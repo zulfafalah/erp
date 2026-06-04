@@ -1,12 +1,15 @@
-import { useState, useEffect } from "react";
-import { SupplierListItem, UnitListItem, ExtendedProductItem } from "../types";
+import { useState, useEffect, useCallback } from "react";
+import { SupplierListItem, UnitListItem, ExtendedProductItem, PurchaseOrderDetail } from "../types";
 
 interface UsePurchaseOrderFormProps {
     productItems: ExtendedProductItem[];
+    setProductItems: React.Dispatch<React.SetStateAction<ExtendedProductItem[]>>;
     router: any; // using any to avoid import incompatibilities, will work with next/navigation useRouter
+    id: string; // "new" or the actual poid as string
 }
 
-export function usePurchaseOrderForm({ productItems, router }: UsePurchaseOrderFormProps) {
+export function usePurchaseOrderForm({ productItems, setProductItems, router, id }: UsePurchaseOrderFormProps) {
+    const isNew = id === "new";
     const today = new Date().toISOString().split("T")[0];
     
     // ── Header Form State ─────────────────────────────────────────────────────
@@ -30,6 +33,73 @@ export function usePurchaseOrderForm({ productItems, router }: UsePurchaseOrderF
     const [itemsError, setItemsError] = useState<string | null>(null);
     const [itemDetailErrors, setItemDetailErrors] = useState<string[]>([]);
     const [apiError, setApiError] = useState<string | null>(null);
+
+    // ── Detail fetch (edit mode) ──────────────────────────────────────────────
+    const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+    const [detailLoadError, setDetailLoadError] = useState<string | null>(null);
+    const [poDetail, setPoDetail] = useState<PurchaseOrderDetail | null>(null);
+
+    const populateFromDetail = useCallback((detail: PurchaseOrderDetail) => {
+        setPoDetail(detail);
+        if (detail.podate)       setPodate(detail.podate);
+        if (detail.ispolokal != null) setIspolokal(detail.ispolokal);
+        if (detail.supplierid != null) setSupplierIdForm(detail.supplierid);
+        if (detail.tipebiaya != null)  setTipePengirimanId(detail.tipebiaya);
+        setPoket1(detail.poket1 ?? "");
+        setPotop(detail.potop ?? 0);
+        setPoInvNo(detail.po_inv_no_supplier ?? "");
+        setPoSjNo(detail.po_sj_no_supplier ?? "");
+        setPoFpajaktno(detail.po_fpajaknorcv ?? "");
+        setPoFpajaktgl(detail.po_fpajaktglrcv ?? "");
+
+        // Map API items → ExtendedProductItem[]
+        if (Array.isArray(detail.items) && detail.items.length > 0) {
+            const mapped: ExtendedProductItem[] = detail.items.map((it: Record<string, unknown>) => {
+                const price = parseFloat(String(it.pricepod ?? "0")) || 0;
+                const qty   = parseFloat(String(it.qtypod  ?? "0")) || 0;
+                const discPct  = parseFloat(String(it.discpctpod ?? "0")) || 0;
+                const ppnPct   = parseFloat(String(it.pod_ppn_pct ?? "0")) || 0;
+                const discVal  = price * (discPct / 100);
+                const afterDisc = price - discVal;
+                const ppnVal   = afterDisc * (ppnPct / 100);
+                const hargaFinal = afterDisc + ppnVal;
+                const jumlah = hargaFinal * qty;
+                return {
+                    name:      String(it.ketbarang ?? it.productname ?? ""),
+                    barcode:   String(it.productcode ?? ""),
+                    uom:       String(it.uomname ?? it.uom ?? ""),
+                    qty,
+                    hargaDasar:  price,
+                    discount:    discVal,
+                    ppn:         ppnVal,
+                    hargaFinal,
+                    jumlah,
+                    productid:   typeof it.productid === "number" ? it.productid : undefined,
+                    uomid:       typeof it.uomid     === "number" ? it.uomid     : undefined,
+                };
+            });
+            setProductItems(mapped);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
+        if (isNew) return;
+        setIsLoadingDetail(true);
+        setDetailLoadError(null);
+        fetch(`/api/purchase/orders/${id}`)
+            .then((res) => res.json())
+            .then((json) => {
+                if (json.ok && json.data) {
+                    populateFromDetail(json.data as PurchaseOrderDetail);
+                } else {
+                    setDetailLoadError(json.message ?? "Gagal memuat data purchase order.");
+                }
+            })
+            .catch(() => setDetailLoadError("Terjadi kesalahan jaringan saat memuat data."))
+            .finally(() => setIsLoadingDetail(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [id]);
 
     // ── Suppliers ─────────────────────────────────────────────────────────────
     const [suppliers, setSuppliers] = useState<SupplierListItem[]>([]);
@@ -116,11 +186,17 @@ export function usePurchaseOrderForm({ productItems, router }: UsePurchaseOrderF
                 })),
             };
 
-            const res = await fetch("/api/purchase/orders", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
-            });
+            const res = isNew
+                ? await fetch("/api/purchase/orders", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                })
+                : await fetch(`/api/purchase/orders/${id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                });
             const json = await res.json();
 
             if (!res.ok || !json.ok) {
@@ -169,9 +245,11 @@ export function usePurchaseOrderForm({ productItems, router }: UsePurchaseOrderF
                 return;
             }
 
-            // Navigate to the new record
-            const newId = json.data?.poid ?? "new";
-            router.push(`/purchase/order/${newId}`);
+            // Navigate to the (new or updated) record
+            if (isNew) {
+                const newId = json.data?.poid ?? "new";
+                router.push(`/purchase/order/${newId}`);
+            }
         } catch (err) {
             console.error("[handleSave]", err);
             setApiError("Terjadi kesalahan jaringan. Silakan coba lagi.");
@@ -181,6 +259,10 @@ export function usePurchaseOrderForm({ productItems, router }: UsePurchaseOrderF
     };
 
     return {
+        isNew,
+        poDetail,
+        isLoadingDetail,
+        detailLoadError,
         podate,
         setPodate,
         ispolokal,
