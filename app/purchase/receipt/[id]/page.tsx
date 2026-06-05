@@ -1,162 +1,54 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
 import Navbar from "../../../components/Navbar";
 import Sidebar from "../../../components/Sidebar";
 import StatusBar from "../../../components/StatusBar";
-import ItemTable, { ProductItem, ColumnDef } from "../../../components/ItemTable";
+import ItemTable from "../../../components/ItemTable";
 import FormField from "../../../components/FormField";
 import FormInput from "../../../components/FormInput";
 import FormSelect from "../../../components/FormSelect";
 import Modal from "../../../components/Modal";
+import Button from "@/app/components/Button";
+import ProductSearchBar, { ProductSearchResult } from "../../../components/ProductSearchBar";
 
-// ── Item Detail Modal State ────────────────────────────────────────────────
-interface ItemDetailForm {
-    namaBarang: string;
-    keterangan: string;
-    uom: string;
-    kuantitas: number;
-    hargaDasar: number;
-    diskon1Pct: number;
-    diskon2Pct: number;
-    diskon3Pct: number;
-    diskon4Pct: number;
-    ppnPct: number;
-    tglKadaluarsa: string;
-}
-
-const defaultItemForm: ItemDetailForm = {
-    namaBarang: "",
-    keterangan: "",
-    uom: "DUS",
-    kuantitas: 0,
-    hargaDasar: 0,
-    diskon1Pct: 0,
-    diskon2Pct: 0,
-    diskon3Pct: 0,
-    diskon4Pct: 0,
-    ppnPct: 0,
-    tglKadaluarsa: "2026-06-01",
-};
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-function applyDiscount(price: number, pct: number) {
-    return price - (price * pct) / 100;
-}
-
-function useItemCalc(form: ItemDetailForm) {
-    const setelah1 = applyDiscount(form.hargaDasar, form.diskon1Pct);
-    const setelah2 = applyDiscount(setelah1, form.diskon2Pct);
-    const setelah3 = applyDiscount(setelah2, form.diskon3Pct);
-    const setelah4 = applyDiscount(setelah3, form.diskon4Pct);
-    const ppnNominal = (setelah4 * form.ppnPct) / 100;
-    const hargaFinal = setelah4 + ppnNominal;
-    const jumlah = hargaFinal * form.kuantitas;
-    return { setelah1, setelah2, setelah3, setelah4, ppnNominal, hargaFinal, jumlah };
-}
-
-// ── Mock Data ────────────────────────────────────────────────────────
-const defaultProductItems: ProductItem[] = [];
-
-// ── Column definition for Purchase Receipt ──────────────────────────────────
-const _fmt = (v: number) =>
-    v.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-const purchaseReceiptColumns: ColumnDef<ProductItem>[] = [
-    { key: "barcode", label: "Barcode", width: "w-28", align: "left" },
-    {
-        key: "name",
-        label: "Nama Barang",
-        render: (v) => (
-            <p className="font-semibold text-slate-800 leading-tight">{String(v || "—")}</p>
-        ),
-    },
-    { key: "uom", label: "UOM", width: "w-20", align: "center" },
-    {
-        key: "qty",
-        label: "Qty",
-        width: "w-24",
-        align: "right",
-        editable: true,
-        editType: "number",
-        footer: "sum",
-    },
-    {
-        key: "hargaDasar",
-        label: "Harga Dasar",
-        width: "w-32",
-        align: "right",
-        render: (v) => _fmt(v as number),
-    },
-    {
-        key: "discount",
-        label: "Discount",
-        width: "w-28",
-        align: "right",
-        render: (v) => _fmt(v as number),
-    },
-    {
-        key: "ppn",
-        label: "PPN",
-        width: "w-28",
-        align: "right",
-        render: (v) => _fmt(v as number),
-    },
-    {
-        key: "hargaFinal",
-        label: "Harga Final",
-        width: "w-32",
-        align: "right",
-        render: (v) => <span className="font-medium">{_fmt(v as number)}</span>,
-    },
-    {
-        key: "jumlah",
-        label: "Jumlah",
-        width: "w-36",
-        align: "right",
-        render: (v) => <span className="font-bold">{_fmt(v as number)}</span>,
-        footer: "sum",
-    },
-];
-
-type TabKey = "header" | "receipt-details" | "attachments";
-
-const tabs: { key: TabKey; label: string; icon: string; badge?: string }[] = [
-    { key: "header", label: "Header Info", icon: "description" },
-    { key: "receipt-details", label: "Detail Penerimaan", icon: "inventory_2", badge: "3" },
-    { key: "attachments", label: "Lampiran", icon: "attachment" },
-];
-
-const statusBadgeStyles: Record<string, string> = {
-    Closed:   "bg-emerald-100 text-emerald-700 border-emerald-200",
-    Approved: "bg-green-100 text-green-700 border-green-200",
-    Pending:  "bg-yellow-100 text-yellow-700 border-yellow-200",
-    Draft:    "bg-slate-100 text-slate-600 border-slate-200",
-    Rejected: "bg-red-100 text-red-700 border-red-200",
-};
+import { ExtendedReceiptItem } from "../types";
+import { tabs, statusBadgeStyles, purchaseReceiptColumns } from "../constants";
+import { useReceiptForm, useItemCalc } from "../hooks/useReceiptForm";
+import { TabKey } from "../types";
 
 export default function PurchaseReceiptDetailPage() {
+    const router = useRouter();
+    const params = useParams();
+    const id = String(params?.id ?? "new");
+
     const [activeTab, setActiveTab] = useState<TabKey>("header");
-    const [productItems, setProductItems] = useState<ProductItem[]>(defaultProductItems);
+    const [productItems, setProductItems] = useState<ExtendedReceiptItem[]>([]);
     const [isProductModalOpen, setIsProductModalOpen] = useState(false);
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
-
-    // ── Product Search ────────────────────────────────────────────────────────
     const [productSearch, setProductSearch] = useState("");
-    const [showProductDropdown, setShowProductDropdown] = useState(false);
 
-    // ── Item Detail Modal State ───────────────────────────────────────────
-    const [itemForm, setItemForm] = useState<ItemDetailForm>(defaultItemForm);
-    const calc = useItemCalc(itemForm);
+    const form = useReceiptForm({ productItems, setProductItems, router, id });
+    const isNew = form.isNew;
+    const calc = useItemCalc(form.itemForm);
 
-    const setItemField = <K extends keyof ItemDetailForm>(key: K, val: ItemDetailForm[K]) =>
-        setItemForm((f) => ({ ...f, [key]: val }));
+    // Auto-switch to receipt-details tab when item errors arrive
+    useEffect(() => {
+        if (form.itemDetailErrors.length > 0 || form.itemsError) {
+            setActiveTab("receipt-details");
+        }
+    }, [form.itemDetailErrors, form.itemsError]);
 
-    const router = useRouter();
-    const currentStatus = "Closed";
+    const handleProductSelected = (p: ProductSearchResult) => {
+        form.setItemField("namaBarang", p.productname);
+        if (p.uom_id_prod) form.setItemField("uomid", p.uom_id_prod);
+        if (p.produnit)    form.setItemField("uom", p.produnit);
+        setProductSearch(p.productname);
+        setIsProductModalOpen(true);
+    };
 
-    const handleUpdateItem = (index: number, field: keyof ProductItem, value: any) => {
+    const handleUpdateItem = (index: number, field: keyof ExtendedReceiptItem, value: any) => {
         const newItems = [...productItems];
         newItems[index] = { ...newItems[index], [field]: value };
         if (field === "qty") {
@@ -171,26 +63,74 @@ export default function PurchaseReceiptDetailPage() {
 
     const handleEditItem = (index: number) => {
         const item = productItems[index];
-        setItemForm((f) => ({
-            ...f,
-            namaBarang: item.name,
-            uom: item.uom,
-            kuantitas: item.qty,
-            hargaDasar: item.hargaDasar,
-        }));
+        form.setItemField("namaBarang", item.name);
+        form.setItemField("uom", item.uom);
+        form.setItemField("kuantitas", item.qty);
+        form.setItemField("hargaDasar", item.hargaDasar);
+        form.setItemField("productid", item.productid);
+        form.setItemField("uomid", item.uomid);
+        form.setItemField("poid_d_idf", item.poid_d_idf);
+        if (item.expireddate) form.setItemField("tglKadaluarsa", item.expireddate);
         setEditingIndex(index);
         setIsProductModalOpen(true);
     };
 
-    const subTotal = productItems.reduce((acc, item) => acc + item.jumlah, 0);
-    const discPct = 8;
-    const discNominal = subTotal * (discPct / 100);
-    const ppnPct = 11;
-    const ppnNominal = (subTotal - discNominal) * (ppnPct / 100);
-    const grandTotal = subTotal - discNominal + ppnNominal;
+    const fmtN = (v: number) =>
+        v.toLocaleString("id-ID", { minimumFractionDigits: 4, maximumFractionDigits: 4 });
 
-    const fmt = (value: number) =>
+    const formatRupiah = (value: number) =>
         new Intl.NumberFormat("id-ID", { style: "decimal", minimumFractionDigits: 2 }).format(value);
+
+    // Summary totals from API detail (when editing) or computed from local items
+    const subTotal    = form.rcvDetail ? parseFloat(form.rcvDetail.subtotalrcv ?? "0") : productItems.reduce((a, i) => a + i.jumlah, 0);
+    const discVal     = form.rcvDetail ? parseFloat(form.rcvDetail.discvalrcvh ?? "0") : 0;
+    const ppnVal      = form.rcvDetail ? parseFloat(form.rcvDetail.ppnvalue    ?? "0") : 0;
+    const grandTotal  = form.rcvDetail ? parseFloat(form.rcvDetail.grandtotalrcv ?? "0") : subTotal - discVal + ppnVal;
+    const tkonversi   = form.rcvDetail ? parseFloat(form.rcvDetail.tkonversibeli ?? "0") : grandTotal;
+    const totalQtyRcv = form.rcvDetail ? parseFloat(form.rcvDetail.totalrcvq ?? "0") : productItems.reduce((a, i) => a + i.qty, 0);
+
+    const currentStatus = form.rcvDetail?.statusrcv_display ?? "Draft";
+    const currentRcvNo  = form.rcvDetail?.rcvno ?? (isNew ? "Baru" : id);
+
+    // ── Loading skeleton ─────────────────────────────────────────────────────
+    if (form.isLoadingDetail) {
+        return (
+            <div className="bg-background-light text-slate-900 font-sans min-h-screen flex flex-col overflow-hidden pb-8">
+                <Navbar />
+                <main className="flex-1 flex overflow-hidden">
+                    <Sidebar />
+                    <section className="flex-1 flex flex-col items-center justify-center gap-4">
+                        <span className="material-symbols-outlined text-5xl text-primary animate-spin">progress_activity</span>
+                        <p className="text-sm text-slate-500 font-medium">Memuat data penerimaan barang…</p>
+                    </section>
+                </main>
+                <StatusBar />
+            </div>
+        );
+    }
+
+    // ── Detail load error ────────────────────────────────────────────────
+    if (form.detailLoadError) {
+        return (
+            <div className="bg-background-light text-slate-900 font-sans min-h-screen flex flex-col overflow-hidden pb-8">
+                <Navbar />
+                <main className="flex-1 flex overflow-hidden">
+                    <Sidebar />
+                    <section className="flex-1 flex flex-col items-center justify-center gap-4">
+                        <span className="material-symbols-outlined text-5xl text-red-400">error</span>
+                        <p className="text-sm font-semibold text-red-600">{form.detailLoadError}</p>
+                        <button
+                            onClick={() => router.push("/purchase/receipt")}
+                            className="mt-2 px-4 py-2 text-sm font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                        >
+                            Kembali ke Daftar
+                        </button>
+                    </section>
+                </main>
+                <StatusBar />
+            </div>
+        );
+    }
 
     return (
         <div className="bg-background-light text-slate-900 font-sans min-h-screen flex flex-col overflow-hidden pb-8">
@@ -206,41 +146,57 @@ export default function PurchaseReceiptDetailPage() {
                     {/* Action Header */}
                     <div className="px-4 md:px-6 py-3 md:py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-primary/5 bg-white/50 backdrop-blur-sm shrink-0">
                         <div className="flex items-start md:items-center gap-3 md:gap-4 w-full md:w-auto">
-                            <button
+                            <Button
+                                variant="secondary-border"
+                                size="icon-sm"
                                 onClick={() => router.push("/purchase/receipt")}
-                                className="size-8 flex-shrink-0 flex items-center justify-center rounded-lg border border-slate-200 hover:bg-white mt-1 md:mt-0"
-                            >
-                                <span className="material-symbols-outlined text-lg">arrow_back</span>
-                            </button>
+                                className="mt-1 md:mt-0"
+                                icon="arrow_back"
+                            />
                             <div>
                                 <div className="flex flex-wrap items-center gap-2">
                                     <h1 className="text-lg md:text-xl font-bold text-slate-900 leading-tight">
-                                        Penerimaan Pembelian Barang
+                                        {isNew ? "Penerimaan Pembelian Barang" : `BPB: ${currentRcvNo}`}
                                     </h1>
                                     <span
-                                        className={`px-2 md:px-3 py-0.5 md:py-1 text-[10px] md:text-xs font-bold rounded-full uppercase tracking-widest border ${statusBadgeStyles[currentStatus]}`}
+                                        className={`px-2 md:px-3 py-0.5 md:py-1 text-[10px] md:text-xs font-bold rounded-full uppercase tracking-widest border ${statusBadgeStyles[currentStatus] || statusBadgeStyles.Draft}`}
                                     >
                                         {currentStatus}
                                     </span>
                                 </div>
                                 <p className="text-[10px] md:text-xs text-slate-500 font-medium mt-1">
-                                    BPB 2601-0001 — Kelola data penerimaan barang dari pemasok.
+                                    Buat dan kelola penerimaan pembelian barang dari pemasok.
                                 </p>
                             </div>
                         </div>
                         <div className="flex flex-wrap items-center gap-2 md:gap-3 w-full md:w-auto">
-                            <button className="flex-1 md:flex-none justify-center px-3 md:px-4 py-2 text-xs md:text-sm font-semibold text-slate-700 hover:bg-slate-200/50 rounded-lg transition-all border border-slate-200 md:border-transparent flex items-center gap-2">
-                                <span className="material-symbols-outlined text-sm">lock_open</span>
-                                Re-open
-                            </button>
-                            <button className="flex-1 md:flex-none justify-center px-3 md:px-4 py-2 text-xs md:text-sm font-semibold bg-white text-primary border border-primary/20 hover:border-primary rounded-lg transition-all flex items-center gap-2">
-                                <span className="material-symbols-outlined text-sm">print</span>
-                                Print BPB
-                            </button>
-                            <button className="w-full md:w-auto justify-center px-4 md:px-5 py-2 text-xs md:text-sm font-bold bg-primary text-white hover:bg-primary/90 rounded-lg shadow-lg shadow-primary/20 flex items-center gap-2">
-                                <span className="material-symbols-outlined text-sm">receipt</span>
-                                Create Auto PIV
-                            </button>
+                            <Button
+                                variant="primary"
+                                icon="save"
+                                onClick={form.handleSave}
+                                loading={form.isSaving}
+                                loadingText="Menyimpan..."
+                                className="flex-1 md:flex-none px-4 md:px-5 py-2 text-xs md:text-sm font-bold shadow-lg shadow-primary/25"
+                            >
+                                Simpan
+                            </Button>
+                            <Button
+                                variant="outline"
+                                disabled={isNew}
+                                icon="print"
+                                className="flex-1 md:flex-none px-3 md:px-4 py-2 text-xs md:text-sm"
+                            >
+                                Print
+                            </Button>
+                            {!isNew && (
+                                <Button
+                                    variant="primary"
+                                    icon="receipt"
+                                    className="w-full md:w-auto px-4 md:px-5 py-2 text-xs md:text-sm"
+                                >
+                                    Create Auto PIV
+                                </Button>
+                            )}
                         </div>
                     </div>
 
@@ -272,8 +228,14 @@ export default function PurchaseReceiptDetailPage() {
                         {/* ── Tab Content: Header ── */}
                         {activeTab === "header" && (
                             <div className="flex-1 overflow-y-auto no-scrollbar pb-6">
+                                {/* API Error Banner */}
+                                {form.apiError && (
+                                    <div className="mb-4 flex items-start gap-2.5 bg-red-50 border border-red-300 text-red-700 rounded-xl px-4 py-3 text-sm font-medium">
+                                        <span className="material-symbols-outlined text-lg text-red-500 mt-0.5">error</span>
+                                        <span>{form.apiError}</span>
+                                    </div>
+                                )}
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-
                                     {/* Left: Form Cards */}
                                     <div className="lg:col-span-2 space-y-6">
 
@@ -288,68 +250,124 @@ export default function PurchaseReceiptDetailPage() {
                                                 {/* No. ~ Status */}
                                                 <FormField label="No. ~ Status">
                                                     <div className="flex gap-2">
-                                                        <FormInput defaultValue="BPB 2601-0001" readOnly />
-                                                        <FormInput defaultValue="Closed" readOnly className="w-28" />
+                                                        <FormInput
+                                                            defaultValue={isNew ? "Auto Generate" : currentRcvNo}
+                                                            readOnly
+                                                        />
+                                                        <FormInput
+                                                            defaultValue={currentStatus}
+                                                            readOnly
+                                                            className="w-28"
+                                                        />
                                                     </div>
                                                 </FormField>
 
                                                 {/* Tanggal Terima */}
                                                 <FormField label="Tanggal Terima">
-                                                    <FormInput type="date" defaultValue="2026-06-01" />
-                                                </FormField>
-
-                                                {/* Masuk Gudang */}
-                                                <FormField label="Masuk Gudang" className="sm:col-span-2">
-                                                    <FormSelect defaultValue="GUDANG DADAP A8">
-                                                        <option>GUDANG DADAP A8</option>
-                                                        <option>GUDANG PUSAT</option>
-                                                        <option>GUDANG BEKASI</option>
-                                                    </FormSelect>
+                                                    <FormInput
+                                                        type="date"
+                                                        value={form.rcvdate}
+                                                        onChange={(e) => form.setRcvdate(e.target.value)}
+                                                    />
                                                 </FormField>
 
                                                 {/* Pemasok */}
-                                                <FormField label="Pemasok">
-                                                    <div className="flex gap-2">
-                                                        <FormSelect>
-                                                            <option>CARREFOUR MEDAN</option>
-                                                            <option>PT UNILEVER</option>
-                                                            <option>PT INDOFOOD</option>
-                                                        </FormSelect>
-                                                        <button className="size-9 flex-shrink-0 flex items-center justify-center rounded-lg border border-slate-200 hover:bg-primary/5 text-slate-400 hover:text-primary transition-colors">
-                                                            <span className="material-symbols-outlined text-base">key</span>
-                                                        </button>
-                                                    </div>
+                                                <FormField label="Pemasok" className="sm:col-span-2">
+                                                    <FormSelect
+                                                        disabled={form.loadingSuppliers}
+                                                        value={form.supplierIdForm}
+                                                        onChange={(e) => {
+                                                            form.setSupplierIdForm(e.target.value ? Number(e.target.value) : "");
+                                                            if (e.target.value) form.clearSupplierError();
+                                                        }}
+                                                        className={form.supplierError ? "!border-red-400 !ring-1 !ring-red-400" : ""}
+                                                    >
+                                                        <option value="">
+                                                            {form.loadingSuppliers ? "Memuat data pemasok..." : "-- Pilih Pemasok --"}
+                                                        </option>
+                                                        {form.suppliers.map((s) => (
+                                                            <option key={s.supplierid} value={s.supplierid}>
+                                                                {s.companyname}
+                                                            </option>
+                                                        ))}
+                                                    </FormSelect>
+                                                    {form.supplierError && (
+                                                        <p className="mt-1.5 text-xs text-red-500 font-medium flex items-center gap-1">
+                                                            <span className="material-symbols-outlined text-sm">error</span>
+                                                            {form.supplierError}
+                                                        </p>
+                                                    )}
                                                 </FormField>
 
                                                 {/* PO No. */}
-                                                <FormField label="PO No.">
-                                                    <FormSelect>
-                                                        <option>POB 2601-0001</option>
-                                                        <option>POB 2601-0002</option>
-                                                    </FormSelect>
+                                                <FormField label="No. PO">
+                                                    <FormInput
+                                                        type="number"
+                                                        placeholder="ID Purchase Order..."
+                                                        value={form.poidh === "" ? "" : String(form.poidh)}
+                                                        onChange={(e) => {
+                                                            form.setPoidh(e.target.value ? Number(e.target.value) : "");
+                                                            if (e.target.value) form.clearPoidhError();
+                                                        }}
+                                                        className={form.poidhError ? "!border-red-400 !ring-1 !ring-red-400" : ""}
+                                                    />
+                                                    {form.poidhError && (
+                                                        <p className="mt-1.5 text-xs text-red-500 font-medium flex items-center gap-1">
+                                                            <span className="material-symbols-outlined text-sm">error</span>
+                                                            {form.poidhError}
+                                                        </p>
+                                                    )}
                                                 </FormField>
 
-                                                {/* BDP No. */}
-                                                <FormField label="BDP No.">
-                                                    <FormSelect>
-                                                        <option>:: Tanpa BDP No. ::</option>
-                                                        <option>BDP 2601-0001</option>
-                                                    </FormSelect>
+                                                {/* Masuk Gudang */}
+                                                <FormField label="Masuk Gudang">
+                                                    <FormInput
+                                                        type="number"
+                                                        placeholder="ID Gudang..."
+                                                        value={form.rcvwhs === "" ? "" : String(form.rcvwhs)}
+                                                        onChange={(e) => {
+                                                            form.setRcvwhs(e.target.value ? Number(e.target.value) : "");
+                                                            if (e.target.value) form.clearRcvwhsError();
+                                                        }}
+                                                        className={form.rcvwhsError ? "!border-red-400 !ring-1 !ring-red-400" : ""}
+                                                    />
+                                                    {form.rcvwhsError && (
+                                                        <p className="mt-1.5 text-xs text-red-500 font-medium flex items-center gap-1">
+                                                            <span className="material-symbols-outlined text-sm">error</span>
+                                                            {form.rcvwhsError}
+                                                        </p>
+                                                    )}
                                                 </FormField>
 
                                                 {/* No. Invoice ~ No. Shipment Supplier */}
-                                                <FormField label="No.Invoice ~ No. Shipment Supplier" className="sm:col-span-2">
+                                                <FormField label="No. Invoice ~ No. SJ Supplier" className="sm:col-span-2">
                                                     <div className="flex gap-2">
-                                                        <FormInput placeholder="No. Invoice..." />
-                                                        <FormInput placeholder="No. Shipment Supplier..." />
+                                                        <FormInput
+                                                            placeholder="No. Invoice Supplier..."
+                                                            value={form.invNoSupplier}
+                                                            onChange={(e) => form.setInvNoSupplier(e.target.value)}
+                                                        />
+                                                        <FormInput
+                                                            placeholder="No. SJ Supplier..."
+                                                            value={form.sjNoSupplier}
+                                                            onChange={(e) => form.setSjNoSupplier(e.target.value)}
+                                                        />
                                                     </div>
                                                 </FormField>
 
                                                 {/* Faktur Pajak No. ~ Tgl Faktur */}
-                                                <FormField label="Faktur. Pajak No. ~ Tgl Faktur" className="sm:col-span-2">
+                                                <FormField label="No. Faktur Pajak ~ Tgl Faktur" className="sm:col-span-2">
                                                     <div className="flex gap-2">
-                                                        <FormInput placeholder="No. Faktur Pajak..." />
-                                                        <FormInput type="date" defaultValue="2026-06-01" />
+                                                        <FormInput
+                                                            placeholder="No. Faktur Pajak..."
+                                                            value={form.fpajaknorcv}
+                                                            onChange={(e) => form.setFpajaknorcv(e.target.value)}
+                                                        />
+                                                        <FormInput
+                                                            type="date"
+                                                            value={form.fpajaktglrcv}
+                                                            onChange={(e) => form.setFpajaktglrcv(e.target.value)}
+                                                        />
                                                     </div>
                                                 </FormField>
                                             </div>
@@ -366,31 +384,50 @@ export default function PurchaseReceiptDetailPage() {
                                                 {/* Mata Uang ~ Kurs Beli */}
                                                 <FormField label="Mata Uang ~ Kurs Beli">
                                                     <div className="flex gap-2 items-center">
-                                                        <FormSelect>
-                                                            <option>Rupiah</option>
-                                                            <option>USD</option>
-                                                            <option>EUR</option>
+                                                        <FormSelect
+                                                            value={form.currencyid}
+                                                            onChange={(e) => form.setCurrencyid(e.target.value)}
+                                                        >
+                                                            <option value="RP">Rupiah</option>
+                                                            <option value="USD">USD</option>
+                                                            <option value="EUR">EUR</option>
                                                         </FormSelect>
-                                                        <FormInput type="number" defaultValue="1.00" className="w-24" />
+                                                        <FormInput
+                                                            type="number"
+                                                            value={form.kursbeli}
+                                                            onChange={(e) => form.setKursbeli(e.target.value)}
+                                                            className="w-28"
+                                                        />
                                                     </div>
                                                 </FormField>
 
                                                 {/* Jenis Bayar ~ Tempo Bayar */}
                                                 <FormField label="Jenis Bayar ~ Tempo Bayar">
                                                     <div className="flex gap-2 items-center">
-                                                        <FormSelect>
-                                                            <option>Tunai</option>
-                                                            <option>Kredit</option>
-                                                            <option>Transfer</option>
+                                                        <FormSelect
+                                                            value={form.iscashrcv}
+                                                            onChange={(e) => form.setIscashrcv(Number(e.target.value))}
+                                                        >
+                                                            <option value={0}>Kredit</option>
+                                                            <option value={1}>Tunai</option>
                                                         </FormSelect>
-                                                        <FormInput type="number" defaultValue="0" className="w-16" />
+                                                        <FormInput
+                                                            type="number"
+                                                            value={form.apod}
+                                                            onChange={(e) => form.setApod(Number(e.target.value) || 0)}
+                                                            className="w-16"
+                                                        />
                                                         <span className="text-sm text-slate-500 whitespace-nowrap">Hari</span>
                                                     </div>
                                                 </FormField>
 
                                                 {/* Keterangan */}
                                                 <FormField label="Keterangan" className="sm:col-span-2">
-                                                    <FormInput defaultValue="Penerimaan Pembelian dari CARREFOUR MEDAN" />
+                                                    <FormInput
+                                                        placeholder="Keterangan penerimaan..."
+                                                        value={form.rcvnote}
+                                                        onChange={(e) => form.setRcvnote(e.target.value)}
+                                                    />
                                                 </FormField>
                                             </div>
                                         </div>
@@ -404,50 +441,33 @@ export default function PurchaseReceiptDetailPage() {
                                                 <h3 className="font-bold text-slate-800">Ringkasan Biaya</h3>
                                             </div>
                                             <div className="p-4 md:p-6 space-y-3">
-
                                                 {/* Sub Total */}
                                                 <div className="flex justify-between items-center text-sm">
                                                     <span className="text-slate-500 w-28 shrink-0">Sub Total</span>
-                                                    <input
+                                                    <FormInput
                                                         readOnly
-                                                        value={fmt(subTotal)}
-                                                        className="flex-1 text-right bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-sm font-semibold text-slate-700 cursor-not-allowed"
+                                                        value={formatRupiah(subTotal)}
+                                                        className="!flex-1 text-right !py-1.5 !px-2 font-semibold text-slate-700"
                                                     />
                                                 </div>
 
-                                                {/* Disc % */}
+                                                {/* Disc */}
                                                 <div className="flex justify-between items-center text-sm gap-2">
-                                                    <div className="flex items-center gap-1 w-28 shrink-0">
-                                                        <span className="text-slate-500">Disc</span>
-                                                        <input
-                                                            className="w-10 h-7 px-1 text-center bg-slate-50 border border-slate-200 rounded text-xs"
-                                                            type="text"
-                                                            defaultValue={discPct}
-                                                        />
-                                                        <span className="text-slate-400 text-xs">%</span>
-                                                    </div>
-                                                    <input
+                                                    <span className="text-slate-500 w-28 shrink-0">Disc</span>
+                                                    <FormInput
                                                         readOnly
-                                                        value={fmt(discNominal)}
-                                                        className="flex-1 text-right bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-sm font-semibold text-red-500 cursor-not-allowed"
+                                                        value={formatRupiah(discVal)}
+                                                        className="!flex-1 text-right !py-1.5 !px-2 font-semibold text-red-500"
                                                     />
                                                 </div>
 
-                                                {/* PPN % */}
+                                                {/* PPN */}
                                                 <div className="flex justify-between items-center text-sm gap-2">
-                                                    <div className="flex items-center gap-1 w-28 shrink-0">
-                                                        <span className="text-slate-500">PPN</span>
-                                                        <input
-                                                            className="w-10 h-7 px-1 text-center bg-slate-50 border border-slate-200 rounded text-xs"
-                                                            type="text"
-                                                            defaultValue={ppnPct}
-                                                        />
-                                                        <span className="text-slate-400 text-xs">%</span>
-                                                    </div>
-                                                    <input
+                                                    <span className="text-slate-500 w-28 shrink-0">PPN</span>
+                                                    <FormInput
                                                         readOnly
-                                                        value={fmt(ppnNominal)}
-                                                        className="flex-1 text-right bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-sm font-semibold text-slate-700 cursor-not-allowed"
+                                                        value={formatRupiah(ppnVal)}
+                                                        className="!flex-1 text-right !py-1.5 !px-2 font-semibold text-slate-700"
                                                     />
                                                 </div>
 
@@ -457,62 +477,33 @@ export default function PurchaseReceiptDetailPage() {
                                                         Grand Total ~ Total Konversi
                                                     </p>
                                                     <div className="flex gap-2">
-                                                        <input
+                                                        <FormInput
                                                             readOnly
-                                                            value={fmt(grandTotal)}
-                                                            className="flex-1 text-right bg-primary/5 border border-primary/20 rounded px-2 py-1.5 text-sm font-black text-primary cursor-not-allowed"
+                                                            value={formatRupiah(grandTotal)}
+                                                            className="!flex-1 text-right !bg-primary/5 !border-primary/20 !py-1.5 !px-2 font-black !text-primary !opacity-100"
                                                         />
-                                                        <input
+                                                        <FormInput
                                                             readOnly
-                                                            value={fmt(grandTotal)}
-                                                            className="flex-1 text-right bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-sm font-semibold text-slate-700 cursor-not-allowed"
+                                                            value={formatRupiah(tkonversi)}
+                                                            className="!flex-1 text-right !py-1.5 !px-2 font-semibold text-slate-700"
                                                         />
                                                     </div>
                                                 </div>
 
-                                                {/* Total Payment ~ Retur ~ Qty */}
+                                                {/* Total Qty */}
                                                 <div className="space-y-1">
                                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                                        Total Payment ~ Retur ~ Qty
+                                                        Total Qty Diterima
                                                     </p>
-                                                    <div className="flex gap-2">
-                                                        <input
-                                                            readOnly
-                                                            value="0.00"
-                                                            className="flex-1 text-right bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-sm font-semibold text-slate-700 cursor-not-allowed"
-                                                        />
-                                                        <input
-                                                            readOnly
-                                                            value="0.00"
-                                                            className="flex-1 text-right bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-sm font-semibold text-slate-700 cursor-not-allowed"
-                                                        />
-                                                        <input
-                                                            readOnly
-                                                            value={productItems.reduce((a, i) => a + i.qty, 0)}
-                                                            className="w-14 text-right bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-sm font-semibold text-slate-700 cursor-not-allowed"
-                                                        />
-                                                    </div>
+                                                    <FormInput
+                                                        readOnly
+                                                        value={totalQtyRcv.toLocaleString("id-ID")}
+                                                        className="!w-full text-right !py-1.5 !px-2 font-semibold text-slate-700"
+                                                    />
                                                 </div>
                                             </div>
 
-                                            {/* Action Buttons */}
-                                            <div className="p-4 bg-slate-50 border-t border-slate-100 grid grid-cols-2 gap-2">
-                                                <button className="col-span-2 py-3 bg-primary text-white rounded font-bold hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20">
-                                                    <span className="material-symbols-outlined">save</span> SIMPAN BPB
-                                                </button>
-                                                <button className="py-2 bg-white border border-slate-200 text-slate-600 rounded text-xs px-1 font-bold hover:bg-slate-100 transition-colors flex items-center justify-center gap-1">
-                                                    <span className="material-symbols-outlined !text-sm">refresh</span> RESET
-                                                </button>
-                                                <button className="py-2 bg-white border border-slate-200 text-slate-600 rounded text-xs px-1 font-bold hover:bg-slate-100 transition-colors flex items-center justify-center gap-1">
-                                                    <span className="material-symbols-outlined !text-sm">print</span> PRINT
-                                                </button>
-                                                <button className="col-span-1 py-2 bg-emerald-500 text-white rounded text-[10px] md:text-xs font-bold hover:bg-emerald-600 transition-colors flex items-center justify-center gap-1">
-                                                    <span className="material-symbols-outlined !text-sm">lock_open</span> RE-OPEN
-                                                </button>
-                                                <button className="col-span-1 py-2 bg-amber-500 text-white rounded text-[10px] md:text-xs font-bold hover:bg-amber-600 transition-colors flex items-center justify-center gap-1">
-                                                    <span className="material-symbols-outlined !text-sm">receipt</span> AUTO PIV
-                                                </button>
-                                            </div>
+
                                         </div>
                                     </div>
                                 </div>
@@ -522,31 +513,49 @@ export default function PurchaseReceiptDetailPage() {
                         {/* ── Tab Content: Receipt Details ── */}
                         {activeTab === "receipt-details" && (
                             <div className="flex-1 flex flex-col overflow-hidden gap-3">
+                                {/* Items Error Banner */}
+                                {(form.itemsError || form.itemDetailErrors.length > 0) && (
+                                    <div className="shrink-0 bg-red-50 border border-red-200 rounded-xl overflow-hidden">
+                                        <div className="flex items-center gap-2 bg-red-100 border-b border-red-200 px-4 py-2.5">
+                                            <span className="material-symbols-outlined text-base text-red-600">error</span>
+                                            <p className="text-xs font-bold text-red-700 uppercase tracking-wider">
+                                                {form.itemsError
+                                                    ? "Periksa data barang"
+                                                    : `${form.itemDetailErrors.length} kesalahan ditemukan — periksa data barang`}
+                                            </p>
+                                        </div>
+                                        <ul className="px-4 py-3 space-y-1.5">
+                                            {form.itemsError && (
+                                                <li className="flex items-center gap-2 text-sm text-red-700 font-medium">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+                                                    {form.itemsError}
+                                                </li>
+                                            )}
+                                            {form.itemDetailErrors.map((msg, i) => (
+                                                <li key={i} className="flex items-start gap-2 text-xs text-red-600">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0 mt-1.5" />
+                                                    {msg}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+
                                 {/* ── Product Search Bar ─────────────────────── */}
                                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-4 py-3 shrink-0 flex items-center gap-3">
-                                    <div className="flex-1 relative">
-                                        <div className="flex items-center border border-slate-300 rounded-lg overflow-hidden focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/30 bg-white">
-                                            <input
-                                                type="text"
-                                                value={productSearch}
-                                                onChange={(e) => {
-                                                    setProductSearch(e.target.value);
-                                                    setShowProductDropdown(true);
-                                                }}
-                                                onFocus={() => setShowProductDropdown(true)}
-                                                onBlur={() =>
-                                                    setTimeout(() => setShowProductDropdown(false), 150)
-                                                }
-                                                placeholder="Cari/Pilih Barang & Jasa..."
-                                                className="flex-1 px-3 py-2 text-sm outline-none bg-transparent"
-                                            />
-                                            <span className="px-3 text-slate-400">
-                                                <span className="material-symbols-outlined text-lg">search</span>
-                                            </span>
-                                        </div>
-                                    </div>
+                                    <ProductSearchBar
+                                        className="flex-1"
+                                        value={productSearch}
+                                        onChange={setProductSearch}
+                                        onSelect={handleProductSelected}
+                                        placeholder="Cari/Pilih Barang & Jasa..."
+                                        minChars={2}
+                                        debounceMs={350}
+                                        maxResults={8}
+                                    />
                                     <button
                                         onClick={() => {
+                                            form.resetItemForm();
                                             setEditingIndex(null);
                                             setIsProductModalOpen(true);
                                         }}
@@ -564,7 +573,7 @@ export default function PurchaseReceiptDetailPage() {
                                     onUpdateItem={handleUpdateItem}
                                     onRemoveItem={handleRemoveItem}
                                     onEditItem={handleEditItem}
-                                    emptyMessage="Belum ada item. Tambah produk penerimaan barang."
+                                    emptyMessage="Belum ada item. Cari & pilih produk di atas."
                                 />
                             </div>
                         )}
@@ -589,43 +598,51 @@ export default function PurchaseReceiptDetailPage() {
             {/* Footer StatusBar */}
             <StatusBar />
 
-            {/* ── Item Detail Modal (Input Detail Penerimaan Pembelian Barang) ── */}
+            {/* ── Item Detail Modal ───────────────────────────────────────── */}
             <Modal
                 isOpen={isProductModalOpen}
                 onClose={() => {
                     setIsProductModalOpen(false);
-                    setItemForm(defaultItemForm);
+                    form.resetItemForm();
                     setEditingIndex(null);
+                    setProductSearch("");
                 }}
-                title={editingIndex !== null ? "Edit Detil Item Penerimaan" : `Input Detail Penerimaan Pembelian Barang BPB 2601-0001`}
+                title={editingIndex !== null ? "Edit Detail Item Penerimaan" : "Input Detail Penerimaan Pembelian Barang"}
                 icon="inventory_2"
                 size="xl"
                 footer={
                     <>
-                        <button
+                        <Button
+                            variant="secondary"
+                            icon="refresh"
                             onClick={() => {
                                 setIsProductModalOpen(false);
-                                setItemForm(defaultItemForm);
+                                form.resetItemForm();
                                 setEditingIndex(null);
+                                setProductSearch("");
                             }}
-                            className="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-2"
                         >
-                            <span className="material-symbols-outlined text-sm">refresh</span>
                             Reset
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                            variant="primary"
+                            icon={editingIndex !== null ? "save" : "add_circle"}
                             onClick={() => {
-                                if (!itemForm.namaBarang) return;
-                                const newItem: ProductItem = {
-                                    name: itemForm.namaBarang,
-                                    barcode: "",
-                                    uom: itemForm.uom,
-                                    qty: itemForm.kuantitas,
-                                    hargaDasar: itemForm.hargaDasar,
-                                    discount: itemForm.hargaDasar - calc.setelah4,
-                                    ppn: calc.ppnNominal,
+                                if (!form.itemForm.namaBarang) return;
+                                const newItem: ExtendedReceiptItem = {
+                                    name:       form.itemForm.namaBarang,
+                                    barcode:    "",
+                                    uom:        form.itemForm.uom,
+                                    qty:        form.itemForm.kuantitas,
+                                    hargaDasar: form.itemForm.hargaDasar,
+                                    discount:   form.itemForm.hargaDasar - calc.setelah4,
+                                    ppn:        calc.ppnNominal,
                                     hargaFinal: calc.hargaFinal,
-                                    jumlah: calc.jumlah,
+                                    jumlah:     calc.jumlah,
+                                    productid:  form.itemForm.productid,
+                                    uomid:      form.itemForm.uomid,
+                                    poid_d_idf: form.itemForm.poid_d_idf,
+                                    expireddate: form.itemForm.tglKadaluarsa || undefined,
                                 };
                                 if (editingIndex !== null) {
                                     setProductItems((prev) =>
@@ -635,16 +652,13 @@ export default function PurchaseReceiptDetailPage() {
                                     setProductItems((prev) => [...prev, newItem]);
                                 }
                                 setIsProductModalOpen(false);
-                                setItemForm(defaultItemForm);
+                                form.resetItemForm();
                                 setEditingIndex(null);
+                                setProductSearch("");
                             }}
-                            className="px-4 py-2 text-sm font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center gap-2"
                         >
-                            <span className="material-symbols-outlined text-sm">
-                                {editingIndex !== null ? "save" : "add_circle"}
-                            </span>
                             {editingIndex !== null ? "Simpan Perubahan" : "Tambah Item"}
-                        </button>
+                        </Button>
                     </>
                 }
             >
@@ -657,14 +671,11 @@ export default function PurchaseReceiptDetailPage() {
                         <div className="relative flex gap-2">
                             <input
                                 type="text"
-                                value={itemForm.namaBarang}
-                                onChange={(e) => setItemField("namaBarang", e.target.value)}
+                                value={form.itemForm.namaBarang}
+                                onChange={(e) => form.setItemField("namaBarang", e.target.value)}
                                 placeholder="Ketik Nama Barang/Kode/Barcode/SKU"
                                 className="flex-1 border border-primary/40 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 bg-white"
                             />
-                            <button className="size-8 flex items-center justify-center rounded border border-slate-200 hover:bg-primary/5 text-slate-400 hover:text-primary transition-colors">
-                                <span className="material-symbols-outlined text-base">edit</span>
-                            </button>
                         </div>
                     </div>
 
@@ -673,8 +684,8 @@ export default function PurchaseReceiptDetailPage() {
                         <span className="text-xs font-semibold text-slate-500 uppercase">Keterangan</span>
                         <input
                             type="text"
-                            value={itemForm.keterangan}
-                            onChange={(e) => setItemField("keterangan", e.target.value)}
+                            value={form.itemForm.keterangan}
+                            onChange={(e) => form.setItemField("keterangan", e.target.value)}
                             className="w-full border border-slate-200 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-primary bg-slate-50"
                         />
                     </div>
@@ -682,15 +693,13 @@ export default function PurchaseReceiptDetailPage() {
                     {/* UOM */}
                     <div className="grid grid-cols-[180px_1fr] items-center gap-3 px-4 py-2.5">
                         <span className="text-xs font-semibold text-slate-500 uppercase">UOM</span>
-                        <select
-                            value={itemForm.uom}
-                            onChange={(e) => setItemField("uom", e.target.value)}
+                        <input
+                            type="text"
+                            value={form.itemForm.uom}
+                            onChange={(e) => form.setItemField("uom", e.target.value)}
+                            placeholder="Satuan..."
                             className="border border-slate-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-primary bg-white"
-                        >
-                            {["PCS", "DUS", "BOX", "KG", "LITER", "RIM", "UNIT", "SET"].map((u) => (
-                                <option key={u}>{u}</option>
-                            ))}
-                        </select>
+                        />
                     </div>
 
                     {/* Kuantitas */}
@@ -698,8 +707,8 @@ export default function PurchaseReceiptDetailPage() {
                         <span className="text-xs font-semibold text-slate-500 uppercase">Kuantitas</span>
                         <input
                             type="number"
-                            value={itemForm.kuantitas}
-                            onChange={(e) => setItemField("kuantitas", parseFloat(e.target.value) || 0)}
+                            value={form.itemForm.kuantitas}
+                            onChange={(e) => form.setItemField("kuantitas", parseFloat(e.target.value) || 0)}
                             className="w-full border border-slate-200 rounded px-3 py-1.5 text-sm text-right focus:outline-none focus:border-primary bg-white"
                         />
                     </div>
@@ -709,28 +718,25 @@ export default function PurchaseReceiptDetailPage() {
                         <span className="text-xs font-semibold text-slate-500 uppercase">Harga Dasar</span>
                         <input
                             type="number"
-                            value={itemForm.hargaDasar}
-                            onChange={(e) => setItemField("hargaDasar", parseFloat(e.target.value) || 0)}
+                            value={form.itemForm.hargaDasar}
+                            onChange={(e) => form.setItemField("hargaDasar", parseFloat(e.target.value) || 0)}
                             className="w-full border border-slate-200 rounded px-3 py-1.5 text-sm text-right focus:outline-none focus:border-primary bg-white"
                         />
                     </div>
 
-                    {/* ── Cascade Discounts ─────────────────────── */}
+                    {/* Cascade Discounts */}
                     {([1, 2, 3, 4] as const).map((n) => {
-                        const pctKey = `diskon${n}Pct` as keyof ItemDetailForm;
-                        const pct = itemForm[pctKey] as number;
-                        const setPct = (v: number) => setItemField(pctKey, v);
-                        const beforeArr = [itemForm.hargaDasar, calc.setelah1, calc.setelah2, calc.setelah3];
+                        const pctKey = `diskon${n}Pct` as keyof typeof form.itemForm;
+                        const pct = form.itemForm[pctKey] as number;
+                        const setPct = (v: number) => form.setItemField(pctKey, v);
+                        const beforeArr = [form.itemForm.hargaDasar, calc.setelah1, calc.setelah2, calc.setelah3];
                         const setelahArr = [calc.setelah1, calc.setelah2, calc.setelah3, calc.setelah4];
                         const before = beforeArr[n - 1];
                         const after = setelahArr[n - 1];
                         const diskonNominal = before - after;
-                        const fmtN = (v: number) =>
-                            v.toLocaleString("id-ID", { minimumFractionDigits: 4, maximumFractionDigits: 4 });
 
                         return (
                             <div key={n}>
-                                {/* Discount row */}
                                 <div className="grid grid-cols-[180px_1fr] items-center gap-3 px-4 py-2">
                                     <span className="text-xs font-semibold text-slate-500 uppercase">
                                         Potongan ke-{n}
@@ -749,7 +755,6 @@ export default function PurchaseReceiptDetailPage() {
                                         />
                                     </div>
                                 </div>
-                                {/* After-discount readonly row */}
                                 <div className="grid grid-cols-[180px_1fr] items-center gap-3 px-4 py-1.5 bg-slate-50/60">
                                     <span className="text-[10px] font-semibold text-slate-400 uppercase pl-2">
                                         Harga Setelah Potongan ke-{n}
@@ -770,8 +775,8 @@ export default function PurchaseReceiptDetailPage() {
                         <div className="flex items-center gap-2">
                             <input
                                 type="number"
-                                value={itemForm.ppnPct}
-                                onChange={(e) => setItemField("ppnPct", parseFloat(e.target.value) || 0)}
+                                value={form.itemForm.ppnPct}
+                                onChange={(e) => form.setItemField("ppnPct", parseFloat(e.target.value) || 0)}
                                 className="w-16 border border-slate-200 rounded px-2 py-1.5 text-sm text-right focus:outline-none focus:border-primary bg-white"
                             />
                             <input
@@ -816,8 +821,8 @@ export default function PurchaseReceiptDetailPage() {
                         <span className="text-xs font-semibold text-slate-500 uppercase">Tgl. Kadaluarsa</span>
                         <input
                             type="date"
-                            value={itemForm.tglKadaluarsa}
-                            onChange={(e) => setItemField("tglKadaluarsa", e.target.value)}
+                            value={form.itemForm.tglKadaluarsa}
+                            onChange={(e) => form.setItemField("tglKadaluarsa", e.target.value)}
                             className="w-full border border-slate-200 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-primary bg-white"
                         />
                     </div>
