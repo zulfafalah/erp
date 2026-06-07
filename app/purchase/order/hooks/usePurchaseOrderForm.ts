@@ -34,6 +34,8 @@ export function usePurchaseOrderForm({ productItems, setProductItems, router, id
     const [itemDetailErrors, setItemDetailErrors] = useState<string[]>([]);
     const [apiError, setApiError] = useState<string | null>(null);
 
+    const [saveToast, setSaveToast] = useState<string | null>(null);
+
     // ── Detail fetch (edit mode) ──────────────────────────────────────────────
     const [isLoadingDetail, setIsLoadingDetail] = useState(false);
     const [detailLoadError, setDetailLoadError] = useState<string | null>(null);
@@ -245,7 +247,10 @@ export function usePurchaseOrderForm({ productItems, setProductItems, router, id
                 return;
             }
 
-            // Navigate to the (new or updated) record
+            const label = (json.data?.pono as string | undefined) ?? "PO";
+            setSaveToast(`${label} berhasil disimpan`);
+            setTimeout(() => setSaveToast(null), 3000);
+
             if (isNew) {
                 const newId = json.data?.poid ?? "new";
                 router.push(`/purchase/order/${newId}`);
@@ -299,5 +304,6 @@ export function usePurchaseOrderForm({ productItems, setProductItems, router, id
         tipePengiriman,
         loadingTipePengiriman,
         handleSave,
+        saveToast,
     };
 }

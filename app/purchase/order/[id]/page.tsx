@@ -193,17 +193,25 @@ export default function PurchaseOrderDetailPage() {
                                 type ActionDef = { action: POAction; label: string; icon: string; variant: import("@/app/components/Button").ButtonVariant };
                                 const actions: ActionDef[] = [];
                                 if (statuspo === 1) {
-                                    actions.push({ action: "submit", label: "Submit", icon: "send", variant: "primary" });
+                                    // s=0 legacy: kirim ke atasan → Waiting For Approval
+                                    actions.push({ action: "submit", label: "Kirim untuk Persetujuan", icon: "send", variant: "primary" });
                                 } else if (statuspo === 2) {
-                                    actions.push({ action: "approve", label: "Approve", icon: "check_circle", variant: "emerald" });
+                                    // s=1 legacy: approve → Approved
+                                    actions.push({ action: "approve", label: "Setujui", icon: "check_circle", variant: "emerald" });
+                                    // reject legacy: → Void
                                     actions.push({ action: "reject", label: "Tolak", icon: "cancel", variant: "danger" });
                                 } else if (statuspo === 3) {
-                                    actions.push({ action: "unapprove", label: "Batalkan Approval", icon: "undo", variant: "outline" });
-                                    actions.push({ action: "order", label: "Order", icon: "shopping_cart", variant: "primary" });
+                                    // s=2 legacy: unapprove → Draft
+                                    actions.push({ action: "unapprove", label: "Batalkan Persetujuan", icon: "undo", variant: "outline" });
+                                    // s=4 legacy: order → Ordered
+                                    actions.push({ action: "order", label: "Tandai Dipesan", icon: "shopping_cart", variant: "primary" });
+                                    // reject legacy: → Void
                                     actions.push({ action: "reject", label: "Tolak", icon: "cancel", variant: "danger" });
                                 } else if (statuspo === 4) {
-                                    actions.push({ action: "on_delivery", label: "On Delivery", icon: "local_shipping", variant: "primary" });
+                                    // s=5 legacy: on_delivery → On Delivery
+                                    actions.push({ action: "on_delivery", label: "Dalam Pengiriman", icon: "local_shipping", variant: "primary" });
                                 } else if (statuspo === 5 || statuspo === 6 || statuspo === 7) {
+                                    // s=8 legacy: close → Closed (juga update semua txrcv ke statusrcv=8)
                                     actions.push({ action: "close", label: "Tutup PO", icon: "lock", variant: "secondary" });
                                 }
                                 return actions.map(({ action, label, icon, variant }) => (
@@ -693,6 +701,14 @@ export default function PurchaseOrderDetailPage() {
                     </div>
                 </div>
             </Modal>
+
+            {/* ── Save Toast ──────────────────────────────────────────────── */}
+            {form.saveToast && (
+                <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 bg-emerald-600 text-white px-4 py-3 rounded-xl shadow-lg animate-fade-in">
+                    <span className="material-symbols-outlined text-lg">check_circle</span>
+                    <span className="text-sm font-semibold">{form.saveToast}</span>
+                </div>
+            )}
 
             {/* ── Item Detail Modal ───────────────────────────────────────── */}
             <Modal
