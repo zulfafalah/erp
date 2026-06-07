@@ -130,6 +130,23 @@ export interface ItemDetailForm {
     tglKadaluarsa: string;
 }
 
+// ─── Dropdown-specific types ──────────────────────────────────────────────────
+
+export interface WarehouseDropdownItem {
+    whsid: number;
+    whsname: string;
+}
+
+export interface PoDropdownItem {
+    poid: number;
+    pono: string;
+}
+
+export interface CurrencyItem {
+    currencyid: string;
+    currencyname: string;
+}
+
 export const defaultItemForm: ItemDetailForm = {
     namaBarang: "",
     keterangan: "",

@@ -301,16 +301,35 @@ export default function PurchaseReceiptDetailPage() {
 
                                                 {/* PO No. */}
                                                 <FormField label="No. PO">
-                                                    <FormInput
-                                                        type="number"
-                                                        placeholder="ID Purchase Order..."
+                                                    <FormSelect
+                                                        disabled={form.loadingPoList}
                                                         value={form.poidh === "" ? "" : String(form.poidh)}
                                                         onChange={(e) => {
-                                                            form.setPoidh(e.target.value ? Number(e.target.value) : "");
+                                                            const val = e.target.value ? Number(e.target.value) : "";
+                                                            form.handlePoSelect(val);
                                                             if (e.target.value) form.clearPoidhError();
                                                         }}
                                                         className={form.poidhError ? "!border-red-400 !ring-1 !ring-red-400" : ""}
-                                                    />
+                                                    >
+                                                        <option value="">
+                                                            {form.loadingPoList
+                                                                ? "Memuat PO..."
+                                                                : !form.supplierIdForm
+                                                                    ? "(Pilih supplier dahulu)"
+                                                                    : "-- Pilih No. PO --"}
+                                                        </option>
+                                                        {form.poList.map((p) => (
+                                                            <option key={p.poid} value={p.poid}>
+                                                                {p.pono}
+                                                            </option>
+                                                        ))}
+                                                        {/* Mode EDIT: tampilkan PO yang sudah dipilih jika belum ada di list */}
+                                                        {!isNew && form.poidh && !form.poList.find(p => p.poid === form.poidh) && (
+                                                            <option value={String(form.poidh)}>
+                                                                PO #{form.poidh}
+                                                            </option>
+                                                        )}
+                                                    </FormSelect>
                                                     {form.poidhError && (
                                                         <p className="mt-1.5 text-xs text-red-500 font-medium flex items-center gap-1">
                                                             <span className="material-symbols-outlined text-sm">error</span>
@@ -321,16 +340,24 @@ export default function PurchaseReceiptDetailPage() {
 
                                                 {/* Masuk Gudang */}
                                                 <FormField label="Masuk Gudang">
-                                                    <FormInput
-                                                        type="number"
-                                                        placeholder="ID Gudang..."
+                                                    <FormSelect
+                                                        disabled={form.loadingWarehouses}
                                                         value={form.rcvwhs === "" ? "" : String(form.rcvwhs)}
                                                         onChange={(e) => {
                                                             form.setRcvwhs(e.target.value ? Number(e.target.value) : "");
                                                             if (e.target.value) form.clearRcvwhsError();
                                                         }}
                                                         className={form.rcvwhsError ? "!border-red-400 !ring-1 !ring-red-400" : ""}
-                                                    />
+                                                    >
+                                                        <option value="">
+                                                            {form.loadingWarehouses ? "Memuat gudang..." : "-- Pilih Gudang --"}
+                                                        </option>
+                                                        {form.warehouses.map((w) => (
+                                                            <option key={w.whsid} value={w.whsid}>
+                                                                {w.whsname}
+                                                            </option>
+                                                        ))}
+                                                    </FormSelect>
                                                     {form.rcvwhsError && (
                                                         <p className="mt-1.5 text-xs text-red-500 font-medium flex items-center gap-1">
                                                             <span className="material-symbols-outlined text-sm">error</span>
@@ -387,10 +414,16 @@ export default function PurchaseReceiptDetailPage() {
                                                         <FormSelect
                                                             value={form.currencyid}
                                                             onChange={(e) => form.setCurrencyid(e.target.value)}
+                                                            disabled={form.loadingCurrencies}
                                                         >
-                                                            <option value="RP">Rupiah</option>
-                                                            <option value="USD">USD</option>
-                                                            <option value="EUR">EUR</option>
+                                                            {form.currencies.length === 0 && (
+                                                                <option value={form.currencyid}>{form.currencyid}</option>
+                                                            )}
+                                                            {form.currencies.map((c) => (
+                                                                <option key={c.currencyid} value={c.currencyid}>
+                                                                    {c.currencyid} — {c.currencyname}
+                                                                </option>
+                                                            ))}
                                                         </FormSelect>
                                                         <FormInput
                                                             type="number"

@@ -1,5 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
-import { GoodsReceivingDetail, ExtendedReceiptItem, defaultItemForm, ItemDetailForm } from "../types";
+import {
+    GoodsReceivingDetail,
+    ExtendedReceiptItem,
+    defaultItemForm,
+    ItemDetailForm,
+    WarehouseDropdownItem,
+    PoDropdownItem,
+    CurrencyItem,
+} from "../types";
 import { SupplierListItem } from "@/app/purchase/order/types";
 
 interface UseReceiptFormProps {
@@ -117,19 +125,109 @@ export function useReceiptForm({ productItems, setProductItems, router, id }: Us
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
+    // ── Warehouses ────────────────────────────────────────────────────────────
+    const [warehouses, setWarehouses]               = useState<WarehouseDropdownItem[]>([]);
+    const [loadingWarehouses, setLoadingWarehouses] = useState(false);
+
+    useEffect(() => {
+        setLoadingWarehouses(true);
+        fetch("/api/master-data/warehouses?limit=200")
+            .then((res) => res.json())
+            .then((json) => {
+                if (json.ok && Array.isArray(json.data)) {
+                    setWarehouses(
+                        json.data.map((w: { whsid: number; whsname: string }) => ({
+                            whsid: w.whsid,
+                            whsname: w.whsname,
+                        }))
+                    );
+                }
+            })
+            .catch((err) => console.error("[warehouses fetch]", err))
+            .finally(() => setLoadingWarehouses(false));
+    }, []);
+
+    // ── Currencies ────────────────────────────────────────────────────────────
+    const [currencies, setCurrencies]               = useState<CurrencyItem[]>([]);
+    const [loadingCurrencies, setLoadingCurrencies] = useState(false);
+
+    useEffect(() => {
+        setLoadingCurrencies(true);
+        fetch("/api/master-data/currencies")
+            .then((res) => res.json())
+            .then((json) => {
+                if (json.ok && Array.isArray(json.data)) setCurrencies(json.data);
+            })
+            .catch((err) => console.error("[currencies fetch]", err))
+            .finally(() => setLoadingCurrencies(false));
+    }, []);
+
+    // ── PO Dropdown (dinamis berdasarkan supplier) ────────────────────────────
+    const [poList, setPoList]               = useState<PoDropdownItem[]>([]);
+    const [loadingPoList, setLoadingPoList] = useState(false);
+
+    useEffect(() => {
+        // Jangan re-fetch PO list saat mode EDIT (PO sudah diketahui)
+        if (!isNew) return;
+        setLoadingPoList(true);
+        setPoList([]);
+
+        const url = supplierIdForm
+            ? `/api/purchase/orders/for-receipt?mode=by_supplier&supplier_id=${supplierIdForm}`
+            : "/api/purchase/orders/for-receipt?mode=initial";
+
+        fetch(url)
+            .then((res) => res.json())
+            .then((json) => {
+                if (json.ok && Array.isArray(json.data)) setPoList(json.data);
+            })
+            .catch((err) => console.error("[poList fetch]", err))
+            .finally(() => setLoadingPoList(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [supplierIdForm, isNew]);
+
     // ── Suppliers ─────────────────────────────────────────────────────────────
     const [suppliers, setSuppliers]             = useState<SupplierListItem[]>([]);
     const [loadingSuppliers, setLoadingSuppliers] = useState(false);
 
     useEffect(() => {
         setLoadingSuppliers(true);
-        fetch("/api/master-data/suppliers?limit=200")
+        // Mode NEW: hanya supplier yang aktif (isactive=1)
+        // Mode EDIT: ambil semua agar data yang sudah dipilih tetap tampil
+        const qs = isNew ? "?limit=500&isactive=1&ordering=companyname" : "?limit=500&ordering=companyname";
+        fetch(`/api/master-data/suppliers${qs}`)
             .then((res) => res.json())
             .then((json) => {
                 if (json.ok && Array.isArray(json.data)) setSuppliers(json.data);
             })
             .catch((err) => console.error("[suppliers fetch]", err))
             .finally(() => setLoadingSuppliers(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isNew]);
+
+    // ── Auto-fill from PO detail ──────────────────────────────────────────────
+    // Ketika user memilih PO dari dropdown, fetch detail PO dan auto-isi field terkait
+    const handlePoSelect = useCallback(async (poid: number | "") => {
+        setPoidh(poid);
+        if (!poid) return;
+
+        try {
+            const res  = await fetch(`/api/purchase/orders/${poid}`);
+            const json = await res.json();
+            if (!json.ok || !json.data) return;
+
+            const po = json.data;
+            // Auto-isi field header dari data PO
+            if (po.po_fpajaknorcv)   setFpajaknorcv(po.po_fpajaknorcv);
+            if (po.po_fpajaktglrcv)  setFpajaktglrcv(po.po_fpajaktglrcv);
+            if (po.po_inv_no_supplier) setInvNoSupplier(po.po_inv_no_supplier);
+            if (po.po_sj_no_supplier)  setSjNoSupplier(po.po_sj_no_supplier);
+            if (typeof po.potop === "number") setApod(po.potop);
+            if (po.pocurr) setCurrencyid(po.pocurr);
+        } catch (err) {
+            console.error("[handlePoSelect detail fetch]", err);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // ── Handle Save ───────────────────────────────────────────────────────────
@@ -305,9 +403,16 @@ export function useReceiptForm({ productItems, setProductItems, router, id }: Us
         itemDetailErrors,
         apiError,
         handleSave,
-        // suppliers
+        // dropdowns
         suppliers,
         loadingSuppliers,
+        warehouses,
+        loadingWarehouses,
+        poList,
+        loadingPoList,
+        handlePoSelect,
+        currencies,
+        loadingCurrencies,
         // item modal
         itemForm,
         setItemField,
