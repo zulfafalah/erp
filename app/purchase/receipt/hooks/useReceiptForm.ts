@@ -209,7 +209,10 @@ export function useReceiptForm({ productItems, setProductItems, router, id }: Us
     // Ketika user memilih PO dari dropdown, fetch detail PO dan auto-isi field terkait
     const handlePoSelect = useCallback(async (poid: number | "") => {
         setPoidh(poid);
-        if (!poid) return;
+        if (!poid) {
+            setProductItems([]);
+            return;
+        }
 
         try {
             const res  = await fetch(`/api/purchase/orders/${poid}`);
@@ -218,12 +221,48 @@ export function useReceiptForm({ productItems, setProductItems, router, id }: Us
 
             const po = json.data;
             // Auto-isi field header dari data PO
-            if (po.po_fpajaknorcv)   setFpajaknorcv(po.po_fpajaknorcv);
-            if (po.po_fpajaktglrcv)  setFpajaktglrcv(po.po_fpajaktglrcv);
+            if (po.po_fpajaknorcv)     setFpajaknorcv(po.po_fpajaknorcv);
+            if (po.po_fpajaktglrcv)    setFpajaktglrcv(po.po_fpajaktglrcv);
             if (po.po_inv_no_supplier) setInvNoSupplier(po.po_inv_no_supplier);
             if (po.po_sj_no_supplier)  setSjNoSupplier(po.po_sj_no_supplier);
             if (typeof po.potop === "number") setApod(po.potop);
-            if (po.pocurr) setCurrencyid(po.pocurr);
+            if (po.pocurr)  setCurrencyid(po.pocurr);
+            if (po.porate)  setKursbeli(po.porate);
+
+            // Auto-populate items dari PO
+            if (Array.isArray(po.items) && po.items.length > 0) {
+                const mapped: ExtendedReceiptItem[] = po.items.map((it: Record<string, unknown>) => {
+                    const hargaDasar = parseFloat(String(it.pricepod      ?? "0")) || 0;
+                    const qty        = parseFloat(String(it.qtypod        ?? "0")) || 0;
+                    const disc1Pct   = parseFloat(String(it.discpctpod    ?? "0")) || 0;
+                    const disc2Pct   = parseFloat(String(it.pod_disc_pct_2 ?? "0")) || 0;
+                    const disc3Pct   = parseFloat(String(it.pod_disc_pct_3 ?? "0")) || 0;
+                    const disc4Pct   = parseFloat(String(it.pod_disc_pct_4 ?? "0")) || 0;
+                    const ppnPct     = parseFloat(String(it.pod_ppn_pct   ?? "0")) || 0;
+                    const a1 = hargaDasar * (1 - disc1Pct / 100);
+                    const a2 = a1         * (1 - disc2Pct / 100);
+                    const a3 = a2         * (1 - disc3Pct / 100);
+                    const afterDisc  = a3 * (1 - disc4Pct / 100);
+                    const discVal    = hargaDasar - afterDisc;
+                    const ppnVal     = afterDisc * (ppnPct / 100);
+                    const hargaFinal = afterDisc + ppnVal;
+                    return {
+                        name:       String(it.ketbarang ?? it.productname ?? ""),
+                        barcode:    String(it.productcode ?? ""),
+                        uom:        String(it.uomname ?? it.uom ?? ""),
+                        qty,
+                        hargaDasar,
+                        discount:   discVal,
+                        ppn:        ppnVal,
+                        hargaFinal,
+                        jumlah:     hargaFinal * qty,
+                        productid:  typeof it.productid === "number" ? it.productid : undefined,
+                        uomid:      typeof it.uomid     === "number" ? it.uomid     : undefined,
+                        poid_d_idf: typeof it.poid_d    === "number" ? it.poid_d    : undefined,
+                    };
+                });
+                setProductItems(mapped);
+            }
         } catch (err) {
             console.error("[handlePoSelect detail fetch]", err);
         }
