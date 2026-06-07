@@ -14,20 +14,11 @@ interface DataTableProps<T> {
     columns: Column<T>[];
     keyField: keyof T;
     renderMobileCard: (item: T, index?: number) => ReactNode;
-    /** Override the default pagination placeholder with a custom footer */
     footer?: ReactNode;
-    /** Show loading skeleton when true */
     isLoading?: boolean;
-    /** Number of skeleton rows to show while loading (default: 5) */
     skeletonRows?: number;
-    /** Icon name for empty state (Material Symbols Outlined) */
     emptyIcon?: string;
-    /** Text to show when data is empty */
     emptyText?: string;
-    // Default values for pagination placeholders (ignored when footer is provided)
-    totalItems?: number;
-    itemsPerPage?: number;
-    currentPage?: number;
 }
 
 // ─── Skeleton Components ──────────────────────────────────────────────────────
@@ -77,9 +68,6 @@ export default function DataTable<T>({
     skeletonRows = 5,
     emptyIcon = "inventory_2",
     emptyText = "Tidak ada data",
-    totalItems = 57,
-    itemsPerPage = 5,
-    currentPage = 1,
 }: DataTableProps<T>) {
     const showEmpty = !isLoading && data.length === 0;
 
@@ -164,29 +152,7 @@ export default function DataTable<T>({
             </div>
 
             {/* Footer / Pagination */}
-            {footer ?? (
-                <div className="px-4 md:px-6 py-4 bg-slate-50 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 border-t border-primary/10">
-                    <p className="text-sm text-slate-500 text-center md:text-left">
-                        Menampilkan {currentPage} sampai {Math.min(itemsPerPage, totalItems)} dari {totalItems} data
-                    </p>
-                    <div className="flex flex-wrap justify-center items-center gap-1">
-                        <button
-                            className="p-2 border border-primary/10 rounded hover:bg-white disabled:opacity-50"
-                            disabled
-                        >
-                            <span className="material-symbols-outlined text-lg">chevron_left</span>
-                        </button>
-                        <button className="px-3 py-1 bg-primary text-white rounded text-sm font-bold">1</button>
-                        <button className="px-3 py-1 hover:bg-white text-sm font-medium rounded transition-colors">2</button>
-                        <button className="px-3 py-1 hover:bg-white text-sm font-medium rounded transition-colors">3</button>
-                        <span className="px-2 text-slate-400">...</span>
-                        <button className="px-3 py-1 hover:bg-white text-sm font-medium rounded transition-colors">12</button>
-                        <button className="p-2 border border-primary/10 rounded hover:bg-white">
-                            <span className="material-symbols-outlined text-lg">chevron_right</span>
-                        </button>
-                    </div>
-                </div>
-            )}
+            {footer}
         </div>
     );
 }

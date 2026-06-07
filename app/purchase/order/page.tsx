@@ -177,10 +177,12 @@ export default function PurchaseOrderListPage() {
 
     const columns = buildColumns(setDeletingId);
 
-    const paginationFooter = !loading && total > 0 ? (
+    const paginationFooter = !loading ? (
         <div className="px-4 md:px-6 py-4 bg-slate-50 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0">
             <p className="text-sm text-slate-500 text-center md:text-left">
-                Menampilkan {from}–{to} dari {total.toLocaleString("id-ID")} data
+                {total > 0
+                    ? `Menampilkan ${from}–${to} dari ${total.toLocaleString("id-ID")} data`
+                    : "Tidak ada data"}
             </p>
             <div className="flex flex-wrap justify-center items-center gap-1">
                 <Button
