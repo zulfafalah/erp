@@ -261,6 +261,7 @@ export function usePurchaseOrderForm({ productItems, setProductItems, router, id
     return {
         isNew,
         poDetail,
+        populateFromDetail,
         isLoadingDetail,
         detailLoadError,
         podate,

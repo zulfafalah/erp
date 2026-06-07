@@ -19,6 +19,7 @@ import { TabKey, ExtendedProductItem, ItemDetailForm } from "../types";
 import { tabs, statusBadgeStyles, purchaseOrderColumns } from "../constants";
 import { usePurchaseOrderForm } from "../hooks/usePurchaseOrderForm";
 import { useItemModal } from "../hooks/useItemModal";
+import { usePOApproveAction, POAction } from "../hooks/usePOApproveAction";
 
 export default function PurchaseOrderDetailPage() {
     const router = useRouter();
@@ -34,6 +35,11 @@ export default function PurchaseOrderDetailPage() {
     const form = usePurchaseOrderForm({ productItems, setProductItems, router, id: String(params?.id ?? "new") });
     const modal = useItemModal();
     const isNew = form.isNew;
+
+    const approveAction = usePOApproveAction({
+        id: String(params?.id ?? ""),
+        onSuccess: (updated) => form.populateFromDetail(updated),
+    });
 
     // Auto-switch to order-details tab when item errors arrive from API
     useEffect(() => {
@@ -182,15 +188,38 @@ export default function PurchaseOrderDetailPage() {
                             >
                                 Print
                             </Button>
-                            {!isNew && (
-                                <Button
-                                    variant="primary"
-                                    icon="check_circle"
-                                    className="w-full md:w-auto px-4 md:px-5 py-2 text-xs md:text-sm"
-                                >
-                                    Approve Order
-                                </Button>
-                            )}
+                            {!isNew && (() => {
+                                const statuspo = form.poDetail?.statuspo ?? null;
+                                type ActionDef = { action: POAction; label: string; icon: string; variant: import("@/app/components/Button").ButtonVariant };
+                                const actions: ActionDef[] = [];
+                                if (statuspo === 1) {
+                                    actions.push({ action: "submit", label: "Submit", icon: "send", variant: "primary" });
+                                } else if (statuspo === 2) {
+                                    actions.push({ action: "approve", label: "Approve", icon: "check_circle", variant: "emerald" });
+                                    actions.push({ action: "reject", label: "Tolak", icon: "cancel", variant: "danger" });
+                                } else if (statuspo === 3) {
+                                    actions.push({ action: "unapprove", label: "Batalkan Approval", icon: "undo", variant: "outline" });
+                                    actions.push({ action: "order", label: "Order", icon: "shopping_cart", variant: "primary" });
+                                    actions.push({ action: "reject", label: "Tolak", icon: "cancel", variant: "danger" });
+                                } else if (statuspo === 4) {
+                                    actions.push({ action: "on_delivery", label: "On Delivery", icon: "local_shipping", variant: "primary" });
+                                } else if (statuspo === 5 || statuspo === 6 || statuspo === 7) {
+                                    actions.push({ action: "close", label: "Tutup PO", icon: "lock", variant: "secondary" });
+                                }
+                                return actions.map(({ action, label, icon, variant }) => (
+                                    <Button
+                                        key={action}
+                                        variant={variant}
+                                        icon={icon}
+                                        loading={approveAction.isActing}
+                                        loadingText="Memproses..."
+                                        className="w-full md:w-auto px-4 md:px-5 py-2 text-xs md:text-sm"
+                                        onClick={() => action === "reject" ? approveAction.openRejectModal() : approveAction.executeAction(action)}
+                                    >
+                                        {label}
+                                    </Button>
+                                ));
+                            })()}
                         </div>
                     </div>
 
@@ -228,6 +257,18 @@ export default function PurchaseOrderDetailPage() {
                                     <div className="mb-4 flex items-start gap-2.5 bg-red-50 border border-red-300 text-red-700 rounded-xl px-4 py-3 text-sm font-medium">
                                         <span className="material-symbols-outlined text-lg text-red-500 mt-0.5">error</span>
                                         <span>{form.apiError}</span>
+                                    </div>
+                                )}
+                                {/* Action Error Banner */}
+                                {approveAction.actionError && (
+                                    <div className="mb-4 flex items-start justify-between gap-2.5 bg-red-50 border border-red-300 text-red-700 rounded-xl px-4 py-3 text-sm font-medium">
+                                        <div className="flex items-start gap-2.5">
+                                            <span className="material-symbols-outlined text-lg text-red-500 mt-0.5">error</span>
+                                            <span>{approveAction.actionError}</span>
+                                        </div>
+                                        <button onClick={approveAction.clearActionError} className="text-red-400 hover:text-red-600 shrink-0">
+                                            <span className="material-symbols-outlined text-lg">close</span>
+                                        </button>
                                     </div>
                                 )}
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
@@ -602,6 +643,56 @@ export default function PurchaseOrderDetailPage() {
 
             {/* Footer StatusBar */}
             <StatusBar />
+
+            {/* ── Reject Modal ────────────────────────────────────────────── */}
+            <Modal
+                isOpen={approveAction.isRejectModalOpen}
+                onClose={approveAction.closeRejectModal}
+                title="Tolak Purchase Order"
+                icon="cancel"
+                size="md"
+                footer={
+                    <>
+                        <Button variant="secondary" onClick={approveAction.closeRejectModal}>
+                            Batal
+                        </Button>
+                        <Button
+                            variant="danger"
+                            icon="cancel"
+                            loading={approveAction.isActing}
+                            loadingText="Menolak..."
+                            onClick={approveAction.submitReject}
+                        >
+                            Tolak PO
+                        </Button>
+                    </>
+                }
+            >
+                <div className="space-y-3">
+                    <p className="text-sm text-slate-600">
+                        Masukkan alasan penolakan Purchase Order ini. PO akan berubah ke status <strong>Void</strong>.
+                    </p>
+                    <div>
+                        <textarea
+                            rows={3}
+                            placeholder="Alasan penolakan..."
+                            value={approveAction.rejectReason}
+                            onChange={(e) => approveAction.setRejectReason(e.target.value)}
+                            className={`w-full rounded-lg border px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 ${
+                                approveAction.rejectReasonError
+                                    ? "border-red-400 ring-1 ring-red-300"
+                                    : "border-slate-200"
+                            }`}
+                        />
+                        {approveAction.rejectReasonError && (
+                            <p className="mt-1 text-xs text-red-500 font-medium flex items-center gap-1">
+                                <span className="material-symbols-outlined text-sm">error</span>
+                                {approveAction.rejectReasonError}
+                            </p>
+                        )}
+                    </div>
+                </div>
+            </Modal>
 
             {/* ── Item Detail Modal ───────────────────────────────────────── */}
             <Modal
