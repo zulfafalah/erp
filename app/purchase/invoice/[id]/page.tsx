@@ -549,20 +549,6 @@ export default function PurchaseInvoiceDetailPage() {
                                                 </div>
                                             </div>
 
-                                            <div className="p-4 bg-slate-50 border-t border-slate-100 grid grid-cols-2 gap-2">
-                                                <button
-                                                    onClick={form.handleSave}
-                                                    disabled={form.isSaving}
-                                                    className="col-span-2 py-3 bg-primary text-white rounded font-bold hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20 disabled:opacity-60"
-                                                >
-                                                    {form.isSaving ? (
-                                                        <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
-                                                    ) : (
-                                                        <span className="material-symbols-outlined">save</span>
-                                                    )}
-                                                    {form.isSaving ? "Menyimpan..." : "SIMPAN PIV"}
-                                                </button>
-                                            </div>
                                         </div>
                                     </div>
                                 </div>

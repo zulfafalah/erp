@@ -188,15 +188,12 @@ export function useInvoiceForm({ productItems, setProductItems, router, id }: Us
 
     useEffect(() => {
         if (!isNew) return;
-        setLoadingPoList(true);
         setPoList([]);
         setBpbIdh("");
+        if (!supplierIdForm) return;
 
-        const url = supplierIdForm
-            ? `/api/purchase/orders/for-receipt?mode=by_supplier&supplier_id=${supplierIdForm}`
-            : "/api/purchase/orders/for-receipt?mode=initial";
-
-        fetch(url)
+        setLoadingPoList(true);
+        fetch(`/api/purchase/orders/for-invoice?supplier_id=${supplierIdForm}`)
             .then((res) => res.json())
             .then((json) => {
                 if (json.ok && Array.isArray(json.data)) setPoList(json.data);
